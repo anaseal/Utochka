@@ -21,7 +21,7 @@ function App() {
   const addCol = () => setGridSize(prev => ({ ...prev, width: prev.width + 1 }));
 
   return (
-    <>
+    <div className="editor">
       <Palette 
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
@@ -34,7 +34,7 @@ function App() {
         onAddRow={addRow}
         onAddCol={addCol}
       />
-    </>
+    </div>
   );
 }
 

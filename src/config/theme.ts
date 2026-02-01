@@ -1,22 +1,30 @@
-// src/config/theme.ts
+/**
+ * ТЕМА И КОНФИГУРАЦИЯ СИСТЕМЫ
+ * Здесь хранятся только те параметры, которые влияют на расчеты 
+ * или требуются в JS/TS коде. Визуальное оформление вынесено в index.css.
+ */
+
 export const BEAD_THEME = {
-  colors: {
-    node: '#22d3ee',
-    span: '#e879f9',
-    selected: '#ffffff',
-  },
+  // Геометрические параметры бисерин (используются в расчетах генератора)
+  // r=7 для узла и r=6 для пролета согласно ТЗ
   sizes: {
-    nodeRadius: 5,
-    spanRadius: 3.5,
-    strokeWidth: 2,
+    nodeRadius: 7,
+    spanRadius: 6,
+    hitboxRadius: 11, // Расширенная область клика
   },
-  // Добавляем этот блок, если его нет
-  animations: {
-    standard: 'transition-all duration-300 ease-in-out',
+
+  // Цвета по умолчанию (используются для инициализации и в логике CanvasView)
+  colors: {
+    nodeDefault: '#22d3ee', // Cyan-400
+    spanDefault: '#e879f9', // Fuchsia-400
+    background: '#1e293b',  // Slate-800
   },
-  effects: {
-    nodeShadow: 'drop-shadow(0 0 8px rgba(34, 211, 238, 0.8))',
-    // Если ты хочешь держать переход здесь, добавь его:
-    transition: 'all 0.3s ease-in-out', 
+
+  // Параметры сетки по умолчанию
+  gridDefaults: {
+    spacing: 65,
+    beadsInSpan: 6,
+    initialWidth: 8,
+    initialHeight: 10,
   }
 };

@@ -1,0 +1,540 @@
+
+C:\Users\Honor\Desktop\silyanka\src
+  - App.tsx
+    import { useState } from 'react';
+import { useGrid } from './hooks/useGrid';
+import { useDrawing } from './hooks/useDrawing';
+import { CanvasView } from './components/Editor/CanvasView';
+import { Palette } from './components/Editor/Palette';
+
+const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68'];
+
+function App() {
+  const [gridSize, setGridSize] = useState({ 
+    width: 8, 
+    height: 10, 
+    spacing: 65, 
+    beadsInSpan: 6 
+  });
+
+  const beads = useGrid(gridSize);
+  const drawingControls = useDrawing(PALETTE[0]);
+
+  const addRow = () => setGridSize(prev => ({ ...prev, height: prev.height + 1 }));
+  const addCol = () => setGridSize(prev => ({ ...prev, width: prev.width + 1 }));
+
+  return (
+    <>
+      <Palette 
+        palette={PALETTE}
+        activeColor={drawingControls.activeColor}
+        setActiveColor={drawingControls.setActiveColor}
+      />
+
+      <CanvasView 
+        beads={beads} 
+        {...drawingControls}
+        onAddRow={addRow}
+        onAddCol={addCol}
+      />
+    </>
+  );
+}
+
+export default App;
+_________________________
+  - index.css
+    @import "tailwindcss";
+
+:root {
+  --color-page: #0f172a;    /* slate-900 */
+  --color-panel: #1e293b;   /* slate-800 */
+  --color-canvas: #1e293b;  /* slate-800 */
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-page);
+}
+
+/* Бисер: Узел 7, Пролет 6 */
+.bead-base {
+  transition: all 0.1s ease-in-out;
+  stroke: #000000;
+  stroke-width: 0.5px;
+}
+
+.bead-glow {
+  filter: drop-shadow(0 0 4px var(--bead-color));
+}
+
+/* Унифицированный стиль кнопок управления */
+.btn-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1e293b; /* slate-800 для лучшей видимости на фоне 900 */
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  z-index: 40;
+}
+
+.btn-control:hover {
+  background-color: #334155; /* slate-700 */
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-control:active {
+  transform: scale(0.95);
+}
+
+/* Контейнеры */
+.workspace-container {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+}
+
+.canvas-wrapper {
+  position: relative;
+  padding: 150px;
+  display: inline-block;
+}
+
+/* Статистика (Бэджи) */
+.stats-panel-base {
+  position: fixed;
+  bottom: 24px;
+  background-color: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+_____________________
+
+  - main.tsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+
+// Добавляем ! после закрывающей скобки getElementById
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
+___________
+
+C:\Users\Honor\Desktop\silyanka\src\components
+  - BeadView.tsx
+import { Bead } from '../types/bead';
+
+interface BeadViewProps {
+  bead: Bead;
+  onMouseDown: () => void;
+  onMouseEnter: () => void;
+}
+
+export const BeadView = ({ bead, onMouseDown, onMouseEnter }: BeadViewProps) => {
+  const isNode = bead.type === 'NODE';
+  // Цвета по умолчанию из вашего ТЗ
+  const defaultColor = isNode ? '#22d3ee' : '#e879f9';
+  const finalColor = bead.color || defaultColor;
+
+  return (
+    <g 
+      className="bead-group"
+      onMouseEnter={onMouseEnter}
+      onMouseDown={onMouseDown}
+    >
+      <circle
+        cx={bead.x}
+        cy={bead.y}
+        r={11} // Удобный хитбокс
+        fill="transparent"
+        style={{ cursor: 'crosshair' }}
+      />
+      <circle
+        cx={bead.x}
+        cy={bead.y}
+        r={isNode ? 7 : 6} // Строго по ТЗ
+        fill={finalColor}
+        className={`bead-base ${isNode ? 'bead-glow' : ''}`}
+        style={{ 
+          '--bead-color': finalColor,
+          shapeRendering: 'geometricPrecision',
+          pointerEvents: 'none' 
+        } as React.CSSProperties}
+      />
+    </g>
+  );
+};
+_____________________
+C:\Users\Honor\Desktop\silyanka\src\components\Editor
+  - CanvasView.tsx
+  import { useMemo } from 'react';
+import { Bead } from '../../types/bead';
+import { BeadView } from '../BeadView';
+
+interface CanvasViewProps {
+  beads: Bead[];
+  designMap: Map<string, string>;
+  isDrawing: boolean;
+  paintBead: (id: string) => void;
+  startDrawing: () => void;
+  stopDrawing: () => void;
+  onAddRow: () => void;
+  onAddCol: () => void;
+}
+
+export const CanvasView = ({
+  beads,
+  designMap,
+  isDrawing,
+  paintBead,
+  startDrawing,
+  stopDrawing,
+  onAddRow,
+  onAddCol
+}: CanvasViewProps) => {
+  
+  const dim = useMemo(() => {
+    if (beads.length === 0) return { w: 100, h: 100 };
+    return {
+      w: Math.max(...beads.map(b => b.x)) + 60,
+      h: Math.max(...beads.map(b => b.y)) + 60
+    };
+  }, [beads]);
+
+  // Группировка статистики по цветам
+  const colorStats = useMemo(() => {
+    const stats = new Map<string, number>();
+    beads.forEach(bead => {
+      const isNode = bead.type === 'NODE';
+      const defaultColor = isNode ? '#22d3ee' : '#e879f9';
+      const color = designMap.get(bead.id) || defaultColor;
+      stats.set(color, (stats.get(color) || 0) + 1);
+    });
+    return Array.from(stats.entries());
+  }, [beads, designMap]);
+
+  return (
+    <div className="workspace-container"
+      onMouseDown={() => startDrawing()}
+      onMouseUp={() => stopDrawing()}
+      onMouseLeave={() => stopDrawing()}
+      onDragStart={(e) => e.preventDefault()}
+    >
+      <div className="canvas-wrapper select-none">
+        <svg 
+          width={dim.w} 
+          height={dim.h}
+          viewBox={`0 0 ${dim.w} ${dim.h}`}
+          className="bg-slate-800 rounded-3xl shadow-2xl border border-white/5 overflow-visible"
+        >
+          <g>
+            {beads.map((bead) => (
+              <BeadView
+                key={bead.id}
+                bead={{ ...bead, color: designMap.get(bead.id) }}
+                onMouseEnter={() => isDrawing && paintBead(bead.id)}
+                onMouseDown={() => paintBead(bead.id)}
+              />
+            ))}
+          </g>
+        </svg>
+
+        {/* Унифицированная кнопка КОЛОНКИ */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onAddCol(); }}
+          className="btn-control absolute flex-col h-24 w-12 rounded-2xl"
+          style={{ left: dim.w + 120, top: 150 + (dim.h / 2) - 48 }}
+        >
+          <span className="text-xl mb-1">+</span>
+          <span className="text-[9px] font-black uppercase rotate-90 tracking-widest">Col</span>
+        </button>
+
+        {/* Унифицированная кнопка РЯДЫ */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onAddRow(); }}
+          className="btn-control absolute h-12 px-8 rounded-2xl"
+          style={{ top: dim.h + 120, left: 150 + (dim.w / 2) - 80 }}
+        >
+          <span className="text-xl mr-3">+</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Add Row</span>
+        </button>
+      </div>
+
+      {/* Статистика СЛЕВА: Общий счет */}
+      <div className="stats-panel-base left-6">
+        <div className="flex flex-col">
+          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Total Count</span>
+          <span className="text-slate-200 font-mono text-xl">{beads.length}</span>
+        </div>
+      </div>
+
+      {/* Статистика СПРАВА: Расход по цветам */}
+      <div className="stats-panel-base right-6 gap-3">
+        {colorStats.map(([color, count]) => (
+          <div key={color} className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-md border border-white/5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-slate-300 font-mono text-xs">{count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+_____________
+  - Palette.tsx
+  interface PaletteProps {
+  palette: string[];
+  activeColor: string;
+  setActiveColor: (color: string) => void;
+}
+
+export const Palette = ({ palette, activeColor, setActiveColor }: PaletteProps) => {
+  return (
+    /* ТЗ №5: position: fixed гарантирует, что панель всегда сверху */
+    <header className="fixed top-0 left-0 w-full h-16 bg-[#020617] border-b border-white/5 flex items-center justify-center z-50 shadow-2xl">
+      <div className="flex gap-3 px-4 py-2 bg-zinc-900/50 rounded-full border border-white/5">
+        {palette.map((color) => (
+          <button
+            key={color}
+            onClick={() => setActiveColor(color)}
+            className={`
+              w-8 h-8 rounded-full transition-all duration-300 
+              hover:scale-110 active:scale-90 cursor-pointer
+              ${activeColor === color 
+                ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950 scale-110' 
+                : 'opacity-50 hover:opacity-100'}
+            `}
+            style={{ backgroundColor: color }}
+          />
+        ))}
+      </div>
+    </header>
+  );
+};
+____________________
+
+C:\Users\Honor\Desktop\silyanka\src\config
+  - theme.ts
+  // src/config/theme.ts
+export const BEAD_THEME = {
+  colors: {
+    node: '#22d3ee',
+    span: '#e879f9',
+    selected: '#ffffff',
+  },
+  sizes: {
+    nodeRadius: 5,
+    spanRadius: 3.5,
+    strokeWidth: 2,
+  },
+  // Добавляем этот блок, если его нет
+  animations: {
+    standard: 'transition-all duration-300 ease-in-out',
+  },
+  effects: {
+    nodeShadow: 'drop-shadow(0 0 8px rgba(34, 211, 238, 0.8))',
+    // Если ты хочешь держать переход здесь, добавь его:
+    transition: 'all 0.3s ease-in-out', 
+  }
+};
+_____________________
+
+C:\Users\Honor\Desktop\silyanka\src\hooks
+  - useDrawing.ts
+  import { useState, useCallback } from 'react';
+
+export const useDrawing = (initialColor: string) => {
+  const [activeColor, setActiveColor] = useState(initialColor);
+  const [designMap, setDesignMap] = useState<Map<string, string>>(new Map());
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  const startDrawing = useCallback(() => setIsDrawing(true), []);
+  const stopDrawing = useCallback(() => setIsDrawing(false), []);
+
+  const paintBead = useCallback((id: string) => {
+    setDesignMap((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(id, activeColor);
+      return newMap;
+    });
+  }, [activeColor]);
+
+  return {
+    activeColor,
+    setActiveColor,
+    designMap,
+    isDrawing,
+    paintBead,
+    startDrawing,
+    stopDrawing
+  };
+};
+___________________
+  - useGrid.ts
+  import { useMemo } from 'react';
+import { generateSilyankaGrid } from '../utils/generator';
+import { Bead } from '../types/bead';
+
+interface GridConfig {
+  width: number;
+  height: number;
+  spacing: number;
+  beadsInSpan: number;
+}
+
+export const useGrid = (config: GridConfig): Bead[] => {
+  return useMemo(() => {
+    return generateSilyankaGrid(
+      config.width,
+      config.height,
+      config.spacing,
+      config.beadsInSpan
+    );
+  }, [config.width, config.height, config.spacing, config.beadsInSpan]);
+};
+____________________
+
+C:\Users\Honor\Desktop\silyanka\src\types
+  - bead.ts
+  /**
+ * Тип бисеринки: 
+ * NODE — ключевая точка (узел), где пересекаются нити.
+ * SPAN — соединительная бисерина в пролете между узлами.
+ */
+export type BeadType = 'NODE' | 'SPAN';
+
+/**
+ * Интерфейс элементарной единицы — Бисерины
+ */
+export interface Bead {
+  id: string;
+  x: number;
+  y: number;
+  type: 'NODE' | 'SPAN';
+  color?: string; // Опционально, так как основной цвет теперь в стейте
+  clusterId?: string;
+  logicalIndex: { row: number; col: number };
+}
+
+/**
+ * Структура всей схемы силянки
+ */
+export interface SilyankaSchema {
+  metadata: {
+    name: string;
+    author: string;
+    createdAt: number;
+  };
+  dimensions: {
+    width: number;        // Количество колонок
+    height: number;       // Количество рядов
+  };
+  beads: Bead[];          // Плоский массив всех бисерин для быстрого рендера
+}
+____________________
+
+C:\Users\Honor\Desktop\silyanka\src\utils
+  - generator.ts
+  import { Bead } from '../types/bead';
+
+export const generateSilyankaGrid = (
+  width: number, 
+  height: number, 
+  spacing: number,
+  beadsInSpan: number = 6 
+): Bead[] => {
+  const nodes: Bead[] = [];
+  const spans: Bead[] = [];
+
+  const horizontalStep = spacing * 2; 
+  const verticalStep = spacing * 1.2;
+
+  const nodeGrid: Bead[][] = [];
+  for (let r = 0; r < height; r++) {
+    nodeGrid[r] = [];
+    const xOffset = (r % 2) * (horizontalStep / 2);
+    for (let c = 0; c < width; c++) {
+      const node: Bead = {
+        id: `node-${r}-${c}`,
+        x: c * horizontalStep + xOffset + 50,
+        y: r * verticalStep + 50,
+        type: 'NODE',
+        logicalIndex: { row: r, col: c }
+      };
+      nodeGrid[r][c] = node;
+      nodes.push(node);
+    }
+  }
+
+  // Замок (Верхний ряд)
+  for (let c = 0; c < width - 1; c++) {
+    const startNode = nodeGrid[0][c];
+    const endNode = nodeGrid[0][c + 1];
+    const clusterId = `top-lock-${c}`;
+    for (let i = 1; i <= beadsInSpan; i++) {
+      const t = i / (beadsInSpan + 1);
+      spans.push({
+        id: `bead-${clusterId}-${i}`,
+        x: startNode.x + t * (endNode.x - startNode.x),
+        y: startNode.y,
+        type: 'SPAN',
+        clusterId,
+        logicalIndex: { row: 0, col: c }
+      });
+    }
+  }
+
+  // Основная сетка
+  for (let r = 0; r < height - 1; r++) {
+    for (let c = 0; c < width; c++) {
+      const currentNode = nodeGrid[r][c];
+      const isShifted = r % 2 !== 0;
+      const neighborIndices = isShifted ? [c, c + 1] : [c - 1, c];
+
+      neighborIndices.forEach((nextCol, index) => {
+        const nextNode = nodeGrid[r + 1]?.[nextCol];
+        if (nextNode) {
+          const side = index === 0 ? 'left' : 'right';
+          const clusterId = `edge-${r}-${c}-${side}`;
+          for (let i = 1; i <= beadsInSpan; i++) {
+            const t = i / (beadsInSpan + 1);
+            spans.push({
+              id: `bead-${clusterId}-${i}`,
+              x: currentNode.x + t * (nextNode.x - currentNode.x),
+              y: currentNode.y + t * (nextNode.y - currentNode.y),
+              type: 'SPAN',
+              clusterId,
+              logicalIndex: { row: r, col: c }
+            });
+          }
+        }
+      });
+    }
+  }
+
+  // ВАЖНО: Узлы (nodes) возвращаем в конце, чтобы они были поверх пролетов (spans)
+  return [...spans, ...nodes];
+};

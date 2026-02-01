@@ -32,7 +32,6 @@ export const CanvasView = ({
     };
   }, [beads]);
 
-  // Группировка статистики по цветам
   const colorStats = useMemo(() => {
     const stats = new Map<string, number>();
     beads.forEach(bead => {
@@ -45,69 +44,75 @@ export const CanvasView = ({
   }, [beads, designMap]);
 
   return (
-    <div className="workspace-container"
+    <main 
+      className="editor__viewport"
       onMouseDown={() => startDrawing()}
       onMouseUp={() => stopDrawing()}
       onMouseLeave={() => stopDrawing()}
       onDragStart={(e) => e.preventDefault()}
     >
-      <div className="canvas-wrapper select-none">
+      <section 
+        className="canvas"
+        style={{ '--canvas-w': `${dim.w}px`, '--canvas-h': `${dim.h}px` } as React.CSSProperties}
+      >
         <svg 
           width={dim.w} 
           height={dim.h}
           viewBox={`0 0 ${dim.w} ${dim.h}`}
-          className="bg-slate-800 rounded-3xl shadow-2xl border border-white/5 overflow-visible"
+          className="canvas__svg"
+          aria-label="Silyanka Design Canvas"
         >
-          <g>
-            {beads.map((bead) => (
-              <BeadView
-                key={bead.id}
-                bead={{ ...bead, color: designMap.get(bead.id) }}
-                onMouseEnter={() => isDrawing && paintBead(bead.id)}
-                onMouseDown={() => paintBead(bead.id)}
-              />
-            ))}
-          </g>
+          {beads.map((bead) => (
+            <BeadView
+              key={bead.id}
+              bead={{ ...bead, color: designMap.get(bead.id) }}
+              onMouseEnter={() => isDrawing && paintBead(bead.id)}
+              onMouseDown={() => paintBead(bead.id)}
+            />
+          ))}
         </svg>
 
-        {/* Унифицированная кнопка КОЛОНКИ */}
         <button
           onClick={(e) => { e.stopPropagation(); onAddCol(); }}
-          className="btn-control absolute flex-col h-24 w-12 rounded-2xl"
-          style={{ left: dim.w + 120, top: 150 + (dim.h / 2) - 48 }}
+          className="control-btn control-btn--col"
+          aria-label="Add column"
         >
-          <span className="text-xl mb-1">+</span>
-          <span className="text-[9px] font-black uppercase rotate-90 tracking-widest">Col</span>
+          <span className="text-xl mb-1" aria-hidden="true">+</span>
+          <span className="control-btn__label control-btn__label--rotated">Col</span>
         </button>
 
-        {/* Унифицированная кнопка РЯДЫ */}
         <button
           onClick={(e) => { e.stopPropagation(); onAddRow(); }}
-          className="btn-control absolute h-12 px-8 rounded-2xl"
-          style={{ top: dim.h + 120, left: 150 + (dim.w / 2) - 80 }}
+          className="control-btn control-btn--row"
+          aria-label="Add row"
         >
-          <span className="text-xl mr-3">+</span>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Add Row</span>
+          <span className="text-xl mr-3" aria-hidden="true">+</span>
+          <span className="control-btn__label">Add Row</span>
         </button>
-      </div>
+      </section>
 
-      {/* Статистика СЛЕВА: Общий счет */}
-      <div className="stats-panel-base left-6">
-        <div className="flex flex-col">
-          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Total Count</span>
-          <span className="text-slate-200 font-mono text-xl">{beads.length}</span>
-        </div>
-      </div>
+      {/* Статистика вынесена в aside как вспомогательный контент */}
+      <aside className="stats stats--left">
+        <article className="stats__item">
+          <h3 className="stats__label">Total Count</h3>
+          <p className="stats__value">{beads.length}</p>
+        </article>
+      </aside>
 
-      {/* Статистика СПРАВА: Расход по цветам */}
-      <div className="stats-panel-base right-6 gap-3">
-        {colorStats.map(([color, count]) => (
-          <div key={color} className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-md border border-white/5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-slate-300 font-mono text-xs">{count}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+      <aside className="stats stats--right">
+        <ul className="flex gap-3 list-none p-0 m-0">
+          {colorStats.map(([color, count]) => (
+            <li key={color} className="stats__color-badge">
+              <span 
+                className="stats__indicator" 
+                style={{ backgroundColor: color }} 
+                role="presentation"
+              />
+              <span className="stats__value text-xs">{count}</span>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    </main>
   );
 };
