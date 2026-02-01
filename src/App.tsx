@@ -8,9 +8,9 @@ const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68
 
 function App() {
   const [gridSize, setGridSize] = useState({ 
-    width: 6, 
-    height: 8, 
-    spacing: 65, // Увеличено для предотвращения слипания
+    width: 8, 
+    height: 10, 
+    spacing: 65, 
     beadsInSpan: 6 
   });
 
@@ -21,7 +21,7 @@ function App() {
   const addCol = () => setGridSize(prev => ({ ...prev, width: prev.width + 1 }));
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-[#050505]">
+    <>
       <Palette 
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
@@ -34,7 +34,7 @@ function App() {
         onAddRow={addRow}
         onAddCol={addCol}
       />
-    </div>
+    </>
   );
 }
 

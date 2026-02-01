@@ -1,10 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --color-workspace: #050505;
-  --color-canvas: #0a0a0a;
+  --color-page: #0f172a;    /* slate-900 */
+  --color-panel: #1e293b;   /* slate-800 */
+  --color-canvas: #1e293b;  /* slate-800 */
 }
 
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-page);
+}
+
+/* Бисер: Узел 7, Пролет 6 */
 .bead-base {
   transition: all 0.1s ease-in-out;
   stroke: #000000;
@@ -12,37 +23,61 @@
 }
 
 .bead-glow {
-  filter: drop-shadow(0 0 3px var(--bead-color));
+  filter: drop-shadow(0 0 4px var(--bead-color));
 }
 
-.bead-group {
-  /* Позволяем событиям мыши проходить через группу */
-  pointer-events: auto;
-}
-
-.bead-group:hover .bead-base {
-  stroke: #ffffff;
-  stroke-width: 1.5px;
-}
-
-/* Остальные стили (btn-control, workspace-scroll) остаются без изменений */
+/* Унифицированный стиль кнопок управления */
 .btn-control {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #18181b;
-  color: #71717a;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: #1e293b; /* slate-800 для лучшей видимости на фоне 900 */
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  z-index: 40;
 }
 
-.workspace-scroll {
-  position: relative;
-  margin-top: 4rem;
-  width: 100%;
-  height: calc(100vh - 64px);
+.btn-control:hover {
+  background-color: #334155; /* slate-700 */
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-control:active {
+  transform: scale(0.95);
+}
+
+/* Контейнеры */
+.workspace-container {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: auto;
-  background-color: var(--color-workspace);
+}
+
+.canvas-wrapper {
+  position: relative;
+  padding: 150px;
+  display: inline-block;
+}
+
+/* Статистика (Бэджи) */
+.stats-panel-base {
+  position: fixed;
+  bottom: 24px;
+  background-color: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 16px;
+  z-index: 50;
   display: flex;
+  align-items: center;
+  gap: 12px;
 }

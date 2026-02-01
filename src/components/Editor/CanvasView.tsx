@@ -27,70 +27,87 @@ export const CanvasView = ({
   const dim = useMemo(() => {
     if (beads.length === 0) return { w: 100, h: 100 };
     return {
-      w: Math.max(...beads.map(b => b.x)) + 100,
-      h: Math.max(...beads.map(b => b.y)) + 100
+      w: Math.max(...beads.map(b => b.x)) + 60,
+      h: Math.max(...beads.map(b => b.y)) + 60
     };
   }, [beads]);
 
+  // Группировка статистики по цветам
+  const colorStats = useMemo(() => {
+    const stats = new Map<string, number>();
+    beads.forEach(bead => {
+      const isNode = bead.type === 'NODE';
+      const defaultColor = isNode ? '#22d3ee' : '#e879f9';
+      const color = designMap.get(bead.id) || defaultColor;
+      stats.set(color, (stats.get(color) || 0) + 1);
+    });
+    return Array.from(stats.entries());
+  }, [beads, designMap]);
+
   return (
-    <main
-      className="workspace-scroll"
-      /* Устанавливаем слушатели на контейнер для глобального отслеживания */
+    <div className="workspace-container"
       onMouseDown={() => startDrawing()}
       onMouseUp={() => stopDrawing()}
       onMouseLeave={() => stopDrawing()}
-      /* Предотвращаем стандартное выделение текста/картинок при драге */
       onDragStart={(e) => e.preventDefault()}
     >
-      <div className="relative p-24 inline-block min-w-max min-h-max select-none">
+      <div className="canvas-wrapper select-none">
         <svg 
           width={dim.w} 
           height={dim.h}
           viewBox={`0 0 ${dim.w} ${dim.h}`}
-          className="bg-canvas rounded-xl shadow-2xl border border-white/5 overflow-visible"
+          className="bg-slate-800 rounded-3xl shadow-2xl border border-white/5 overflow-visible"
         >
           <g>
             {beads.map((bead) => (
               <BeadView
                 key={bead.id}
-                bead={{
-                  ...bead,
-                  color: designMap.get(bead.id),
-                }}
-                /* Красим при наведении, если в пропсах isDrawing = true */
-                onMouseEnter={() => {
-                  if (isDrawing) paintBead(bead.id);
-                }}
-                /* Красим при первом клике */
+                bead={{ ...bead, color: designMap.get(bead.id) }}
+                onMouseEnter={() => isDrawing && paintBead(bead.id)}
                 onMouseDown={() => paintBead(bead.id)}
               />
             ))}
           </g>
         </svg>
 
+        {/* Унифицированная кнопка КОЛОНКИ */}
         <button
-          onClick={onAddCol}
-          className="btn-control absolute w-10 h-10"
-          style={{ 
-            left: dim.w + 120, 
-            top: 100 + (dim.h / 2) - 20 
-          }}
+          onClick={(e) => { e.stopPropagation(); onAddCol(); }}
+          className="btn-control absolute flex-col h-24 w-12 rounded-2xl"
+          style={{ left: dim.w + 120, top: 150 + (dim.h / 2) - 48 }}
         >
-          <span className="text-xl">+</span>
+          <span className="text-xl mb-1">+</span>
+          <span className="text-[9px] font-black uppercase rotate-90 tracking-widest">Col</span>
         </button>
 
+        {/* Унифицированная кнопка РЯДЫ */}
         <button
-          onClick={onAddRow}
-          className="btn-control absolute px-6 py-2"
-          style={{ 
-            top: dim.h + 120, 
-            left: 100 + (dim.w / 2) - 60 
-          }}
+          onClick={(e) => { e.stopPropagation(); onAddRow(); }}
+          className="btn-control absolute h-12 px-8 rounded-2xl"
+          style={{ top: dim.h + 120, left: 150 + (dim.w / 2) - 80 }}
         >
-          <span className="mr-2 font-bold">+</span>
-          <span className="text-[10px] font-black uppercase tracking-widest">Add Row</span>
+          <span className="text-xl mr-3">+</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Add Row</span>
         </button>
       </div>
-    </main>
+
+      {/* Статистика СЛЕВА: Общий счет */}
+      <div className="stats-panel-base left-6">
+        <div className="flex flex-col">
+          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Total Count</span>
+          <span className="text-slate-200 font-mono text-xl">{beads.length}</span>
+        </div>
+      </div>
+
+      {/* Статистика СПРАВА: Расход по цветам */}
+      <div className="stats-panel-base right-6 gap-3">
+        {colorStats.map(([color, count]) => (
+          <div key={color} className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-md border border-white/5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-slate-300 font-mono text-xs">{count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };

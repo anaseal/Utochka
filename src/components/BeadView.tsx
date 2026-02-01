@@ -8,6 +8,7 @@ interface BeadViewProps {
 
 export const BeadView = ({ bead, onMouseDown, onMouseEnter }: BeadViewProps) => {
   const isNode = bead.type === 'NODE';
+  // Цвета по умолчанию из вашего ТЗ
   const defaultColor = isNode ? '#22d3ee' : '#e879f9';
   const finalColor = bead.color || defaultColor;
 
@@ -17,20 +18,17 @@ export const BeadView = ({ bead, onMouseDown, onMouseEnter }: BeadViewProps) => 
       onMouseEnter={onMouseEnter}
       onMouseDown={onMouseDown}
     >
-      {/* Увеличенный хитбокс. r=10 для Node(7) и Span(6) */}
       <circle
         cx={bead.x}
         cy={bead.y}
-        r={10} 
+        r={11} // Удобный хитбокс
         fill="transparent"
-        className="cursor-crosshair pointer-events-auto"
+        style={{ cursor: 'crosshair' }}
       />
-
-      {/* Сама бисеринка */}
       <circle
         cx={bead.x}
         cy={bead.y}
-        r={isNode ? 7 : 6}
+        r={isNode ? 7 : 6} // Строго по ТЗ
         fill={finalColor}
         className={`bead-base ${isNode ? 'bead-glow' : ''}`}
         style={{ 
