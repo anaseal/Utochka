@@ -1,1 +1,48 @@
 @import "tailwindcss";
+
+:root {
+  --color-workspace: #050505;
+  --color-canvas: #0a0a0a;
+}
+
+.bead-base {
+  transition: all 0.1s ease-in-out;
+  stroke: #000000;
+  stroke-width: 0.5px;
+}
+
+.bead-glow {
+  filter: drop-shadow(0 0 3px var(--bead-color));
+}
+
+.bead-group {
+  /* Позволяем событиям мыши проходить через группу */
+  pointer-events: auto;
+}
+
+.bead-group:hover .bead-base {
+  stroke: #ffffff;
+  stroke-width: 1.5px;
+}
+
+/* Остальные стили (btn-control, workspace-scroll) остаются без изменений */
+.btn-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #18181b;
+  color: #71717a;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+}
+
+.workspace-scroll {
+  position: relative;
+  margin-top: 4rem;
+  width: 100%;
+  height: calc(100vh - 64px);
+  overflow: auto;
+  background-color: var(--color-workspace);
+  display: flex;
+}

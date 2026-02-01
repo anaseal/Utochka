@@ -1,45 +1,43 @@
 import { Bead } from '../types/bead';
-import { BEAD_THEME } from '../config/theme';
 
 interface BeadViewProps {
   bead: Bead;
-  onClick?: (id: string) => void;
-  onMouseEnter?: () => void;
+  onMouseDown: () => void;
+  onMouseEnter: () => void;
 }
 
-export const BeadView = ({ bead, onClick, onMouseEnter }: BeadViewProps) => {
+export const BeadView = ({ bead, onMouseDown, onMouseEnter }: BeadViewProps) => {
   const isNode = bead.type === 'NODE';
-  
+  const defaultColor = isNode ? '#22d3ee' : '#e879f9';
+  const finalColor = bead.color || defaultColor;
+
   return (
     <g 
-      className="cursor-crosshair"
+      className="bead-group"
       onMouseEnter={onMouseEnter}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.(bead.id);
-      }}
+      onMouseDown={onMouseDown}
     >
-      {/* 1. НЕВИДИМЫЙ ХИТБОКС (увеличивает зону клика) */}
+      {/* Увеличенный хитбокс. r=10 для Node(7) и Span(6) */}
       <circle
         cx={bead.x}
         cy={bead.y}
-        r={BEAD_THEME.sizes.nodeRadius * 2.5} // Увеличили зону попадания в 2.5 раза
+        r={10} 
         fill="transparent"
-        className="pointer-events-auto"
+        className="cursor-crosshair pointer-events-auto"
       />
 
-      {/* 2. РЕАЛЬНАЯ БИСЕРИНКА */}
+      {/* Сама бисеринка */}
       <circle
         cx={bead.x}
         cy={bead.y}
-        r={isNode ? BEAD_THEME.sizes.nodeRadius : BEAD_THEME.sizes.spanRadius}
-        fill={bead.color || (isNode ? BEAD_THEME.colors.node : BEAD_THEME.colors.span)}
+        r={isNode ? 7 : 6}
+        fill={finalColor}
+        className={`bead-base ${isNode ? 'bead-glow' : ''}`}
         style={{ 
-          filter: isNode ? BEAD_THEME.effects.nodeShadow : 'none',
-          transition: 'fill 0.1s ease-in-out',
-          pointerEvents: 'none' // Пропускает события сквозь себя на хитбокс
-        }}
-        className="hover:stroke-white hover:stroke-[1px]"
+          '--bead-color': finalColor,
+          shapeRendering: 'geometricPrecision',
+          pointerEvents: 'none' 
+        } as React.CSSProperties}
       />
     </g>
   );

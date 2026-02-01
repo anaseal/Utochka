@@ -1,19 +1,20 @@
-import { Bead, BeadType } from '../types/bead';
+import { Bead } from '../types/bead';
 
 export const generateSilyankaGrid = (
   width: number, 
   height: number, 
   spacing: number,
-  beadsInSpan: number = 3 
+  beadsInSpan: number = 6 
 ): Bead[] => {
-  const beads: Bead[] = [];
+  const nodes: Bead[] = [];
+  const spans: Bead[] = [];
+
   const horizontalStep = spacing * 2; 
   const verticalStep = spacing * 1.2;
 
-  // 1. Генерация узлов (NODE)
-  const nodes: Bead[][] = [];
+  const nodeGrid: Bead[][] = [];
   for (let r = 0; r < height; r++) {
-    nodes[r] = [];
+    nodeGrid[r] = [];
     const xOffset = (r % 2) * (horizontalStep / 2);
     for (let c = 0; c < width; c++) {
       const node: Bead = {
@@ -21,65 +22,50 @@ export const generateSilyankaGrid = (
         x: c * horizontalStep + xOffset + 50,
         y: r * verticalStep + 50,
         type: 'NODE',
-        color: '#22d3ee',
         logicalIndex: { row: r, col: c }
       };
-      nodes[r][c] = node;
-      beads.push(node);
+      nodeGrid[r][c] = node;
+      nodes.push(node);
     }
   }
 
-  // --- ТЗ №11: Генерация верхнего ряда переходов («Замок») ---
-  // Проходим по узлам самого первого ряда (r = 0)
+  // Замок (Верхний ряд)
   for (let c = 0; c < width - 1; c++) {
-    const startNode = nodes[0][c];
-    const endNode = nodes[0][c + 1];
+    const startNode = nodeGrid[0][c];
+    const endNode = nodeGrid[0][c + 1];
     const clusterId = `top-lock-${c}`;
-
     for (let i = 1; i <= beadsInSpan; i++) {
-      const t = i / (beadsInSpan + 1); // Коэффициент интерполяции
-      
-      // Линейная интерполяция между соседними узлами по горизонтали
-      const x = startNode.x + t * (endNode.x - startNode.x);
-      const y = startNode.y; // Строго горизонтальная линия
-
-      beads.push({
+      const t = i / (beadsInSpan + 1);
+      spans.push({
         id: `bead-${clusterId}-${i}`,
-        x,
-        y,
+        x: startNode.x + t * (endNode.x - startNode.x),
+        y: startNode.y,
         type: 'SPAN',
-        color: '#e879f9', // Соответствует цвету пролета из ТЗ
         clusterId,
         logicalIndex: { row: 0, col: c }
       });
     }
   }
-  // -----------------------------------------------------------
 
-  // 2. Генерация ромбовидной сетки (Connectivity)
+  // Основная сетка
   for (let r = 0; r < height - 1; r++) {
     for (let c = 0; c < width; c++) {
-      const currentNode = nodes[r][c];
+      const currentNode = nodeGrid[r][c];
       const isShifted = r % 2 !== 0;
       const neighborIndices = isShifted ? [c, c + 1] : [c - 1, c];
 
       neighborIndices.forEach((nextCol, index) => {
-        const nextNode = nodes[r + 1]?.[nextCol];
+        const nextNode = nodeGrid[r + 1]?.[nextCol];
         if (nextNode) {
           const side = index === 0 ? 'left' : 'right';
           const clusterId = `edge-${r}-${c}-${side}`;
-
           for (let i = 1; i <= beadsInSpan; i++) {
             const t = i / (beadsInSpan + 1);
-            const x = currentNode.x + t * (nextNode.x - currentNode.x);
-            const y = currentNode.y + t * (nextNode.y - currentNode.y);
-
-            beads.push({
+            spans.push({
               id: `bead-${clusterId}-${i}`,
-              x,
-              y,
+              x: currentNode.x + t * (nextNode.x - currentNode.x),
+              y: currentNode.y + t * (nextNode.y - currentNode.y),
               type: 'SPAN',
-              color: '#e879f9',
               clusterId,
               logicalIndex: { row: r, col: c }
             });
@@ -89,5 +75,6 @@ export const generateSilyankaGrid = (
     }
   }
 
-  return beads;
+  // ВАЖНО: Узлы (nodes) возвращаем в конце, чтобы они были поверх пролетов (spans)
+  return [...spans, ...nodes];
 };

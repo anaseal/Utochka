@@ -5,11 +5,12 @@ import { BeadView } from '../BeadView';
 interface CanvasViewProps {
   beads: Bead[];
   designMap: Map<string, string>;
-  activeColor: string;
   isDrawing: boolean;
   paintBead: (id: string) => void;
   startDrawing: () => void;
   stopDrawing: () => void;
+  onAddRow: () => void;
+  onAddCol: () => void;
 }
 
 export const CanvasView = ({
@@ -19,47 +20,76 @@ export const CanvasView = ({
   paintBead,
   startDrawing,
   stopDrawing,
+  onAddRow,
+  onAddCol
 }: CanvasViewProps) => {
   
-  const colorStats = useMemo(() => {
-    const counts: Record<string, number> = {};
-    beads.forEach((bead) => {
-      const finalColor = designMap.get(bead.id) || (bead.type === 'NODE' ? '#22d3ee' : '#e879f9');
-      counts[finalColor] = (counts[finalColor] || 0) + 1;
-    });
-    return counts;
-  }, [beads, designMap]);
+  const dim = useMemo(() => {
+    if (beads.length === 0) return { w: 100, h: 100 };
+    return {
+      w: Math.max(...beads.map(b => b.x)) + 100,
+      h: Math.max(...beads.map(b => b.y)) + 100
+    };
+  }, [beads]);
 
   return (
     <main
-      className="relative bg-slate-800 rounded-[2.5rem] border border-slate-700 shadow-inner overflow-hidden w-full max-w-4xl aspect-[16/10] flex items-center justify-center cursor-crosshair"
-      onMouseDown={startDrawing}
-      onMouseUp={stopDrawing}
-      onMouseLeave={stopDrawing}
+      className="workspace-scroll"
+      /* Устанавливаем слушатели на контейнер для глобального отслеживания */
+      onMouseDown={() => startDrawing()}
+      onMouseUp={() => stopDrawing()}
+      onMouseLeave={() => stopDrawing()}
+      /* Предотвращаем стандартное выделение текста/картинок при драге */
+      onDragStart={(e) => e.preventDefault()}
     >
-      <svg viewBox="0 0 800 500" className="w-full h-full p-8">
-        <g>
-          {beads.map((bead) => (
-            <BeadView
-              key={bead.id}
-              bead={{
-                ...bead,
-                color: designMap.get(bead.id) || (bead.type === 'NODE' ? '#22d3ee' : '#e879f9'),
-              }}
-              onClick={() => paintBead(bead.id)}
-              onMouseEnter={() => isDrawing && paintBead(bead.id)}
-            />
-          ))}
-        </g>
-      </svg>
+      <div className="relative p-24 inline-block min-w-max min-h-max select-none">
+        <svg 
+          width={dim.w} 
+          height={dim.h}
+          viewBox={`0 0 ${dim.w} ${dim.h}`}
+          className="bg-canvas rounded-xl shadow-2xl border border-white/5 overflow-visible"
+        >
+          <g>
+            {beads.map((bead) => (
+              <BeadView
+                key={bead.id}
+                bead={{
+                  ...bead,
+                  color: designMap.get(bead.id),
+                }}
+                /* Красим при наведении, если в пропсах isDrawing = true */
+                onMouseEnter={() => {
+                  if (isDrawing) paintBead(bead.id);
+                }}
+                /* Красим при первом клике */
+                onMouseDown={() => paintBead(bead.id)}
+              />
+            ))}
+          </g>
+        </svg>
 
-      <div className="absolute bottom-8 right-8 flex flex-col gap-2 items-end pointer-events-none">
-        {Object.entries(colorStats).map(([color, count]) => (
-          <div key={color} className="px-4 py-2 bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-700 flex items-center gap-3 shadow-2xl">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-xs font-black text-white">{count}</span>
-          </div>
-        ))}
+        <button
+          onClick={onAddCol}
+          className="btn-control absolute w-10 h-10"
+          style={{ 
+            left: dim.w + 120, 
+            top: 100 + (dim.h / 2) - 20 
+          }}
+        >
+          <span className="text-xl">+</span>
+        </button>
+
+        <button
+          onClick={onAddRow}
+          className="btn-control absolute px-6 py-2"
+          style={{ 
+            top: dim.h + 120, 
+            left: 100 + (dim.w / 2) - 60 
+          }}
+        >
+          <span className="mr-2 font-bold">+</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Add Row</span>
+        </button>
       </div>
     </main>
   );
