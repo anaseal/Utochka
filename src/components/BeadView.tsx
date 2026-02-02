@@ -1,4 +1,5 @@
 import { Bead } from '../types/bead';
+import './BeadView.css';
 
 interface BeadViewProps {
   bead: Bead;

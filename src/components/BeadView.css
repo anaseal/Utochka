@@ -1,0 +1,19 @@
+.bead {
+  cursor: crosshair;
+}
+
+.bead__hitbox {
+  fill: transparent;
+}
+
+.bead__body {
+  transition: fill 0.1s ease, r 0.2s ease;
+  stroke: #000000;
+  stroke-width: 0.5px;
+  shape-rendering: geometricPrecision;
+  pointer-events: none;
+}
+
+.bead--type-node .bead__body {
+  filter: drop-shadow(0 0 4px var(--bead-color));
+}

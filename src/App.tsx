@@ -7,11 +7,13 @@ import { Palette } from './components/Editor/Palette';
 const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68'];
 
 function App() {
+  // Изменены стартовые параметры согласно задаче:
+  // width: 10, height: 3, beadsInSpan: 3
   const [gridSize, setGridSize] = useState({ 
-    width: 8, 
-    height: 10, 
+    width: 10, 
+    height: 6, 
     spacing: 65, 
-    beadsInSpan: 6 
+    beadsInSpan: 3 
   });
 
   const beads = useGrid(gridSize);

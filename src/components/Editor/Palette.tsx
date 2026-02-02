@@ -1,3 +1,5 @@
+import './Palette.css';
+
 interface PaletteProps {
   palette: string[];
   activeColor: string;

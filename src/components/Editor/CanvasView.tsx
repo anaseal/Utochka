@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Bead } from '../../types/bead';
 import { BeadView } from '../BeadView';
+import './CanvasView.css';
 
 interface CanvasViewProps {
   beads: Bead[];
@@ -51,35 +52,36 @@ export const CanvasView = ({
       onMouseLeave={() => stopDrawing()}
       onDragStart={(e) => e.preventDefault()}
     >
-      <section 
-        className="canvas"
-        style={{ '--canvas-w': `${dim.w}px`, '--canvas-h': `${dim.h}px` } as React.CSSProperties}
-      >
-        <svg 
-          width={dim.w} 
-          height={dim.h}
-          viewBox={`0 0 ${dim.w} ${dim.h}`}
-          className="canvas__svg"
-          aria-label="Silyanka Design Canvas"
-        >
-          {beads.map((bead) => (
-            <BeadView
-              key={bead.id}
-              bead={{ ...bead, color: designMap.get(bead.id) }}
-              onMouseEnter={() => isDrawing && paintBead(bead.id)}
-              onMouseDown={() => paintBead(bead.id)}
-            />
-          ))}
-        </svg>
+      <section className="canvas">
+        <div className="canvas__main-row">
+          <div className="canvas__svg">
+            <svg
+              width={dim.w}
+              height={dim.h}
+              viewBox={`0 0 ${dim.w} ${dim.h}`}
+              aria-label="Silyanka Design Canvas"
+              style={{ display: 'block' }}
+            >
+              {beads.map((bead) => (
+                <BeadView
+                  key={bead.id}
+                  bead={{ ...bead, color: designMap.get(bead.id) }}
+                  onMouseEnter={() => isDrawing && paintBead(bead.id)}
+                  onMouseDown={() => paintBead(bead.id)}
+                />
+              ))}
+            </svg>
+          </div>
 
-        <button
-          onClick={(e) => { e.stopPropagation(); onAddCol(); }}
-          className="control-btn control-btn--col"
-          aria-label="Add column"
-        >
-          <span className="text-xl mb-1" aria-hidden="true">+</span>
-          <span className="control-btn__label control-btn__label--rotated">Col</span>
-        </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onAddCol(); }}
+            className="control-btn control-btn--col"
+            aria-label="Add column"
+          >
+            <span className="text-xl mb-1" aria-hidden="true">+</span>
+            <span className="control-btn__label control-btn__label--rotated">Col</span>
+          </button>
+        </div>
 
         <button
           onClick={(e) => { e.stopPropagation(); onAddRow(); }}
@@ -91,7 +93,6 @@ export const CanvasView = ({
         </button>
       </section>
 
-      {/* Статистика вынесена в aside как вспомогательный контент */}
       <aside className="stats stats--left">
         <article className="stats__item">
           <h3 className="stats__label">Total Count</h3>
