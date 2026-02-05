@@ -1,3 +1,4 @@
+/* src/App.tsx */
 import { useState } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
@@ -17,8 +18,14 @@ function App() {
   const beads = useGrid(gridSize);
   const drawingControls = useDrawing(PALETTE[0]);
 
-  const addRow = () => setGridSize(prev => ({ ...prev, height: prev.height + 1 }));
-  const addCol = () => setGridSize(prev => ({ ...prev, width: prev.width + 1 }));
+  // Функции изменения размера с защитой (минимум 1)
+  const updateWidth = (delta: number) => {
+    setGridSize(prev => ({ ...prev, width: Math.max(1, prev.width + delta) }));
+  };
+  
+  const updateHeight = (delta: number) => {
+    setGridSize(prev => ({ ...prev, height: Math.max(1, prev.height + delta) }));
+  };
 
   return (
     <main className="editor">
@@ -26,13 +33,15 @@ function App() {
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
         setActiveColor={drawingControls.setActiveColor}
+        gridWidth={gridSize.width}
+        gridHeight={gridSize.height}
+        onWidthChange={updateWidth}
+        onHeightChange={updateHeight}
       />
 
       <CanvasView 
         beads={beads} 
         {...drawingControls}
-        onAddRow={addRow}
-        onAddCol={addCol}
       />
     </main>
   );

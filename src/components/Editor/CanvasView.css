@@ -10,11 +10,9 @@
   bottom: 0;
   height: calc(100vh - var(--palette-height));
   overflow: hidden; 
-  
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  
   background-color: #020617;
 }
 
@@ -30,12 +28,7 @@
   flex-shrink: 0;
 }
 
-.canvas__main-row {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
+/* Изменено: Контейнер для SVG теперь управляет внутренним скроллом */
 .canvas__svg {
   display: block;
   background-color: var(--color-canvas);
@@ -44,15 +37,19 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   width: 1200px;
   height: 600px;
-  
-  /* Включаем внутренний скролл */
   overflow: auto;
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: #334155 rgba(0, 0, 0, 0.2);
 }
 
-/* Элементы индексов внутри SVG */
+/* Элемент: Содержимое SVG. Используем overflow: visible для отображения индексов вне вьюбокса */
+.canvas__svg-content {
+  display: block;
+  overflow: visible;
+}
+
+/* Элемент: Текстовые индексы осей внутри SVG */
 .canvas__axis-text {
   fill: #64748b; /* slate-500 */
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -62,74 +59,7 @@
   user-select: none;
 }
 
-.canvas__svg-content {
-  display: block;
-  overflow: visible; /* Чтобы индексы по краям не обрезались */
-}
-
-/* Webkit Scrollbar */
-.canvas__svg::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.canvas__svg::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 10px;
-  margin: 10px;
-}
-.canvas__svg::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-  border: 2px solid #1e293b;
-}
-
-/* --- Block: Control Buttons --- */
-.control-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--color-panel);
-  color: #f1f5f9;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  z-index: 40;
-  border-radius: 16px;
-  flex-shrink: 0;
-}
-
-.control-btn:hover {
-  background-color: #334155;
-  transform: scale(1.05);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.control-btn--col {
-  flex-direction: column;
-  height: 96px;
-  width: 48px;
-}
-
-.control-btn--row {
-  height: 48px;
-  padding: 0 32px;
-  align-self: center;
-}
-
-.control-btn__label {
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-}
-
-.control-btn__label--rotated {
-  font-size: 9px;
-  transform: rotate(90deg);
-}
-
-/* --- Block: Stats --- */
+/* --- Block: Stats (Панели статистики) --- */
 .stats {
   position: fixed;
   bottom: 24px;
@@ -144,8 +74,13 @@
   gap: 12px;
 }
 
-.stats--left { left: 24px; }
-.stats--right { right: 24px; }
+.stats--left {
+  left: 24px;
+}
+
+.stats--right {
+  right: 24px;
+}
 
 .stats__item {
   display: flex;
@@ -166,6 +101,7 @@
   font-size: 20px;
 }
 
+/* Элемент: Цветовой индикатор в статистике */
 .stats__color-badge {
   display: flex;
   align-items: center;
@@ -182,11 +118,29 @@
   border-radius: 50%;
 }
 
-.palette__list ul,
-.stats ul {
+.stats__list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+/* Webkit Scrollbar */
+.canvas__svg::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.canvas__svg::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 10px;
+  margin: 10px;
+}
+
+.canvas__svg::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+  border: 2px solid #1e293b;
 }

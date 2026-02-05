@@ -11,8 +11,6 @@ interface CanvasViewProps {
   paintBead: (id: string) => void;
   startDrawing: () => void;
   stopDrawing: () => void;
-  onAddRow: () => void;
-  onAddCol: () => void;
 }
 
 export const CanvasView = ({
@@ -22,8 +20,6 @@ export const CanvasView = ({
   paintBead,
   startDrawing,
   stopDrawing,
-  onAddRow,
-  onAddCol
 }: CanvasViewProps) => {
   
   const dim = useMemo(() => {
@@ -45,7 +41,6 @@ export const CanvasView = ({
     return Array.from(stats.entries());
   }, [beads, designMap]);
 
-  // Фильтрация узлов для осей координат
   const xAxesNodes = useMemo(() => 
     beads.filter(b => b.type === 'NODE' && b.logicalIndex.row === 0), 
   [beads]);
@@ -54,7 +49,6 @@ export const CanvasView = ({
     beads.filter(b => b.type === 'NODE' && b.logicalIndex.col === 0), 
   [beads]);
 
-  // Вычисление фиксированных базовых линий для выравнивания "в одну линию"
   const baselineY = useMemo(() => 
     xAxesNodes.length > 0 ? Math.min(...xAxesNodes.map(n => n.y)) - 30 : 20, 
   [xAxesNodes]);
@@ -72,75 +66,53 @@ export const CanvasView = ({
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
-        <div className="canvas__main-row">
-          <div className="canvas__svg">
-            <svg
-              width={dim.w}
-              height={dim.h}
-              viewBox={`0 0 ${dim.w} ${dim.h}`}
-              aria-label="Silyanka Design Canvas"
-              className="canvas__svg-content"
-            >
-              {/* Горизонтальные индексы (Колонки) - Выровнены по baselineY */}
-              <g className="canvas__ruler-group" aria-hidden="true">
-                {xAxesNodes.map((node, i) => (
-                  <text
-                    key={`idx-x-${node.id}`}
-                    x={node.x}
-                    y={baselineY}
-                    textAnchor="middle"
-                    className="canvas__axis-text"
-                  >
-                    {i + 1}
-                  </text>
-                ))}
-              </g>
-
-              {/* Вертикальные индексы (Ряды) - Выровнены по baselineX */}
-              <g className="canvas__ruler-group" aria-hidden="true">
-                {yAxesNodes.map((node, i) => (
-                  <text
-                    key={`idx-y-${node.id}`}
-                    x={baselineX}
-                    y={node.y}
-                    dominantBaseline="middle"
-                    textAnchor="end"
-                    className="canvas__axis-text"
-                  >
-                    {i + 1}
-                  </text>
-                ))}
-              </g>
-
-              {beads.map((bead) => (
-                <BeadView
-                  key={bead.id}
-                  bead={{ ...bead, color: designMap.get(bead.id) }}
-                  onMouseEnter={() => isDrawing && paintBead(bead.id)}
-                  onMouseDown={() => paintBead(bead.id)}
-                />
-              ))}
-            </svg>
-          </div>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); onAddCol(); }}
-            className="control-btn control-btn--col"
-            aria-label="Add column"
+        <div className="canvas__svg">
+          <svg
+            width={dim.w}
+            height={dim.h}
+            viewBox={`0 0 ${dim.w} ${dim.h}`}
+            aria-label="Silyanka Design Canvas"
+            className="canvas__svg-content"
           >
-            <span className="text-xl mb-1" aria-hidden="true">+</span>
-            <span className="control-btn__label control-btn__label--rotated">Col</span>
-          </button>
-        </div>
+            <g className="canvas__ruler-group" aria-hidden="true">
+              {xAxesNodes.map((node, i) => (
+                <text
+                  key={`idx-x-${node.id}`}
+                  x={node.x}
+                  y={baselineY}
+                  textAnchor="middle"
+                  className="canvas__axis-text"
+                >
+                  {i + 1}
+                </text>
+              ))}
+            </g>
 
-        <button
-          onClick={(e) => { e.stopPropagation(); onAddRow(); }}
-          className="control-btn control-btn--row"
-          aria-label="Add row"
-        >
-          <span className="text-xl mr-3" aria-hidden="true">+</span>
-          <span className="control-btn__label">Add Row</span>
-        </button>
+            <g className="canvas__ruler-group" aria-hidden="true">
+              {yAxesNodes.map((node, i) => (
+                <text
+                  key={`idx-y-${node.id}`}
+                  x={baselineX}
+                  y={node.y}
+                  dominantBaseline="middle"
+                  textAnchor="end"
+                  className="canvas__axis-text"
+                >
+                  {i + 1}
+                </text>
+              ))}
+            </g>
+
+            {beads.map((bead) => (
+              <BeadView
+                key={bead.id}
+                bead={{ ...bead, color: designMap.get(bead.id) }}
+                onMouseEnter={() => isDrawing && paintBead(bead.id)}
+                onMouseDown={() => paintBead(bead.id)}
+              />
+            ))}
+          </svg>
+        </div>
       </section>
 
       <aside className="stats stats--left">
@@ -154,11 +126,7 @@ export const CanvasView = ({
         <ul className="flex gap-3 list-none p-0 m-0">
           {colorStats.map(([color, count]) => (
             <li key={color} className="stats__color-badge">
-              <span 
-                className="stats__indicator" 
-                style={{ backgroundColor: color }} 
-                role="presentation"
-              />
+              <span className="stats__indicator" style={{ backgroundColor: color }} />
               <span className="stats__value text-xs">{count}</span>
             </li>
           ))}

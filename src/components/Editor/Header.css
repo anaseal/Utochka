@@ -1,47 +1,90 @@
-/* Блок Header: семантический контейнер верхнего уровня */
+/* src/components/Editor/Header.css */
 .header {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 1rem;
+  height: var(--palette-height);
   background-color: #0f172a;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 100;
 }
 
-/* Блок Palette: независимый компонент выбора цвета */
-.palette {
+.header__nav {
   display: flex;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.5rem 1.5rem;
   background-color: rgba(24, 24, 27, 0.5);
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Элемент палитры: кнопка цвета */
+.header__divider {
+  width: 1px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Palette Styles */
+.palette { display: flex; gap: 0.75rem; }
 .palette__color {
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 50%;
   border: none;
   cursor: pointer;
   background-color: var(--color-value);
-  transition: transform 0.2s, opacity 0.2s;
+  transition: all 0.2s;
   opacity: 0.5;
 }
-
-/* Состояния элементов (Hover) */
-.palette__color:hover {
-  transform: scale(1.1);
-  opacity: 1;
-}
-
-/* Модификатор: активное состояние кнопки */
+.palette__color:hover { opacity: 1; transform: scale(1.1); }
 .palette__color--active {
   opacity: 1;
   transform: scale(1.1);
   outline: 2px solid #ffffff;
   outline-offset: 2px;
+}
+
+/* Grid Controls Styles */
+.grid-controls { display: flex; gap: 1.5rem; }
+.grid-controls__group { display: flex; align-items: center; gap: 0.75rem; }
+.grid-controls__label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.grid-controls__actions {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.grid-controls__btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #f1f5f9;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.grid-controls__btn:hover { background: rgba(255, 255, 255, 0.1); }
+.grid-controls__value {
+  min-width: 30px;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 14px;
+  color: #22d3ee;
 }
