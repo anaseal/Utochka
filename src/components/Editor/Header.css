@@ -1,0 +1,47 @@
+/* Блок Header: семантический контейнер верхнего уровня */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 1rem;
+  background-color: #0f172a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Блок Palette: независимый компонент выбора цвета */
+.palette {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: rgba(24, 24, 27, 0.5);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Элемент палитры: кнопка цвета */
+.palette__color {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background-color: var(--color-value);
+  transition: transform 0.2s, opacity 0.2s;
+  opacity: 0.5;
+}
+
+/* Состояния элементов (Hover) */
+.palette__color:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+/* Модификатор: активное состояние кнопки */
+.palette__color--active {
+  opacity: 1;
+  transform: scale(1.1);
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}

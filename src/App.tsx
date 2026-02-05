@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
 import { CanvasView } from './components/Editor/CanvasView';
-import { Palette } from './components/Editor/Palette';
+import { Header } from './components/Editor/Header';
 
 const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68'];
 
 function App() {
-  // Изменены стартовые параметры согласно задаче:
-  // width: 10, height: 3, beadsInSpan: 3
   const [gridSize, setGridSize] = useState({ 
     width: 10, 
     height: 6, 
@@ -23,8 +21,8 @@ function App() {
   const addCol = () => setGridSize(prev => ({ ...prev, width: prev.width + 1 }));
 
   return (
-    <div className="editor">
-      <Palette 
+    <main className="editor">
+      <Header 
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
         setActiveColor={drawingControls.setActiveColor}
@@ -36,7 +34,7 @@ function App() {
         onAddRow={addRow}
         onAddCol={addCol}
       />
-    </div>
+    </main>
   );
 }
 
