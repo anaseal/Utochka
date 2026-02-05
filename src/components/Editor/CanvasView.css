@@ -37,7 +37,7 @@
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: #334155 rgba(0, 0, 0, 0.2);
-  padding: 20px;
+  padding: 30px;
 }
 
 .canvas__svg-content {
@@ -47,7 +47,6 @@
   transform-origin: top left;
   transition: transform 0.1s ease-out;
 }
-
 .canvas__axis-text {
   fill: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

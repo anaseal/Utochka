@@ -1,4 +1,3 @@
-/* src/components/Editor/CanvasView.tsx */
 import { useMemo } from 'react';
 import { Bead } from '../../types/bead';
 import { BeadView } from '../BeadView';
@@ -27,8 +26,8 @@ export const CanvasView = ({
   const dim = useMemo(() => {
     if (beads.length === 0) return { w: 100, h: 100 };
     return {
-      w: Math.max(...beads.map(b => b.x)) + 80,
-      h: Math.max(...beads.map(b => b.y)) + 80
+      w: Math.max(...beads.map(b => b.x)) + 150,
+      h: Math.max(...beads.map(b => b.y)) + 150
     };
   }, [beads]);
 
@@ -43,21 +42,57 @@ export const CanvasView = ({
     return Array.from(stats.entries());
   }, [beads, designMap]);
 
-  const xAxesNodes = useMemo(() => 
-    beads.filter(b => b.type === 'NODE' && b.logicalIndex.row === 0), 
-  [beads]);
+  // --- ЛОГИКА ОСЕЙ ---
 
-  const yAxesNodes = useMemo(() => 
-    beads.filter(b => b.type === 'NODE' && b.logicalIndex.col === 0), 
-  [beads]);
+  // РЯДЫ: Самые левые выступающие ноды (Ряды 1, 2, 3...)
+  const rowAxesNodes = useMemo(() => {
+    const yGroups = new Map<number, Bead[]>();
+    beads.filter(b => b.type === 'NODE').forEach(node => {
+      const y = Math.round(node.y);
+      if (!yGroups.has(y)) yGroups.set(y, []);
+      yGroups.get(y)!.push(node);
+    });
 
-  const baselineY = useMemo(() => 
-    xAxesNodes.length > 0 ? Math.min(...xAxesNodes.map(n => n.y)) - 35 : 20, 
-  [xAxesNodes]);
+    const leftMostNodes = Array.from(yGroups.values()).map(group => 
+      group.reduce((min, curr) => (curr.x < min.x ? curr : min), group[0])
+    );
 
+    const sortedNodes = leftMostNodes.sort((a, b) => a.y - b.y);
+    const minX = Math.min(...sortedNodes.map(n => n.x));
+    // Оставляем только те ноды, которые выступают максимально влево
+    return sortedNodes.filter(n => Math.abs(n.x - minX) < 1);
+  }, [beads]);
+
+  // КОЛОНКИ: Ноды, которые находятся "между" 1 и 2 рядами (утопленные сверху)
+  const colAxesNodes = useMemo(() => {
+    // 1. Находим все NODE и сортируем их по уникальным уровням Y
+    const distinctY = Array.from(new Set(beads.filter(b => b.type === 'NODE').map(n => Math.round(n.y))))
+      .sort((a, b) => a - b);
+    
+    // 2. Нам нужен второй уровень Y (тот, что "утоплен" под первый ряд)
+    const targetY = distinctY[1]; 
+
+    if (targetY === undefined) return [];
+
+    // 3. Берем все ноды на этом уровне Y — они и будут центрами колонок
+    return beads
+      .filter(b => b.type === 'NODE' && Math.abs(Math.round(b.y) - targetY) < 1)
+      .sort((a, b) => a.x - b.x);
+  }, [beads]);
+
+  // Смещение для текста
+  const axisMargin = 60;
+  
+  // X-координата для цифр рядов (слева от сетки)
   const baselineX = useMemo(() => 
-    yAxesNodes.length > 0 ? Math.min(...yAxesNodes.map(n => n.x)) - 40 : 20, 
-  [yAxesNodes]);
+    (rowAxesNodes.length > 0 ? Math.min(...rowAxesNodes.map(n => n.x)) : 0) - axisMargin, 
+  [rowAxesNodes]);
+
+  // Y-координата для цифр колонок (сверху от сетки)
+  const baselineY = useMemo(() => {
+    const minY = Math.min(...beads.filter(b => b.type === 'NODE').map(n => n.y));
+    return minY - axisMargin;
+  }, [beads]);
 
   return (
     <main 
@@ -76,28 +111,30 @@ export const CanvasView = ({
             width={dim.w}
             height={dim.h}
             viewBox={`0 0 ${dim.w} ${dim.h}`}
-            aria-label="Silyanka Design Canvas"
             className="canvas__svg-content"
           >
             <g className="canvas__ruler-group" aria-hidden="true">
-              {xAxesNodes.map((node, i) => (
+              {/* Ряды (Слева) */}
+              {rowAxesNodes.map((node, i) => (
                 <text
-                  key={`idx-x-${node.id}`}
-                  x={node.x}
-                  y={baselineY}
-                  textAnchor="middle"
+                  key={`idx-row-${node.id}`}
+                  x={baselineX}
+                  y={node.y}
+                  dominantBaseline="middle"
+                  textAnchor="end"
                   className="canvas__axis-text"
                 >
                   {i + 1}
                 </text>
               ))}
-              {yAxesNodes.map((node, i) => (
+
+              {/* Колонки (Сверху): теперь нумеруем только "утопленные" ноды */}
+              {colAxesNodes.map((node, i) => (
                 <text
-                  key={`idx-y-${node.id}`}
-                  x={baselineX}
-                  y={node.y}
-                  dominantBaseline="middle"
-                  textAnchor="end"
+                  key={`idx-col-${node.id}`}
+                  x={node.x}
+                  y={baselineY}
+                  textAnchor="middle"
                   className="canvas__axis-text"
                 >
                   {i + 1}
