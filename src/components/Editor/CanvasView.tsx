@@ -1,3 +1,4 @@
+/* src/components/Editor/CanvasView.tsx */
 import { useMemo } from 'react';
 import { Bead } from '../../types/bead';
 import { BeadView } from '../BeadView';
@@ -44,6 +45,24 @@ export const CanvasView = ({
     return Array.from(stats.entries());
   }, [beads, designMap]);
 
+  // Фильтрация узлов для осей координат
+  const xAxesNodes = useMemo(() => 
+    beads.filter(b => b.type === 'NODE' && b.logicalIndex.row === 0), 
+  [beads]);
+
+  const yAxesNodes = useMemo(() => 
+    beads.filter(b => b.type === 'NODE' && b.logicalIndex.col === 0), 
+  [beads]);
+
+  // Вычисление фиксированных базовых линий для выравнивания "в одну линию"
+  const baselineY = useMemo(() => 
+    xAxesNodes.length > 0 ? Math.min(...xAxesNodes.map(n => n.y)) - 30 : 20, 
+  [xAxesNodes]);
+
+  const baselineX = useMemo(() => 
+    yAxesNodes.length > 0 ? Math.min(...yAxesNodes.map(n => n.x)) - 35 : 20, 
+  [yAxesNodes]);
+
   return (
     <main 
       className="editor__viewport"
@@ -60,8 +79,39 @@ export const CanvasView = ({
               height={dim.h}
               viewBox={`0 0 ${dim.w} ${dim.h}`}
               aria-label="Silyanka Design Canvas"
-              style={{ display: 'block' }}
+              className="canvas__svg-content"
             >
+              {/* Горизонтальные индексы (Колонки) - Выровнены по baselineY */}
+              <g className="canvas__ruler-group" aria-hidden="true">
+                {xAxesNodes.map((node, i) => (
+                  <text
+                    key={`idx-x-${node.id}`}
+                    x={node.x}
+                    y={baselineY}
+                    textAnchor="middle"
+                    className="canvas__axis-text"
+                  >
+                    {i + 1}
+                  </text>
+                ))}
+              </g>
+
+              {/* Вертикальные индексы (Ряды) - Выровнены по baselineX */}
+              <g className="canvas__ruler-group" aria-hidden="true">
+                {yAxesNodes.map((node, i) => (
+                  <text
+                    key={`idx-y-${node.id}`}
+                    x={baselineX}
+                    y={node.y}
+                    dominantBaseline="middle"
+                    textAnchor="end"
+                    className="canvas__axis-text"
+                  >
+                    {i + 1}
+                  </text>
+                ))}
+              </g>
+
               {beads.map((bead) => (
                 <BeadView
                   key={bead.id}
