@@ -11,6 +11,7 @@ interface CanvasViewProps {
   paintBead: (id: string) => void;
   startDrawing: () => void;
   stopDrawing: () => void;
+  zoom: number;
 }
 
 export const CanvasView = ({
@@ -20,13 +21,14 @@ export const CanvasView = ({
   paintBead,
   startDrawing,
   stopDrawing,
+  zoom
 }: CanvasViewProps) => {
   
   const dim = useMemo(() => {
     if (beads.length === 0) return { w: 100, h: 100 };
     return {
-      w: Math.max(...beads.map(b => b.x)) + 60,
-      h: Math.max(...beads.map(b => b.y)) + 60
+      w: Math.max(...beads.map(b => b.x)) + 80,
+      h: Math.max(...beads.map(b => b.y)) + 80
     };
   }, [beads]);
 
@@ -50,11 +52,11 @@ export const CanvasView = ({
   [beads]);
 
   const baselineY = useMemo(() => 
-    xAxesNodes.length > 0 ? Math.min(...xAxesNodes.map(n => n.y)) - 30 : 20, 
+    xAxesNodes.length > 0 ? Math.min(...xAxesNodes.map(n => n.y)) - 35 : 20, 
   [xAxesNodes]);
 
   const baselineX = useMemo(() => 
-    yAxesNodes.length > 0 ? Math.min(...yAxesNodes.map(n => n.x)) - 35 : 20, 
+    yAxesNodes.length > 0 ? Math.min(...yAxesNodes.map(n => n.x)) - 40 : 20, 
   [yAxesNodes]);
 
   return (
@@ -66,7 +68,10 @@ export const CanvasView = ({
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
-        <div className="canvas__svg">
+        <div 
+          className="canvas__svg" 
+          style={{ '--canvas-zoom': zoom } as React.CSSProperties}
+        >
           <svg
             width={dim.w}
             height={dim.h}
@@ -86,9 +91,6 @@ export const CanvasView = ({
                   {i + 1}
                 </text>
               ))}
-            </g>
-
-            <g className="canvas__ruler-group" aria-hidden="true">
               {yAxesNodes.map((node, i) => (
                 <text
                   key={`idx-y-${node.id}`}
@@ -123,7 +125,7 @@ export const CanvasView = ({
       </aside>
 
       <aside className="stats stats--right">
-        <ul className="flex gap-3 list-none p-0 m-0">
+        <ul className="stats__list">
           {colorStats.map(([color, count]) => (
             <li key={color} className="stats__color-badge">
               <span className="stats__indicator" style={{ backgroundColor: color }} />

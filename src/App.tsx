@@ -14,17 +14,24 @@ function App() {
     spacing: 65, 
     beadsInSpan: 3 
   });
+  
+  // Состояние масштаба (1 = 100%)
+  const [zoom, setZoom] = useState(1);
 
   const beads = useGrid(gridSize);
   const drawingControls = useDrawing(PALETTE[0]);
 
-  // Функции изменения размера с защитой (минимум 1)
   const updateWidth = (delta: number) => {
     setGridSize(prev => ({ ...prev, width: Math.max(1, prev.width + delta) }));
   };
   
   const updateHeight = (delta: number) => {
     setGridSize(prev => ({ ...prev, height: Math.max(1, prev.height + delta) }));
+  };
+
+  // Функции управления зумом
+  const updateZoom = (delta: number) => {
+    setZoom(prev => Math.min(3, Math.max(0.25, prev + delta)));
   };
 
   return (
@@ -37,10 +44,14 @@ function App() {
         gridHeight={gridSize.height}
         onWidthChange={updateWidth}
         onHeightChange={updateHeight}
+        zoom={zoom}
+        onZoomChange={updateZoom}
+        onZoomReset={() => setZoom(1)}
       />
 
       <CanvasView 
         beads={beads} 
+        zoom={zoom}
         {...drawingControls}
       />
     </main>

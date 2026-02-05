@@ -1,65 +1,62 @@
 /* src/components/Editor/CanvasView.css */
 @import "tailwindcss";
 
-/* --- Block: Editor (Layout) --- */
 .editor__viewport {
   position: fixed;
   top: var(--palette-height);
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(100vh - var(--palette-height));
   overflow: hidden; 
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   background-color: #020617;
 }
 
-/* --- Block: Canvas --- */
 .canvas {
   position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  gap: 24px;
-  margin-top: 70px;
-  margin-left: 50px;
-  user-select: none;
+  display: flex;
+  padding: 100px;
   flex-shrink: 0;
 }
 
-/* Изменено: Контейнер для SVG теперь управляет внутренним скроллом */
+/* ФИКСИРОВАННОЕ ПОЛЕ */
 .canvas__svg {
   display: block;
-  background-color: var(--color-canvas);
+  background-color: #0f172a;
   border-radius: 24px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  width: 1200px;
-  height: 600px;
-  overflow: auto;
+  
+  /* Возвращаем фиксированные размеры, чтобы рамка не двигалась */
+  width: 1200px; 
+  height: 650px;
+  
+  overflow: auto; /* Скролл появляется внутри, если контент больше 1200x650 */
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: #334155 rgba(0, 0, 0, 0.2);
+  padding: 20px;
 }
 
-/* Элемент: Содержимое SVG. Используем overflow: visible для отображения индексов вне вьюбокса */
 .canvas__svg-content {
   display: block;
   overflow: visible;
+  transform: scale(var(--canvas-zoom, 1));
+  transform-origin: top left;
+  transition: transform 0.1s ease-out;
 }
 
-/* Элемент: Текстовые индексы осей внутри SVG */
 .canvas__axis-text {
-  fill: #64748b; /* slate-500 */
+  fill: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 13px;
+  font-size: 20px;
   font-weight: 600;
   pointer-events: none;
-  user-select: none;
 }
 
-/* --- Block: Stats (Панели статистики) --- */
+/* Stats */
 .stats {
   position: fixed;
   bottom: 24px;
@@ -71,37 +68,14 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
-.stats--left {
-  left: 24px;
-}
+.stats--left { left: 24px; }
+.stats--right { right: 24px; }
+.stats__item { display: flex; flex-direction: column; }
+.stats__label { font-size: 9px; color: #64748b; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
+.stats__value { color: #e2e8f0; font-family: monospace; font-size: 20px; }
 
-.stats--right {
-  right: 24px;
-}
-
-.stats__item {
-  display: flex;
-  flex-direction: column;
-}
-
-.stats__label {
-  font-size: 9px;
-  color: #64748b;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.stats__value {
-  color: #e2e8f0;
-  font-family: monospace;
-  font-size: 20px;
-}
-
-/* Элемент: Цветовой индикатор в статистике */
 .stats__color-badge {
   display: flex;
   align-items: center;
@@ -112,35 +86,10 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.stats__indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.stats__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.stats__indicator { width: 12px; height: 12px; border-radius: 50%; }
+.stats__list { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 8px; }
 
 /* Webkit Scrollbar */
-.canvas__svg::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.canvas__svg::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 10px;
-  margin: 10px;
-}
-
-.canvas__svg::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-  border: 2px solid #1e293b;
-}
+.canvas__svg::-webkit-scrollbar { width: 8px; height: 8px; }
+.canvas__svg::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 10px; }
+.canvas__svg::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }

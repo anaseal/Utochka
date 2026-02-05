@@ -9,6 +9,9 @@ interface HeaderProps {
   gridHeight: number;
   onWidthChange: (delta: number) => void;
   onHeightChange: (delta: number) => void;
+  zoom: number;
+  onZoomChange: (delta: number) => void;
+  onZoomReset: () => void;
 }
 
 export const Header = ({ 
@@ -18,12 +21,14 @@ export const Header = ({
   gridWidth,
   gridHeight,
   onWidthChange,
-  onHeightChange
+  onHeightChange,
+  zoom,
+  onZoomChange,
+  onZoomReset
 }: HeaderProps) => {
   return (
     <header className="header">
       <nav className="header__nav" aria-label="Editor Controls">
-        {/* Блок палитры */}
         <div className="palette" aria-label="Color Palette">
           {palette.map((color) => (
             <button
@@ -36,10 +41,8 @@ export const Header = ({
           ))}
         </div>
 
-        {/* Разделитель */}
         <div className="header__divider" />
 
-        {/* Блок управления сеткой */}
         <div className="grid-controls">
           <div className="grid-controls__group">
             <span className="grid-controls__label">Width</span>
@@ -56,6 +59,27 @@ export const Header = ({
               <button onClick={() => onHeightChange(-1)} className="grid-controls__btn">−</button>
               <span className="grid-controls__value">{gridHeight}</span>
               <button onClick={() => onHeightChange(1)} className="grid-controls__btn">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="header__divider" />
+
+        <div className="grid-controls">
+          <div className="grid-controls__group">
+            <span className="grid-controls__label">Zoom</span>
+            <div className="grid-controls__actions">
+              <button onClick={() => onZoomChange(-0.25)} className="grid-controls__btn">−</button>
+              <span className="grid-controls__value" style={{ minWidth: '45px' }}>
+                {Math.round(zoom * 100)}%
+              </span>
+              <button onClick={() => onZoomChange(0.25)} className="grid-controls__btn">+</button>
+              <button 
+                onClick={onZoomReset} 
+                className="grid-controls__btn grid-controls__btn--reset"
+              >
+                Reset
+              </button>
             </div>
           </div>
         </div>
