@@ -12,7 +12,8 @@ function App() {
     width: 10, 
     height: 6, 
     spacing: 65, 
-    beadsInSpan: 3 
+    topSpan: 3,    // Общее количество бусин в верхних гранях
+    bottomSpan: 3  // Общее количество бусин в нижних гранях
   });
   
   // Состояние масштаба (1 = 100%)
@@ -29,6 +30,21 @@ function App() {
     setGridSize(prev => ({ ...prev, height: Math.max(1, prev.height + delta) }));
   };
 
+  // Функции управления количеством бусин в гранях (от 3 до 10)
+  const updateTopSpan = (delta: number) => {
+    setGridSize(prev => ({ 
+      ...prev, 
+      topSpan: Math.max(3, Math.min(10, prev.topSpan + delta)) 
+    }));
+  };
+
+  const updateBottomSpan = (delta: number) => {
+    setGridSize(prev => ({ 
+      ...prev, 
+      bottomSpan: Math.max(3, Math.min(10, prev.bottomSpan + delta)) 
+    }));
+  };
+
   // Функции управления зумом
   const updateZoom = (delta: number) => {
     setZoom(prev => Math.min(3, Math.max(0.25, prev + delta)));
@@ -42,8 +58,12 @@ function App() {
         setActiveColor={drawingControls.setActiveColor}
         gridWidth={gridSize.width}
         gridHeight={gridSize.height}
+        topSpan={gridSize.topSpan}
+        bottomSpan={gridSize.bottomSpan}
         onWidthChange={updateWidth}
         onHeightChange={updateHeight}
+        onTopSpanChange={updateTopSpan}
+        onBottomSpanChange={updateBottomSpan}
         zoom={zoom}
         onZoomChange={updateZoom}
         onZoomReset={() => setZoom(1)}

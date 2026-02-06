@@ -1,3 +1,5 @@
+/* src/types/bead.ts */
+
 /**
  * Тип бисеринки: 
  * NODE — ключевая точка (узел), где пересекаются нити.
@@ -12,10 +14,21 @@ export interface Bead {
   id: string;
   x: number;
   y: number;
-  type: 'NODE' | 'SPAN';
-  color?: string; // Опционально, так как основной цвет теперь в стейте
+  type: BeadType;
+  color?: string;
   clusterId?: string;
   logicalIndex: { row: number; col: number };
+}
+
+/**
+ * Конфигурация сетки для генератора
+ */
+export interface GridConfig {
+  width: number;
+  height: number;
+  spacing: number;
+  topSpan: number;    // Количество бусин в верхних гранях ("плечи")
+  bottomSpan: number; // Количество бусин в нижних гранях ("ножки")
 }
 
 /**
