@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+.editor__viewport {
+  position: fixed;
+  top: var(--palette-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden; 
+  display: flex;
+  background-color: #020617;
+}
+
+.canvas {
+  position: relative;
+  display: flex;
+  padding-top: 50px;
+    padding-left: 50px;
+  flex-shrink: 0;
+}
+
+/* ФИКСИРОВАННОЕ ПОЛЕ */
+.canvas__svg {
+  display: block;
+  background-color: #0f172a;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  
+  /* Возвращаем фиксированные размеры */
+  width: 1200px; 
+  height: 650px;
+  
+  overflow: auto; /* Скролл появляется внутри, если контент больше 1200x650 */
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 rgba(0, 0, 0, 0.2);
+  padding: 30px;
+}
+
+.canvas__svg-content {
+  display: block;
+  overflow: visible;
+  transform: scale(var(--canvas-zoom, 1));
+  transform-origin: top left;
+  transition: transform 0.1s ease-out;
+}
+
+/* Webkit Scrollbar */
+.canvas__svg::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.canvas__svg::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 10px;
+}
+
+.canvas__svg::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}

@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
-import { CanvasView } from './components/Editor/CanvasView';
-import { Header } from './components/Editor/Header';
+import { CanvasView } from './components/Editor/CanvasView/CanvasView';
+import { Header } from './components/Editor/Header/Header';
 
 const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68'];
 
