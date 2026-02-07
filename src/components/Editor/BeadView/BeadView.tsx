@@ -9,7 +9,7 @@ interface BeadViewProps {
 
 export const BeadView = ({ bead, onMouseDown, onMouseEnter }: BeadViewProps) => {
   const isNode = bead.type === 'NODE';
-  const defaultColor = isNode ? '#22d3ee' : '#e879f9';
+  const defaultColor = isNode ? '#bcd4e6' : '#d6e2e9';
   const finalColor = bead.color || defaultColor;
 
   return (

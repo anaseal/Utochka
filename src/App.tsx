@@ -9,8 +9,8 @@ const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68
 
 function App() {
   const [gridSize, setGridSize] = useState({ 
-    width: 10, 
-    height: 6, 
+columns: 10, 
+    rows: 6, 
     spacing: 65, 
     topSpan: 3,    // Общее количество бусин в верхних гранях
     bottomSpan: 3  // Общее количество бусин в нижних гранях
@@ -23,11 +23,11 @@ function App() {
   const drawingControls = useDrawing(PALETTE[0]);
 
   const updateWidth = (delta: number) => {
-    setGridSize(prev => ({ ...prev, width: Math.max(1, prev.width + delta) }));
+    setGridSize(prev => ({ ...prev, width: Math.max(1, prev.columns + delta) }));
   };
   
   const updateHeight = (delta: number) => {
-    setGridSize(prev => ({ ...prev, height: Math.max(1, prev.height + delta) }));
+    setGridSize(prev => ({ ...prev, height: Math.max(1, prev.rows + delta) }));
   };
 
   // Функции управления количеством бусин в гранях (от 3 до 10)
@@ -56,8 +56,8 @@ function App() {
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
         setActiveColor={drawingControls.setActiveColor}
-        gridWidth={gridSize.width}
-        gridHeight={gridSize.height}
+        gridWidth={gridSize.columns}
+        gridHeight={gridSize.rows}
         topSpan={gridSize.topSpan}
         bottomSpan={gridSize.bottomSpan}
         onWidthChange={updateWidth}

@@ -15,5 +15,6 @@
 }
 
 .bead--type-node .bead__body {
-  filter: drop-shadow(0 0 4px var(--bead-color));
+    stroke: none;
+  filter: drop-shadow(0 0 1px var(--bead-color));
 }
