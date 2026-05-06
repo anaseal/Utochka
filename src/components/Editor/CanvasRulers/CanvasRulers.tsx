@@ -22,7 +22,7 @@ export const CanvasRulers = ({ beads }: CanvasRulersProps) => {
     );
 
     const sortedNodes = leftMostNodes.sort((a, b) => a.y - b.y);
-    const minX = Math.min(...sortedNodes.map(n => n.x));
+    const minX = sortedNodes.length > 0 ? Math.min(...sortedNodes.map(n => n.x)) : 0;
     
     return sortedNodes.filter(n => Math.abs(n.x - minX) < 1);
   }, [beads]);

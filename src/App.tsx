@@ -9,7 +9,6 @@ import { BEAD_THEME } from './config/theme';
 const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68'];
 
 function App() {
-  // Синхронизация с Single Source of Truth (BEAD_THEME)
   const [gridSize, setGridSize] = useState({ 
     width: BEAD_THEME.gridDefaults.initialWidth, 
     height: BEAD_THEME.gridDefaults.initialHeight, 
@@ -24,11 +23,11 @@ function App() {
   const drawingControls = useDrawing(PALETTE[0]);
 
   const updateWidth = (delta: number) => {
-    setGridSize(prev => ({ ...prev, width: Math.max(1, prev.columns + delta) }));
+    setGridSize(prev => ({ ...prev, width: Math.max(1, prev.width + delta) }));
   };
   
   const updateHeight = (delta: number) => {
-    setGridSize(prev => ({ ...prev, height: Math.max(1, prev.rows + delta) }));
+    setGridSize(prev => ({ ...prev, height: Math.max(1, prev.height + delta) }));
   };
 
   const updateTopSpan = (delta: number) => {
@@ -55,8 +54,8 @@ function App() {
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
         setActiveColor={drawingControls.setActiveColor}
-        gridWidth={gridSize.columns}
-        gridHeight={gridSize.rows}
+        gridWidth={gridSize.width} // Убеждаемся, что передаем width как gridWidth
+        gridHeight={gridSize.height} // Убеждаемся, что передаем height как gridHeight
         topSpan={gridSize.topSpan}
         bottomSpan={gridSize.bottomSpan}
         onWidthChange={updateWidth}
