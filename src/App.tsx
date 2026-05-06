@@ -4,19 +4,20 @@ import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
 import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { Header } from './components/Editor/Header/Header';
+import { BEAD_THEME } from './config/theme';
 
 const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68'];
 
 function App() {
+  // Синхронизация с Single Source of Truth (BEAD_THEME)
   const [gridSize, setGridSize] = useState({ 
-columns: 10, 
-    rows: 6, 
-    spacing: 65, 
-    topSpan: 3,    // Общее количество бусин в верхних гранях
-    bottomSpan: 3  // Общее количество бусин в нижних гранях
+    width: BEAD_THEME.gridDefaults.initialWidth, 
+    height: BEAD_THEME.gridDefaults.initialHeight, 
+    spacing: BEAD_THEME.gridDefaults.spacing, 
+    topSpan: BEAD_THEME.gridDefaults.beadsInSpan,
+    bottomSpan: BEAD_THEME.gridDefaults.beadsInSpan
   });
   
-  // Состояние масштаба (1 = 100%)
   const [zoom, setZoom] = useState(1);
 
   const beads = useGrid(gridSize);
@@ -30,7 +31,6 @@ columns: 10,
     setGridSize(prev => ({ ...prev, height: Math.max(1, prev.rows + delta) }));
   };
 
-  // Функции управления количеством бусин в гранях (от 3 до 10)
   const updateTopSpan = (delta: number) => {
     setGridSize(prev => ({ 
       ...prev, 
@@ -45,7 +45,6 @@ columns: 10,
     }));
   };
 
-  // Функции управления зумом
   const updateZoom = (delta: number) => {
     setZoom(prev => Math.min(3, Math.max(0.25, prev + delta)));
   };

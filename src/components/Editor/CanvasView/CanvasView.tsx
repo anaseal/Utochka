@@ -1,13 +1,15 @@
-import { useMemo } from 'react';
+/* FILE: src\components\Editor\CanvasView\CanvasView.tsx */
+import { useMemo, useCallback } from 'react';
 import { Bead } from '../../../types/bead';
 import { BeadView } from '../BeadView/BeadView';
 import { CanvasRulers } from '../CanvasRulers/CanvasRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
+import { BEAD_THEME } from '../../../config/theme';
 import './CanvasView.css';
 
 interface CanvasViewProps {
   beads: Bead[];
-  designMap: Map<string, string>;
+  designMap: Record<string, string>; // Обновленный тип
   isDrawing: boolean;
   paintBead: (id: string) => void;
   startDrawing: () => void;
@@ -25,11 +27,15 @@ export const CanvasView = ({
   zoom
 }: CanvasViewProps) => {
   
+  const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
+  const padding = 100;
+
+  // Расчет размеров на основе чистых координат + фиксированный паддинг
   const dim = useMemo(() => {
     if (beads.length === 0) return { w: 100, h: 100 };
     return {
-      w: Math.max(...beads.map(b => b.x)) + 150,
-      h: Math.max(...beads.map(b => b.y)) + 150
+      w: Math.max(...beads.map(b => b.x)) + padding * 2,
+      h: Math.max(...beads.map(b => b.y)) + padding * 2
     };
   }, [beads]);
 
@@ -37,12 +43,20 @@ export const CanvasView = ({
     const stats = new Map<string, number>();
     beads.forEach(bead => {
       const isNode = bead.type === 'NODE';
-      const defaultColor = isNode ? '#22d3ee' : '#e879f9';
-      const color = designMap.get(bead.id) || defaultColor;
+      const defaultColor = isNode ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault;
+      const color = designMap[bead.id] || defaultColor;
       stats.set(color, (stats.get(color) || 0) + 1);
     });
     return Array.from(stats.entries());
   }, [beads, designMap]);
+
+  const handleMouseEnter = useCallback((id: string) => {
+    if (isDrawing) paintBead(id);
+  }, [isDrawing, paintBead]);
+
+  const handleMouseDown = useCallback((id: string) => {
+    paintBead(id);
+  }, [paintBead]);
 
   return (
     <main 
@@ -63,16 +77,24 @@ export const CanvasView = ({
             viewBox={`0 0 ${dim.w} ${dim.h}`}
             className="canvas__svg-content"
           >
-            <CanvasRulers beads={beads} />
+            {/* Группа трансформации: отделяем визуальный отступ от логики координат */}
+            <g transform={`translate(${offsetX}, ${offsetY})`}>
+              <CanvasRulers beads={beads} />
 
-            {beads.map((bead) => (
-              <BeadView
-                key={bead.id}
-                bead={{ ...bead, color: designMap.get(bead.id) }}
-                onMouseEnter={() => isDrawing && paintBead(bead.id)}
-                onMouseDown={() => paintBead(bead.id)}
-              />
-            ))}
+              {beads.map((bead) => (
+                <BeadView
+                  key={bead.id}
+                  id={bead.id}
+                  x={bead.x}
+                  y={bead.y}
+                  type={bead.type}
+                  color={designMap[bead.id]}
+                  defaultColor={bead.type === 'NODE' ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseDown={handleMouseDown}
+                />
+              ))}
+            </g>
           </svg>
         </div>
       </section>

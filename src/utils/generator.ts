@@ -1,118 +1,100 @@
 /* src/utils/generator.ts */
-import { Bead, GridSize } from '../types/bead';
+import { Bead } from '../types/bead';
+import { BEAD_THEME } from '../config/theme';
 
-/**
- * Генерирует массив бисеринок на основе параметров сетки.
- * Расчет адаптирован так, чтобы ромбы можно было растягивать по горизонтали,
- * а бисер в пролетах распределялся равномерно.
- */
-export const generateBeads = (gridSize: GridSize): Bead[] => {
-  const { columns, rows, spacing, topSpan, bottomSpan } = gridSize;
+type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
-  // Чтобы сделать отступы между средними нодами шире, 
-  // мы разделяем единый spacing на горизонтальный и вертикальный шаги.
-  // horizontalStep отвечает за ширину ромба (расстояние между узлами в ряду).
-  // verticalStep отвечает за высоту (расстояние между рядами).
-  const horizontalStep = spacing; 
-  const verticalStep = spacing * 0.6; // Меньший коэффициент делает ромб более плоским и широким
-
-  const nodeGrid: Bead[][] = [];
+export const generateSilyankaGrid = (
+  width: number, 
+  height: number, 
+  spacing: number,
+  topSpan: number,
+  bottomSpan: number
+): Bead[] => {
   const beads: Bead[] = [];
+  const { 
+    verticalCompression, 
+    horizontalStepMultiplier 
+  } = BEAD_THEME.gridDefaults;
 
-  // 1. Создание сетки основных узлов (вершины ромбов)
-  for (let r = 0; r < rows; r++) {
-    const rowNodes: Bead[] = [];
+  const internalTop = Math.max(0, topSpan - 2);
+  const internalBottom = Math.max(0, bottomSpan - 2);
+
+  const topStepY = (internalTop + 1) * (spacing * verticalCompression); 
+  const bottomStepY = (internalBottom + 1) * (spacing * verticalCompression);
+  const stepX = spacing * horizontalStepMultiplier; 
+
+  const nodeGrid: SpanCoords[][] = [];
+  let currentY = 0; // Начинаем строго от 0
+
+  // 1. Создаем сетку узловых точек
+  for (let r = 0; r <= 2 * height; r++) {
+    const rowNodes: SpanCoords[] = [];
     const isShifted = r % 2 !== 0;
+    const currentOffsetX = isShifted ? stepX / 2 : 0;
 
-    for (let c = 0; c < columns; c++) {
-      // Смещение каждого второго ряда создает шахматный порядок (сетку)
-      const x = c * horizontalStep + (isShifted ? horizontalStep / 2 : 0);
-      const y = r * verticalStep;
-
-      const node: Bead = {
-        id: `node-${r}-${c}`,
-        x,
-        y,
-        type: 'NODE',
-        logicalIndex: { row: r, col: c }
-      };
-      rowNodes.push(node);
-      beads.push(node);
+    for (let c = 0; c < width; c++) {
+      rowNodes.push({ 
+        x: c * stepX + currentOffsetX, // Относительный X
+        y: currentY 
+      });
     }
     nodeGrid.push(rowNodes);
+    currentY += (r % 2 === 0) ? bottomStepY : topStepY;
   }
 
-  // 2. Заполнение верхнего края (горизонтальные перемычки)
-  for (let c = 0; c < columns - 1; c++) {
-    const startNode = nodeGrid[0][c];
-    const endNode = nodeGrid[0][c + 1];
-    const clusterId = `top-edge-${c}`;
-
-    for (let i = 1; i <= topSpan; i++) {
-      const t = i / (topSpan + 1);
+  const generateSpan = (
+    start: SpanCoords, 
+    end: SpanCoords, 
+    count: number, 
+    clusterId: string, 
+    r: number, 
+    c: number
+  ) => {
+    for (let i = 1; i <= count; i++) {
+      const t = i / (count + 1);
       beads.push({
-        id: `bead-${clusterId}-${i}`,
-        x: startNode.x + t * (endNode.x - startNode.x),
-        y: startNode.y,
+        id: `span-${clusterId}-bead-${i}`,
+        x: start.x + t * (end.x - start.x),
+        y: start.y + t * (end.y - start.y),
         type: 'SPAN',
         clusterId,
-        logicalIndex: { row: 0, col: c }
+        logicalIndex: { row: r, col: c }
       });
     }
-  }
+  };
 
-  // 3. Заполнение граней (тело сетки)
-  for (let r = 0; r < rows - 1; r++) {
-    // Выбираем количество бисера в зависимости от того, верхняя это грань ромба или нижняя
-    const currentSpan = (r % 2 === 0) ? topSpan : bottomSpan;
-
-    for (let c = 0; c < columns; c++) {
+  for (let r = 0; r < nodeGrid.length; r++) {
+    for (let c = 0; c < width; c++) {
       const currentNode = nodeGrid[r][c];
-      const isShifted = r % 2 !== 0;
-
-      // Каждый узел соединяется с узлами в следующем ряду (слева и справа внизу)
-      const neighborIndices = isShifted ? [c, c + 1] : [c - 1, c];
-
-      neighborIndices.forEach((nextCol, index) => {
-        const nextNode = nodeGrid[r + 1]?.[nextCol];
-        if (nextNode) {
-          const side = index === 0 ? 'left' : 'right';
-          const clusterId = `edge-${r}-${c}-${side}`;
-
-          // Равномерно распределяем бисер между узлами по прямой линии
-          for (let i = 1; i <= currentSpan; i++) {
-            const t = i / (currentSpan + 1);
-            beads.push({
-              id: `bead-${clusterId}-${i}`,
-              x: currentNode.x + t * (nextNode.x - currentNode.x),
-              y: currentNode.y + t * (nextNode.y - currentNode.y),
-              type: 'SPAN',
-              clusterId,
-              logicalIndex: { row: r, col: c }
-            });
-          }
-        }
-      });
-    }
-  }
-
-  // 4. Заполнение нижнего края
-  const lastRowIdx = rows - 1;
-  for (let c = 0; c < columns - 1; c++) {
-    const startNode = nodeGrid[lastRowIdx][c];
-    const endNode = nodeGrid[lastRowIdx][c + 1];
-    const clusterId = `bottom-edge-${c}`;
-
-    for (let i = 1; i <= bottomSpan; i++) {
-      const t = i / (bottomSpan + 1);
+      
       beads.push({
-        id: `bead-${clusterId}-${i}`,
-        x: startNode.x + t * (endNode.x - startNode.x),
-        y: startNode.y,
-        type: 'SPAN',
-        clusterId,
-        logicalIndex: { row: lastRowIdx, col: c }
+        id: `node-${r}-${c}`,
+        x: currentNode.x,
+        y: currentNode.y,
+        type: 'NODE',
+        clusterId: `node-${r}-${c}`,
+        logicalIndex: { row: r, col: c }
       });
+
+      if (r === 0 && c < width - 1) {
+        generateSpan(currentNode, nodeGrid[0][c + 1], internalTop, `edge-top-link-${c}`, r, c);
+      }
+
+      const nextRow = nodeGrid[r + 1];
+      if (nextRow) {
+        const isBottomTransition = r % 2 === 0;
+        const currentCount = isBottomTransition ? internalBottom : internalTop;
+        const neighborIndices = isBottomTransition ? [c - 1, c] : [c, c + 1];
+
+        neighborIndices.forEach((nIdx, sideIdx) => {
+          const nextNode = nextRow[nIdx];
+          if (nextNode) {
+            const side = sideIdx === 0 ? 'left' : 'right';
+            generateSpan(currentNode, nextNode, currentCount, `edge-${r}-${c}-${side}`, r, c);
+          }
+        });
+      }
     }
   }
 
