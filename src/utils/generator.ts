@@ -1,5 +1,8 @@
 /* src/utils/generator.ts */
 import { Bead } from '../types/bead';
+import { BEAD_THEME } from '../config/theme';
+
+type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
 export const generateSilyankaGrid = (
   width: number, 
@@ -8,86 +11,92 @@ export const generateSilyankaGrid = (
   topSpan: number,
   bottomSpan: number
 ): Bead[] => {
-  const nodes: Bead[] = [];
-  const spans: Bead[] = [];
-  const horizontalStep = spacing * 2; 
-  
-  const vScale = 0.6;
-  const getTopHeight = () => (spacing * vScale) * ((topSpan + 1) / 4);
-  const getBottomHeight = () => (spacing * vScale) * ((bottomSpan + 1) / 4);
+  const beads: Bead[] = [];
+  const { 
+    verticalCompression, 
+    horizontalStepMultiplier 
+  } = BEAD_THEME.gridDefaults;
 
-  const nodeLevels = height * 2 + 1;
-  const nodeGrid: Bead[][] = [];
+  const internalTop = Math.max(0, topSpan - 2);
+  const internalBottom = Math.max(0, bottomSpan - 2);
 
-  for (let r = 0; r < nodeLevels; r++) {
-    nodeGrid[r] = [];
-    const xOffset = (r % 2) * (horizontalStep / 2);
-    
-    let currentY = 50;
-    for (let i = 0; i < r; i++) {
-      currentY += (i % 2 === 0) ? getTopHeight() : getBottomHeight();
-    }
+  const topStepY = (internalTop + 1) * (spacing * verticalCompression); 
+  const bottomStepY = (internalBottom + 1) * (spacing * verticalCompression);
+  const stepX = spacing * horizontalStepMultiplier; 
+
+  const nodeGrid: SpanCoords[][] = [];
+  let currentY = 0; // Начинаем строго от 0
+
+  // 1. Создаем сетку узловых точек
+  for (let r = 0; r <= 2 * height; r++) {
+    const rowNodes: SpanCoords[] = [];
+    const isShifted = r % 2 !== 0;
+    const currentOffsetX = isShifted ? stepX / 2 : 0;
 
     for (let c = 0; c < width; c++) {
-      const node: Bead = {
-        id: `node-${r}-${c}`,
-        x: c * horizontalStep + xOffset + 50,
-        y: currentY,
-        type: 'NODE',
-        logicalIndex: { row: r, col: c }
-      };
-      nodeGrid[r][c] = node;
-      nodes.push(node);
+      rowNodes.push({ 
+        x: c * stepX + currentOffsetX, // Относительный X
+        y: currentY 
+      });
     }
+    nodeGrid.push(rowNodes);
+    currentY += (r % 2 === 0) ? bottomStepY : topStepY;
   }
 
-  // Верхний край (всегда использует topSpan)
-  for (let c = 0; c < width - 1; c++) {
-    const startNode = nodeGrid[0][c];
-    const endNode = nodeGrid[0][c + 1];
-    const clusterId = `top-edge-${c}`;
-    for (let i = 1; i <= topSpan; i++) {
-      const t = i / (topSpan + 1);
-      spans.push({
-        id: `bead-${clusterId}-${i}`,
-        x: startNode.x + t * (endNode.x - startNode.x),
-        y: startNode.y,
+  const generateSpan = (
+    start: SpanCoords, 
+    end: SpanCoords, 
+    count: number, 
+    clusterId: string, 
+    r: number, 
+    c: number
+  ) => {
+    for (let i = 1; i <= count; i++) {
+      const t = i / (count + 1);
+      beads.push({
+        id: `span-${clusterId}-bead-${i}`,
+        x: start.x + t * (end.x - start.x),
+        y: start.y + t * (end.y - start.y),
         type: 'SPAN',
         clusterId,
-        logicalIndex: { row: 0, col: c }
+        logicalIndex: { row: r, col: c }
       });
     }
-  }
+  };
 
-  // Грани
-  for (let r = 0; r < nodeLevels - 1; r++) {
-    const isBottom = (r % 2 !== 0);
-    const currentCount = isBottom ? bottomSpan : topSpan;
-
+  for (let r = 0; r < nodeGrid.length; r++) {
     for (let c = 0; c < width; c++) {
       const currentNode = nodeGrid[r][c];
-      const isShifted = r % 2 !== 0;
-      const neighborIndices = isShifted ? [c, c + 1] : [c - 1, c];
-
-      neighborIndices.forEach((nextCol, index) => {
-        const nextNode = nodeGrid[r + 1]?.[nextCol];
-        if (nextNode) {
-          const side = index === 0 ? 'left' : 'right';
-          const clusterId = `edge-${r}-${c}-${side}`;
-          for (let i = 1; i <= currentCount; i++) {
-            const t = i / (currentCount + 1);
-            spans.push({
-              id: `bead-${clusterId}-${i}`,
-              x: currentNode.x + t * (nextNode.x - currentNode.x),
-              y: currentNode.y + t * (nextNode.y - currentNode.y),
-              type: 'SPAN',
-              clusterId,
-              logicalIndex: { row: r, col: c }
-            });
-          }
-        }
+      
+      beads.push({
+        id: `node-${r}-${c}`,
+        x: currentNode.x,
+        y: currentNode.y,
+        type: 'NODE',
+        clusterId: `node-${r}-${c}`,
+        logicalIndex: { row: r, col: c }
       });
+
+      if (r === 0 && c < width - 1) {
+        generateSpan(currentNode, nodeGrid[0][c + 1], internalTop, `edge-top-link-${c}`, r, c);
+      }
+
+      const nextRow = nodeGrid[r + 1];
+      if (nextRow) {
+        const isBottomTransition = r % 2 === 0;
+        const currentCount = isBottomTransition ? internalBottom : internalTop;
+        const neighborIndices = isBottomTransition ? [c - 1, c] : [c, c + 1];
+
+        neighborIndices.forEach((nIdx, sideIdx) => {
+          const nextNode = nextRow[nIdx];
+          if (nextNode) {
+            const side = sideIdx === 0 ? 'left' : 'right';
+            generateSpan(currentNode, nextNode, currentCount, `edge-${r}-${c}-${side}`, r, c);
+          }
+        });
+      }
     }
   }
-  return [...spans, ...nodes];
+
+  return beads;
 };
