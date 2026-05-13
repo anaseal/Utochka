@@ -9,12 +9,16 @@ import './CanvasView.css';
 
 interface CanvasViewProps {
   beads: Bead[];
-  designMap: Record<string, string>; // Обновленный тип
+  designMap: Record<string, string>;
   isDrawing: boolean;
   paintBead: (id: string) => void;
   startDrawing: () => void;
   stopDrawing: () => void;
   zoom: number;
+  topSpan: number;
+  bottomSpan: number;
+  rowSpanOverrides: Record<number, number>;
+  onRowSpanChange: (spanRowIndex: number, delta: number) => void;
 }
 
 export const CanvasView = ({
@@ -24,7 +28,11 @@ export const CanvasView = ({
   paintBead,
   startDrawing,
   stopDrawing,
-  zoom
+  zoom,
+  topSpan,
+  bottomSpan,
+  rowSpanOverrides,
+  onRowSpanChange,
 }: CanvasViewProps) => {
   
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
@@ -81,7 +89,13 @@ export const CanvasView = ({
           >
             {/* Группа трансформации: отделяем визуальный отступ от логики координат */}
             <g transform={`translate(${offsetX}, ${offsetY})`}>
-              <CanvasRulers beads={beads} />
+              <CanvasRulers
+                beads={beads}
+                topSpan={topSpan}
+                bottomSpan={bottomSpan}
+                rowSpanOverrides={rowSpanOverrides}
+                onRowSpanChange={onRowSpanChange}
+              />
 
               {beads.map((bead) => (
                 <BeadView

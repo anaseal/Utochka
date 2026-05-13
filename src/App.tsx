@@ -21,8 +21,9 @@ function App() {
   });
   
   const [zoom, setZoom] = useState(1);
+  const [rowSpanOverrides, setRowSpanOverrides] = useState<Record<number, number>>({});
 
-  const beads = useGrid(gridSize);
+  const beads = useGrid(gridSize, rowSpanOverrides);
   const drawingControls = useDrawing(PALETTE[0]);
 
   useEffect(() => {
@@ -61,6 +62,15 @@ function App() {
     setZoom(prev => Math.min(3, Math.max(0.25, prev + delta)));
   };
 
+  const updateRowSpan = (spanRowIndex: number, delta: number) => {
+    setRowSpanOverrides(prev => {
+      const global = spanRowIndex % 2 === 0 ? gridSize.bottomSpan : gridSize.topSpan;
+      const current = prev[spanRowIndex] ?? global;
+      const next = Math.max(3, Math.min(10, current + delta));
+      return { ...prev, [spanRowIndex]: next };
+    });
+  };
+
   return (
     <main className="editor">
       <Header
@@ -87,9 +97,13 @@ function App() {
         canRedo={drawingControls.canRedo}
       />
 
-      <CanvasView 
-        beads={beads} 
+      <CanvasView
+        beads={beads}
         zoom={zoom}
+        topSpan={gridSize.topSpan}
+        bottomSpan={gridSize.bottomSpan}
+        rowSpanOverrides={rowSpanOverrides}
+        onRowSpanChange={updateRowSpan}
         {...drawingControls}
       />
     </main>

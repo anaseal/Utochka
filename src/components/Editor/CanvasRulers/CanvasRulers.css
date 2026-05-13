@@ -8,3 +8,65 @@
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Кнопки изменения бисеринок в рядах */
+.span-ctrl__btn {
+  cursor: pointer;
+}
+
+/* Ножки (r чётный, even→odd) — янтарный */
+.span-ctrl__btn--bottom {
+  fill: #451a03;
+  stroke: #92400e;
+  stroke-width: 1;
+}
+
+.span-ctrl__btn-group--bottom:hover .span-ctrl__btn--bottom {
+  fill: #78350f;
+  stroke: #d97706;
+}
+
+/* Плечи (r нечётный, odd→even) — синий */
+.span-ctrl__btn--top {
+  fill: #082f49;
+  stroke: #075985;
+  stroke-width: 1;
+}
+
+.span-ctrl__btn-group--top:hover .span-ctrl__btn--top {
+  fill: #0c4a6e;
+  stroke: #0284c7;
+}
+
+.span-ctrl__btn-text {
+  fill: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.span-ctrl__count {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.span-ctrl__count--bottom {
+  fill: #92400e;
+}
+
+.span-ctrl__count--top {
+  fill: #0369a1;
+}
+
+/* Ряд с индивидуальным значением — ярче */
+.span-ctrl__count--overridden {
+  fill: #f59e0b;
+}

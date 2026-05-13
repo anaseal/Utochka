@@ -28,7 +28,7 @@ export const BEAD_THEME = {
     // Новые константы для унификации логики
     verticalCompression: 0.25,
     horizontalStepMultiplier: 1.2,
-    offsetX: 50,
+    offsetX: 160,
     offsetY: 50,
   }
 };

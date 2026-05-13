@@ -5,27 +5,32 @@ import { BEAD_THEME } from '../config/theme';
 type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
 export const generateSilyankaGrid = (
-  width: number, 
-  height: number, 
+  width: number,
+  height: number,
   spacing: number,
   topSpan: number,
-  bottomSpan: number
+  bottomSpan: number,
+  rowSpanOverrides: Record<number, number> = {}
 ): Bead[] => {
   const beads: Bead[] = [];
-  const { 
-    verticalCompression, 
-    horizontalStepMultiplier 
+  const {
+    verticalCompression,
+    horizontalStepMultiplier
   } = BEAD_THEME.gridDefaults;
 
-  const internalTop = Math.max(0, topSpan - 2);
-  const internalBottom = Math.max(0, bottomSpan - 2);
+  const stepX = spacing * horizontalStepMultiplier;
+  const internalTop = Math.max(0, topSpan - 2); // для горизонтальных спанов верхнего ряда
 
-  const topStepY = (internalTop + 1) * (spacing * verticalCompression); 
-  const bottomStepY = (internalBottom + 1) * (spacing * verticalCompression);
-  const stepX = spacing * horizontalStepMultiplier; 
+  const getSpanCount = (r: number): number =>
+    rowSpanOverrides[r] !== undefined ? rowSpanOverrides[r] : (r % 2 === 0 ? bottomSpan : topSpan);
+
+  const getInternalCount = (r: number): number => Math.max(0, getSpanCount(r) - 2);
+
+  const getYStep = (r: number): number =>
+    (getInternalCount(r) + 1) * (spacing * verticalCompression);
 
   const nodeGrid: SpanCoords[][] = [];
-  let currentY = 0; // Начинаем строго от 0
+  let currentY = 0;
 
   // 1. Создаем сетку узловых точек
   for (let r = 0; r <= 2 * height; r++) {
@@ -34,13 +39,13 @@ export const generateSilyankaGrid = (
     const currentOffsetX = isShifted ? stepX / 2 : 0;
 
     for (let c = 0; c < width; c++) {
-      rowNodes.push({ 
-        x: c * stepX + currentOffsetX, // Относительный X
-        y: currentY 
+      rowNodes.push({
+        x: c * stepX + currentOffsetX,
+        y: currentY
       });
     }
     nodeGrid.push(rowNodes);
-    currentY += (r % 2 === 0) ? bottomStepY : topStepY;
+    currentY += getYStep(r);
   }
 
   const generateSpan = (
@@ -84,7 +89,7 @@ export const generateSilyankaGrid = (
       const nextRow = nodeGrid[r + 1];
       if (nextRow) {
         const isBottomTransition = r % 2 === 0;
-        const currentCount = isBottomTransition ? internalBottom : internalTop;
+        const currentCount = getInternalCount(r);
         const neighborIndices = isBottomTransition ? [c - 1, c] : [c, c + 1];
 
         neighborIndices.forEach((nIdx, sideIdx) => {
