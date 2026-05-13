@@ -18,8 +18,12 @@ export const generateSilyankaGrid = (
     horizontalStepMultiplier
   } = BEAD_THEME.gridDefaults;
 
-  const stepX = spacing * horizontalStepMultiplier;
   const internalTop = Math.max(0, topSpan - 2); // для горизонтальных спанов верхнего ряда
+  const minBeadPitch = BEAD_THEME.sizes.spanRadius * 2 + 2; // минимальный шаг без перекрытия ≈ 14px
+  const stepX = Math.max(
+    spacing * horizontalStepMultiplier,
+    (internalTop + 1) * minBeadPitch
+  );
 
   const getSpanCount = (r: number): number =>
     rowSpanOverrides[r] !== undefined ? rowSpanOverrides[r] : (r % 2 === 0 ? bottomSpan : topSpan);
