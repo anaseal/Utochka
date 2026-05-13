@@ -28,16 +28,18 @@ export const CanvasView = ({
 }: CanvasViewProps) => {
   
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
-  const padding = 100;
+  const { nodeRadius } = BEAD_THEME.sizes;
 
-  // Расчет размеров на основе чистых координат + фиксированный паддинг
   const dim = useMemo(() => {
     if (beads.length === 0) return { w: 100, h: 100 };
+    const maxX = Math.max(...beads.map(b => b.x));
+    const maxY = Math.max(...beads.map(b => b.y));
+    const margin = 30;
     return {
-      w: Math.max(...beads.map(b => b.x)) + padding * 2,
-      h: Math.max(...beads.map(b => b.y)) + padding * 2
+      w: maxX + offsetX + nodeRadius + margin,
+      h: maxY + offsetY + nodeRadius + margin,
     };
-  }, [beads]);
+  }, [beads, offsetX, offsetY, nodeRadius]);
 
   const colorStats = useMemo(() => {
     const stats = new Map<string, number>();

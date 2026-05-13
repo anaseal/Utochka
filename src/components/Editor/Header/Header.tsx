@@ -16,13 +16,18 @@ interface HeaderProps {
   zoom: number;
   onZoomChange: (delta: number) => void;
   onZoomReset: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
-export const Header = ({ 
+export const Header = ({
   palette, activeColor, setActiveColor,
   gridWidth, gridHeight, topSpan, bottomSpan,
   onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
-  zoom, onZoomChange, onZoomReset
+  zoom, onZoomChange, onZoomReset,
+  onUndo, onRedo, canUndo, canRedo
 }: HeaderProps) => {
   return (
     <header className="header">
@@ -90,6 +95,15 @@ export const Header = ({
               <span className="grid-controls__value">{Math.round(zoom * 100)}%</span>
               <button onClick={() => onZoomChange(0.1)} className="grid-controls__btn">+</button>
             </div>
+          </div>
+        </div>
+
+        <div className="header__divider" />
+
+        <div className="grid-controls">
+          <div className="grid-controls__actions">
+            <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
+            <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
           </div>
         </div>
       </nav>

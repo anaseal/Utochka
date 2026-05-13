@@ -7,7 +7,7 @@ interface CanvasRulersProps {
 }
 
 export const CanvasRulers = ({ beads }: CanvasRulersProps) => {
-  const axisMargin = 60;
+  const axisMargin = 40;
 
   const rowAxesNodes = useMemo(() => {
     const yGroups = new Map<number, Bead[]>();

@@ -1,5 +1,5 @@
 /* src/App.tsx */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
 import { CanvasView } from './components/Editor/CanvasView/CanvasView';
@@ -21,6 +21,16 @@ function App() {
 
   const beads = useGrid(gridSize);
   const drawingControls = useDrawing(PALETTE[0]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); drawingControls.undo(); }
+      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); drawingControls.redo(); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [drawingControls.undo, drawingControls.redo]);
 
   const updateWidth = (delta: number) => {
     setGridSize(prev => ({ ...prev, width: Math.max(1, prev.width + delta) }));
@@ -65,6 +75,10 @@ function App() {
         zoom={zoom}
         onZoomChange={updateZoom}
         onZoomReset={() => setZoom(1)}
+        onUndo={drawingControls.undo}
+        onRedo={drawingControls.redo}
+        canUndo={drawingControls.canUndo}
+        canRedo={drawingControls.canRedo}
       />
 
       <CanvasView 
