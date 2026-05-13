@@ -30,3 +30,4 @@ dist-ssr
 .env.*
 .eslintcache
 все подряд.txt
+.claude/

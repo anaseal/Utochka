@@ -2,8 +2,11 @@ import { useState, useCallback, useRef } from 'react';
 
 const MAX_HISTORY = 30;
 
+export type DrawingTool = 'pencil' | 'eraser';
+
 export const useDrawing = (initialColor: string) => {
   const [activeColor, setActiveColor] = useState(initialColor);
+  const [activeTool, setActiveTool] = useState<DrawingTool>('pencil');
   const [designMap, setDesignMap] = useState<Record<string, string>>({});
   const [isDrawing, setIsDrawing] = useState(false);
   const [past, setPast] = useState<Record<string, string>[]>([]);
@@ -28,11 +31,29 @@ export const useDrawing = (initialColor: string) => {
   }, [isDrawing, designMap]);
 
   const paintBead = useCallback((id: string) => {
-    setDesignMap((prev) => ({
-      ...prev,
-      [id]: activeColor
-    }));
-  }, [activeColor]);
+    if (activeTool === 'eraser') {
+      setDesignMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    } else {
+      setDesignMap((prev) => ({
+        ...prev,
+        [id]: activeColor
+      }));
+    }
+  }, [activeColor, activeTool]);
+
+  const clearAll = useCallback(() => {
+    if (Object.keys(designMap).length === 0) return;
+    setPast(prev => {
+      const next = [...prev, designMap];
+      return next.length > MAX_HISTORY ? next.slice(1) : next;
+    });
+    setFuture([]);
+    setDesignMap({});
+  }, [designMap]);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;
@@ -51,11 +72,14 @@ export const useDrawing = (initialColor: string) => {
   return {
     activeColor,
     setActiveColor,
+    activeTool,
+    setActiveTool,
     designMap,
     isDrawing,
     paintBead,
     startDrawing,
     stopDrawing,
+    clearAll,
     undo,
     redo,
     canUndo: past.length > 0,

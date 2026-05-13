@@ -60,12 +60,15 @@ function App() {
 
   return (
     <main className="editor">
-      <Header 
+      <Header
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
         setActiveColor={drawingControls.setActiveColor}
-        gridWidth={gridSize.width} // Убеждаемся, что передаем width как gridWidth
-        gridHeight={gridSize.height} // Убеждаемся, что передаем height как gridHeight
+        activeTool={drawingControls.activeTool}
+        setActiveTool={drawingControls.setActiveTool}
+        onClearAll={drawingControls.clearAll}
+        gridWidth={gridSize.width}
+        gridHeight={gridSize.height}
         topSpan={gridSize.topSpan}
         bottomSpan={gridSize.bottomSpan}
         onWidthChange={updateWidth}

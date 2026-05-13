@@ -1,10 +1,14 @@
 /* src/components/Editor/Header.tsx */
 import './Header.css';
+import { DrawingTool } from '../../../hooks/useDrawing';
 
 interface HeaderProps {
   palette: string[];
   activeColor: string;
   setActiveColor: (color: string) => void;
+  activeTool: DrawingTool;
+  setActiveTool: (tool: DrawingTool) => void;
+  onClearAll: () => void;
   gridWidth: number;
   gridHeight: number;
   topSpan: number;
@@ -23,7 +27,7 @@ interface HeaderProps {
 }
 
 export const Header = ({
-  palette, activeColor, setActiveColor,
+  palette, activeColor, setActiveColor, activeTool, setActiveTool, onClearAll,
   gridWidth, gridHeight, topSpan, bottomSpan,
   onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
   zoom, onZoomChange, onZoomReset,
@@ -36,12 +40,20 @@ export const Header = ({
           {palette.map((color) => (
             <button
               key={color}
-              onClick={() => setActiveColor(color)}
-              className={`palette__color ${activeColor === color ? 'palette__color--active' : ''}`}
+              onClick={() => { setActiveColor(color); setActiveTool('pencil'); }}
+              className={`palette__color ${activeTool === 'pencil' && activeColor === color ? 'palette__color--active' : ''}`}
               style={{ '--color-value': color } as React.CSSProperties}
             />
           ))}
         </div>
+
+        <button
+          onClick={() => setActiveTool(activeTool === 'eraser' ? 'pencil' : 'eraser')}
+          className={`tool-btn ${activeTool === 'eraser' ? 'tool-btn--active' : ''}`}
+          title="Eraser"
+        >
+          ⌫
+        </button>
 
         <div className="header__divider" />
 
@@ -104,6 +116,7 @@ export const Header = ({
           <div className="grid-controls__actions">
             <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
             <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
+            <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">CLR</button>
           </div>
         </div>
       </nav>
