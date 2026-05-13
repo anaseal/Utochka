@@ -6,7 +6,10 @@ import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { Header } from './components/Editor/Header/Header';
 import { BEAD_THEME } from './config/theme';
 
-const PALETTE = ['#22d3ee', '#e879f9', '#ffffff', '#ff4757', '#2ed573', '#eccc68'];
+const PALETTE = [
+  '#ff4757', '#ff9f43', '#ffd32a', '#2ed573',
+  '#22d3ee', '#1e90ff', '#e879f9', '#ffffff',
+];
 
 function App() {
   const [gridSize, setGridSize] = useState({ 
