@@ -99,6 +99,7 @@
 .grid-controls { display: flex; gap: 1rem; }
 .grid-controls__group { display: flex; align-items: center; gap: 0.5rem; }
 .grid-controls__label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
+.grid-controls__label-stacked { line-height: 1.05; text-align: right; display: inline-block; }
 .grid-controls__actions {
   display: flex;
   align-items: center;
@@ -131,6 +132,20 @@
   color: #64748b;
   border-left: 1px solid rgba(255,255,255,0.1);
 }
+.grid-controls__reset {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.grid-controls__reset:hover { color: #f1f5f9; background: rgba(255, 255, 255, 0.08); }
 .grid-controls__value {
   min-width: 30px;
   text-align: center;

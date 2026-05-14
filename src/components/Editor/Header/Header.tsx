@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, RotateCcw } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
@@ -24,6 +24,8 @@ interface HeaderProps {
   onHeightChange: (delta: number) => void;
   onTopSpanChange: (delta: number) => void;
   onBottomSpanChange: (delta: number) => void;
+  onTopEdgeReset: () => void;
+  onBottomEdgeReset: () => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
   onUndo: () => void;
@@ -38,11 +40,13 @@ const Stepper = ({
   label,
   value,
   onDelta,
+  onReset,
   variant = 'bar',
 }: {
-  label: string;
+  label: React.ReactNode;
   value: React.ReactNode;
   onDelta: (sign: -1 | 1) => void;
+  onReset?: () => void;
   variant?: StepperVariant;
 }) => {
   const wrapperClass = variant === 'overflow' ? 'header__overflow-row' : 'grid-controls__group';
@@ -55,6 +59,17 @@ const Stepper = ({
         <span className="grid-controls__value">{value}</span>
         <button onClick={() => onDelta(1)} className="grid-controls__btn">+</button>
       </div>
+      {onReset && (
+        <button
+          type="button"
+          onClick={onReset}
+          className="grid-controls__reset"
+          title="Reset to default"
+          aria-label="Reset to default"
+        >
+          <RotateCcw size={13} />
+        </button>
+      )}
     </div>
   );
 };
@@ -63,6 +78,7 @@ export const Header = ({
   palette, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
   gridWidth, gridHeight, topSpan, bottomSpan,
   onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
+  onTopEdgeReset, onBottomEdgeReset,
   zoom, onZoomChange,
   onUndo, onRedo, canUndo, canRedo
 }: HeaderProps) => {
@@ -203,8 +219,18 @@ export const Header = ({
         <div className="header__divider header__divider--collapsible" />
 
         <div className="grid-controls grid-controls--collapsible">
-          <Stepper label="Top Edge" value={topSpan} onDelta={onTopSpanChange} />
-          <Stepper label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} />
+          <Stepper
+            label={<span className="grid-controls__label-stacked">Top<br />Edge</span>}
+            value={topSpan}
+            onDelta={onTopSpanChange}
+            onReset={onTopEdgeReset}
+          />
+          <Stepper
+            label={<span className="grid-controls__label-stacked">Bottom<br />Edge</span>}
+            value={bottomSpan}
+            onDelta={onBottomSpanChange}
+            onReset={onBottomEdgeReset}
+          />
         </div>
 
         <div className="header__divider" />
@@ -243,8 +269,8 @@ export const Header = ({
             <div className="header__overflow-panel" role="menu">
               <Stepper variant="overflow" label="Width" value={gridWidth} onDelta={onWidthChange} />
               <Stepper variant="overflow" label="Height" value={gridHeight} onDelta={onHeightChange} />
-              <Stepper variant="overflow" label="Top Edge" value={topSpan} onDelta={onTopSpanChange} />
-              <Stepper variant="overflow" label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} />
+              <Stepper variant="overflow" label="Top Edge" value={topSpan} onDelta={onTopSpanChange} onReset={onTopEdgeReset} />
+              <Stepper variant="overflow" label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} onReset={onBottomEdgeReset} />
             </div>
           )}
         </div>

@@ -77,6 +77,23 @@ function App() {
     });
   };
 
+  const resetEdge = (edge: 'top' | 'bottom') => {
+    const isTop = edge === 'top';
+    setGridSize(prev => ({
+      ...prev,
+      [isTop ? 'topSpan' : 'bottomSpan']: BEAD_THEME.gridDefaults.beadsInSpan,
+    }));
+    setRowSpanOverrides(prev => {
+      const next: Record<number, number> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        const isEvenRow = Number(k) % 2 === 0;
+        const belongsToEdge = isTop ? !isEvenRow : isEvenRow;
+        if (!belongsToEdge) next[Number(k)] = v;
+      }
+      return next;
+    });
+  };
+
   return (
     <main className="editor">
       <Header
@@ -96,6 +113,8 @@ function App() {
         onHeightChange={(delta) => updateDimension('height', delta)}
         onTopSpanChange={updateTopSpan}
         onBottomSpanChange={updateBottomSpan}
+        onTopEdgeReset={() => resetEdge('top')}
+        onBottomEdgeReset={() => resetEdge('bottom')}
         zoom={zoom}
         onZoomChange={updateZoom}
         onUndo={drawingControls.undo}
