@@ -1,5 +1,6 @@
 /* src/components/Editor/Header.tsx */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
 import colorPickerIcon from "../../../assets/colorpicker.svg";
@@ -39,6 +40,31 @@ export const Header = ({
   const colorInputRef = useRef<HTMLInputElement>(null);
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
 
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
+  const overflowTriggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!overflowOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOverflowOpen(false);
+        overflowTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [overflowOpen]);
+
   const isCustomColor = !palette.includes(activeColor);
   const isCustomActive = activeTool === 'pencil' && isCustomColor;
 
@@ -70,16 +96,27 @@ export const Header = ({
 
           <div className="palette__divider" />
 
-          <button
-            className={`palette__color ${isCustomActive ? 'palette__color--active' : ''}`}
-            onClick={() => colorInputRef.current?.click()}
-            title="Custom color"
-            style={
-              isCustomActive
-                ? { background: activeColor } as React.CSSProperties
-                : { background: 'conic-gradient(from 0deg, #ff4757, #ff9f43, #ffd32a, #2ed573, #22d3ee, #1e90ff, #e879f9, #ff4757)' } as React.CSSProperties
-            }
-          />
+          <div className="palette__custom">
+            <button
+              className={`palette__color ${isCustomActive ? 'palette__color--active' : ''}`}
+              onClick={() => colorInputRef.current?.click()}
+              title="Custom color"
+              style={
+                isCustomActive
+                  ? { background: activeColor } as React.CSSProperties
+                  : { background: 'conic-gradient(from 0deg, #ff4757, #ff9f43, #ffd32a, #2ed573, #22d3ee, #1e90ff, #e879f9, #ff4757)' } as React.CSSProperties
+              }
+            />
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={safeHex}
+              onChange={e => { setActiveColor(e.target.value); setActiveTool('pencil'); }}
+              className="palette__custom-input"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          </div>
 
           {hasEyeDropper && (
             <button
@@ -87,7 +124,7 @@ export const Header = ({
               onClick={handleEyeDropper}
               title="Pick color from screen"
             >
-<img src={colorPickerIcon} alt="Color Picker" />
+              <img src={colorPickerIcon} alt="Color Picker" />
             </button>
           )}
         </div>
@@ -97,12 +134,12 @@ export const Header = ({
           className={`tool-btn ${activeTool === 'eraser' ? 'tool-btn--active' : ''}`}
           title="Eraser"
         >
-<img src={eraserIcon} alt="Eraser" />
+          <img src={eraserIcon} alt="Eraser" />
         </button>
 
-        <div className="header__divider" />
+        <div className="header__divider header__divider--collapsible" />
 
-        <div className="grid-controls">
+        <div className="grid-controls grid-controls--collapsible">
           <div className="grid-controls__group">
             <span className="grid-controls__label">Width</span>
             <div className="grid-controls__actions">
@@ -121,9 +158,9 @@ export const Header = ({
           </div>
         </div>
 
-        <div className="header__divider" />
+        <div className="header__divider header__divider--collapsible" />
 
-        <div className="grid-controls">
+        <div className="grid-controls grid-controls--collapsible">
           <div className="grid-controls__group">
             <span className="grid-controls__label">Top Edge</span>
             <div className="grid-controls__actions">
@@ -164,14 +201,57 @@ export const Header = ({
             <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">CLEAR</button>
           </div>
         </div>
+
+        <div className="header__overflow" ref={overflowRef}>
+          <button
+            ref={overflowTriggerRef}
+            type="button"
+            className="header__overflow-trigger"
+            aria-label="Grid settings"
+            aria-haspopup="menu"
+            aria-expanded={overflowOpen}
+            onClick={() => setOverflowOpen(o => !o)}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+          {overflowOpen && (
+            <div className="header__overflow-panel" role="menu">
+              <div className="header__overflow-row">
+                <span className="header__overflow-label">Width</span>
+                <div className="grid-controls__actions">
+                  <button className="grid-controls__btn" onClick={() => onWidthChange(-1)}>−</button>
+                  <span className="grid-controls__value">{gridWidth}</span>
+                  <button className="grid-controls__btn" onClick={() => onWidthChange(1)}>+</button>
+                </div>
+              </div>
+              <div className="header__overflow-row">
+                <span className="header__overflow-label">Height</span>
+                <div className="grid-controls__actions">
+                  <button className="grid-controls__btn" onClick={() => onHeightChange(-1)}>−</button>
+                  <span className="grid-controls__value">{gridHeight}</span>
+                  <button className="grid-controls__btn" onClick={() => onHeightChange(1)}>+</button>
+                </div>
+              </div>
+              <div className="header__overflow-row">
+                <span className="header__overflow-label">Top Edge</span>
+                <div className="grid-controls__actions">
+                  <button className="grid-controls__btn" onClick={() => onTopSpanChange(-1)}>−</button>
+                  <span className="grid-controls__value">{topSpan}</span>
+                  <button className="grid-controls__btn" onClick={() => onTopSpanChange(1)}>+</button>
+                </div>
+              </div>
+              <div className="header__overflow-row">
+                <span className="header__overflow-label">Bottom Edge</span>
+                <div className="grid-controls__actions">
+                  <button className="grid-controls__btn" onClick={() => onBottomSpanChange(-1)}>−</button>
+                  <span className="grid-controls__value">{bottomSpan}</span>
+                  <button className="grid-controls__btn" onClick={() => onBottomSpanChange(1)}>+</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </nav>
-      <input
-        ref={colorInputRef}
-        type="color"
-        value={safeHex}
-        onChange={e => { setActiveColor(e.target.value); setActiveTool('pencil'); }}
-        style={{ position: 'fixed', top: '-200px', left: '-200px', opacity: 0 }}
-      />
     </header>
   );
 };

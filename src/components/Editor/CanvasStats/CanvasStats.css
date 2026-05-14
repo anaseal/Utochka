@@ -1,6 +1,8 @@
 .stats {
   position: fixed;
-  bottom: 24px;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   background-color: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -9,19 +11,18 @@
   z-index: 50;
   display: flex;
   align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
 }
 
-.stats--left {
-  left: 24px;
-}
-
-.stats--right {
-  right: 24px;
-}
-
-.stats__item {
+.stats__total {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .stats__label {
@@ -30,12 +31,24 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  line-height: 1;
+  margin: 0;
 }
 
 .stats__value {
   color: #e2e8f0;
   font-family: monospace;
   font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
+}
+
+.stats__divider {
+  align-self: stretch;
+  width: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .stats__list {
@@ -43,8 +56,9 @@
   margin: 0;
   padding: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .stats__color-badge {
@@ -61,4 +75,85 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stats__count {
+  color: #e2e8f0;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Tablet: compact spacing, allow color badges to wrap into multiple rows */
+@media (max-width: 1023.98px) {
+  .stats {
+    bottom: 12px;
+    padding: 8px 12px;
+    gap: 10px;
+  }
+
+  .stats__value {
+    font-size: 12px;
+  }
+
+  .stats__list {
+    gap: 4px 5px;
+    max-width: min(60vw, 360px);
+  }
+
+  .stats__color-badge {
+    padding: 3px 6px;
+    gap: 5px;
+    min-width: 44px;
+  }
+
+  .stats__indicator {
+    width: 10px;
+    height: 10px;
+  }
+
+  .stats__count {
+    font-size: 12px;
+  }
+}
+
+/* Mobile: tighter padding, smaller text, badges wrap freely */
+@media (max-width: 639.98px) {
+  .stats {
+    bottom: 8px;
+    padding: 6px 10px;
+    gap: 8px;
+    border-radius: 10px;
+  }
+
+  .stats__label {
+    font-size: 7px;
+    letter-spacing: 0.05em;
+  }
+
+  .stats__value {
+    font-size: 14px;
+  }
+
+  .stats__list {
+    gap: 3px 4px;
+    max-width: 65vw;
+  }
+
+  .stats__color-badge {
+    padding: 2px 5px;
+    gap: 4px;
+    min-width: 38px;
+    border-radius: 4px;
+  }
+
+  .stats__indicator {
+    width: 8px;
+    height: 8px;
+  }
+
+  .stats__count {
+    font-size: 11px;
+  }
 }

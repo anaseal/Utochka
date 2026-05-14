@@ -6,7 +6,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  overflow: hidden; 
+  overflow: hidden;
   display: flex;
   background-color: #020617;
 }
@@ -15,23 +15,25 @@
   position: relative;
   display: flex;
   padding-top: 50px;
-    padding-left: 50px;
+  padding-left: 50px;
   flex-shrink: 0;
 }
 
-/* Р¤РРљРЎРР РћР’РђРќРќРћР• РџРћР›Р• */
+/* Канвас: визуальное окно фиксированного размера со скроллом внутри, если SVG больше */
 .canvas__svg {
   display: block;
   background-color: #0f172a;
   border-radius: 24px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  
-  /* Р’РѕР·РІСЂР°С‰Р°РµРј С„РёРєСЃРёСЂРѕРІР°РЅРЅС‹Рµ СЂР°Р·РјРµСЂС‹ */
-  width: 1200px; 
-  height: 650px;
-  
-  overflow: auto; /* РЎРєСЂРѕР»Р» РїРѕСЏРІР»СЏРµС‚СЃСЏ РІРЅСѓС‚СЂРё, РµСЃР»Рё РєРѕРЅС‚РµРЅС‚ Р±РѕР»СЊС€Рµ 1200x650 */
+
+  /* Адаптивный размер: до 1200x650, но сжимается чтобы влезать в viewport
+     (учитываем padding-left 50px у .canvas + правый отступ ~30px,
+     и сверху var(--palette-height) + padding-top 50px + место под .stats снизу) */
+  width: min(1200px, calc(100vw - 80px));
+  height: min(650px, calc(100vh - var(--palette-height) - 140px));
+
+  overflow: auto;
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: #334155 rgba(0, 0, 0, 0.2);
@@ -60,4 +62,18 @@
 .canvas__svg::-webkit-scrollbar-thumb {
   background: #334155;
   border-radius: 10px;
+}
+
+/* Tablet horizontal (768–1024px): сжатые отступы, edge-swipe safe */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .canvas {
+    padding-top: 24px;
+    padding-left: 36px;
+  }
+  .canvas__svg {
+    width: min(1200px, calc(100vw - 60px));
+    height: min(650px, calc(100vh - var(--palette-height) - 110px));
+    padding: 20px;
+    border-radius: 18px;
+  }
 }
