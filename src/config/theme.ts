@@ -3,7 +3,7 @@ import { BeadType } from '../types/bead';
 export const BEAD_THEME = {
   // Геометрические параметры бисерин (используются в расчетах генератора)
   sizes: {
-    nodeRadius: 6.5,
+    nodeRadius: 6.3,
     spanRadius: 6,
     hitboxRadius: 11, // Расширенная область клика
   },
@@ -18,8 +18,8 @@ export const BEAD_THEME = {
     beadsInSpan: 3,
     initialWidth: 10,
     initialHeight: 4,
-    verticalCompression: 0.25,
-    horizontalStepMultiplier: 1.2,
+    verticalCompression: 0.2,
+    horizontalStepMultiplier: 0.8,
     offsetX: 160,
     offsetY: 50,
   },
