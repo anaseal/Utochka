@@ -1,10 +1,17 @@
 import { useState, useCallback, useRef } from 'react';
 import { BEAD_THEME } from '../config/theme';
+import { usePersistedState } from './usePersistedState';
 
 const MAX_HISTORY = 30;
 const RECENT_LIMIT = BEAD_THEME.ui.recentColorsLimit;
 const RECENT_STORAGE_KEY = 'silyanka:recentColors';
+const DESIGN_STORAGE_KEY = 'silyanka:designMap';
 const HEX_RE = /^#[0-9a-f]{6}$/i;
+
+const isDesignMap = (v: unknown): v is Record<string, string> => {
+  if (typeof v !== 'object' || v === null) return false;
+  return Object.values(v).every(c => typeof c === 'string');
+};
 
 export type DrawingTool = 'pencil' | 'eraser';
 
@@ -39,7 +46,9 @@ export const useDrawing = (initialColor: string, basePalette: readonly string[])
       return next;
     });
   }, [basePalette]);
-  const [designMap, setDesignMap] = useState<Record<string, string>>({});
+  const [designMap, setDesignMap] = usePersistedState<Record<string, string>>(
+    DESIGN_STORAGE_KEY, {}, isDesignMap,
+  );
   const [isDrawing, setIsDrawing] = useState(false);
   const [past, setPast] = useState<Record<string, string>[]>([]);
   const [future, setFuture] = useState<Record<string, string>[]>([]);

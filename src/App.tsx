@@ -1,25 +1,45 @@
 /* src/App.tsx */
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
+import { usePersistedState } from './hooks/usePersistedState';
 import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { Header } from './components/Editor/Header/Header';
 import { BEAD_THEME } from './config/theme';
+import { GridConfig } from './types/bead';
 import { clampSpan, resolveSpanCount } from './utils/spans';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
+const isGridConfig = (v: unknown): v is GridConfig =>
+  typeof v === 'object' && v !== null &&
+  typeof (v as GridConfig).width === 'number' &&
+  typeof (v as GridConfig).height === 'number' &&
+  typeof (v as GridConfig).spacing === 'number' &&
+  typeof (v as GridConfig).topSpan === 'number' &&
+  typeof (v as GridConfig).bottomSpan === 'number';
+
+const isZoom = (v: unknown): v is number =>
+  typeof v === 'number' && v >= 0.25 && v <= 3;
+
+const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
+  if (typeof v !== 'object' || v === null) return false;
+  return Object.values(v).every(n => typeof n === 'number');
+};
+
 function App() {
-  const [gridSize, setGridSize] = useState({ 
-    width: BEAD_THEME.gridDefaults.initialWidth, 
-    height: BEAD_THEME.gridDefaults.initialHeight, 
-    spacing: BEAD_THEME.gridDefaults.spacing, 
+  const [gridSize, setGridSize] = usePersistedState<GridConfig>('silyanka:gridSize', {
+    width: BEAD_THEME.gridDefaults.initialWidth,
+    height: BEAD_THEME.gridDefaults.initialHeight,
+    spacing: BEAD_THEME.gridDefaults.spacing,
     topSpan: BEAD_THEME.gridDefaults.beadsInSpan,
-    bottomSpan: BEAD_THEME.gridDefaults.beadsInSpan
-  });
-  
-  const [zoom, setZoom] = useState(1);
-  const [rowSpanOverrides, setRowSpanOverrides] = useState<Record<number, number>>({});
+    bottomSpan: BEAD_THEME.gridDefaults.beadsInSpan,
+  }, isGridConfig);
+
+  const [zoom, setZoom] = usePersistedState<number>('silyanka:zoom', 1, isZoom);
+  const [rowSpanOverrides, setRowSpanOverrides] = usePersistedState<Record<number, number>>(
+    'silyanka:rowSpanOverrides', {}, isRowSpanOverrides,
+  );
 
   const beads = useGrid(gridSize, rowSpanOverrides);
   const drawingControls = useDrawing(PALETTE[0], PALETTE);
