@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
+import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
 import colorPickerIcon from "../../../assets/colorpicker.svg";
@@ -13,6 +14,7 @@ interface HeaderProps {
   activeTool: DrawingTool;
   setActiveTool: (tool: DrawingTool) => void;
   recentColors: string[];
+  commitRecentColor: (color: string) => void;
   onClearAll: () => void;
   gridWidth: number;
   gridHeight: number;
@@ -58,14 +60,15 @@ const Stepper = ({
 };
 
 export const Header = ({
-  palette, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, onClearAll,
+  palette, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
   gridWidth, gridHeight, topSpan, bottomSpan,
   onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
   zoom, onZoomChange,
   onUndo, onRedo, canUndo, canRedo
 }: HeaderProps) => {
-  const colorInputRef = useRef<HTMLInputElement>(null);
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const customTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
@@ -93,20 +96,25 @@ export const Header = ({
   }, [overflowOpen]);
 
   const isCustomColor = !palette.includes(activeColor);
-  const isCustomActive = activeTool === 'pencil' && isCustomColor;
 
   const handleEyeDropper = async () => {
     try {
       const dropper = new (window as any).EyeDropper();
       const { sRGBHex } = await dropper.open();
       setActiveColor(sRGBHex);
+      commitRecentColor(sRGBHex);
       setActiveTool('pencil');
     } catch {
       // cancelled
     }
   };
 
-  const safeHex = /^#[0-9a-f]{6}$/i.test(activeColor) ? activeColor : '#ffffff';
+  const handlePickerConfirm = (color: string) => {
+    setActiveColor(color);
+    commitRecentColor(color);
+    setActiveTool('pencil');
+    setPickerOpen(false);
+  };
 
   return (
     <header className="header">
@@ -148,24 +156,22 @@ export const Header = ({
 
           <div className="palette__custom">
             <button
-              className={`palette__color ${isCustomActive ? 'palette__color--active' : ''}`}
-              onClick={() => colorInputRef.current?.click()}
+              ref={customTriggerRef}
+              className="palette__color palette__color--custom-trigger"
+              onClick={() => setPickerOpen(o => !o)}
               title="Custom color"
-              style={
-                isCustomActive
-                  ? { background: activeColor } as React.CSSProperties
-                  : { background: 'conic-gradient(from 0deg, #ff4757, #ff9f43, #ffd32a, #2ed573, #22d3ee, #1e90ff, #e879f9, #ff4757)' } as React.CSSProperties
-              }
+              aria-haspopup="dialog"
+              aria-expanded={pickerOpen}
+              style={{ background: 'conic-gradient(from 0deg, #ff4757, #ff9f43, #ffd32a, #2ed573, #22d3ee, #1e90ff, #e879f9, #ff4757)' }}
             />
-            <input
-              ref={colorInputRef}
-              type="color"
-              value={safeHex}
-              onChange={e => { setActiveColor(e.target.value); setActiveTool('pencil'); }}
-              className="palette__custom-input"
-              aria-hidden="true"
-              tabIndex={-1}
-            />
+            {pickerOpen && (
+              <ColorPicker
+                initialColor={isCustomColor ? activeColor : '#ffffff'}
+                onConfirm={handlePickerConfirm}
+                onClose={() => setPickerOpen(false)}
+                triggerRef={customTriggerRef}
+              />
+            )}
           </div>
 
           {hasEyeDropper && (

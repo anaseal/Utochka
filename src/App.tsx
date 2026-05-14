@@ -66,6 +66,7 @@ function App() {
         activeTool={drawingControls.activeTool}
         setActiveTool={drawingControls.setActiveTool}
         recentColors={drawingControls.recentColors}
+        commitRecentColor={drawingControls.commitRecentColor}
         onClearAll={drawingControls.clearAll}
         gridWidth={gridSize.width}
         gridHeight={gridSize.height}

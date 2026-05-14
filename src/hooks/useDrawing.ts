@@ -27,8 +27,13 @@ export const useDrawing = (initialColor: string, basePalette: readonly string[])
 
   const setActiveColor = useCallback((color: string) => {
     setActiveColorState(color);
+  }, []);
+
+  const commitRecentColor = useCallback((color: string) => {
+    if (!HEX_RE.test(color)) return;
     if (basePalette.includes(color)) return;
     setRecentColors(prev => {
+      if (prev[0] === color) return prev;
       const next = [color, ...prev.filter(c => c !== color)].slice(0, RECENT_LIMIT);
       try { localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(next)); } catch {}
       return next;
@@ -99,6 +104,7 @@ export const useDrawing = (initialColor: string, basePalette: readonly string[])
   return {
     activeColor,
     setActiveColor,
+    commitRecentColor,
     activeTool,
     setActiveTool,
     recentColors,
