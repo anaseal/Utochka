@@ -81,7 +81,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
 
   const spanRowControls = useMemo(() => {
     const rows = Array.from(rowYMap.keys()).sort((a, b) => a - b);
-    return rows.slice(0, -1).map(r => {
+    const controls = rows.slice(0, -1).map(r => {
       const y = rowYMap.get(r)!;
       const nextY = rowYMap.get(r + 1)!;
       const midY = (y + nextY) / 2;
@@ -90,6 +90,24 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
       const isOverridden = rowSpanOverrides[r] !== undefined;
       return { r, midY, count, isOverridden, isBottom };
     });
+
+    // Верхняя горизонтальная грань (r=-1) — отдельный override.
+    // Размещаем над r=0 на том же расстоянии, что и первый ромбовый контрол ниже,
+    // чтобы кнопки визуально не пересекались.
+    const firstRowY = rowYMap.get(0);
+    const secondRowY = rowYMap.get(1);
+    if (firstRowY !== undefined) {
+      const offset = secondRowY !== undefined ? (secondRowY - firstRowY) / 2 : 24;
+      controls.unshift({
+        r: -1,
+        midY: firstRowY - offset,
+        count: resolveSpanCount(-1, topSpan, bottomSpan, rowSpanOverrides),
+        isOverridden: rowSpanOverrides[-1] !== undefined,
+        isBottom: false,
+      });
+    }
+
+    return controls;
   }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan]);
 
   const ctrlCenterX = baselineX - 58;
