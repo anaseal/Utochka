@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Bead } from '../../../types/bead';
+import { resolveSpanCount } from '../../../utils/spans';
 import './CanvasRulers.css';
 
 interface CanvasRulersProps {
@@ -10,72 +11,86 @@ interface CanvasRulersProps {
   onRowSpanChange: (spanRowIndex: number, delta: number) => void;
 }
 
+const SpanCtrlButton = ({
+  cx,
+  midY,
+  type,
+  glyph,
+  onClick,
+}: {
+  cx: number;
+  midY: number;
+  type: 'top' | 'bottom';
+  glyph: '−' | '+';
+  onClick: () => void;
+}) => (
+  <g
+    className={`span-ctrl__btn-group span-ctrl__btn-group--${type}`}
+    onMouseDown={(e) => e.stopPropagation()}
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
+  >
+    <rect
+      x={cx - 8}
+      y={midY - 8}
+      width={16}
+      height={16}
+      rx={4}
+      className={`span-ctrl__btn span-ctrl__btn--${type}`}
+    />
+    <text
+      x={cx}
+      y={midY}
+      dominantBaseline="middle"
+      textAnchor="middle"
+      className="span-ctrl__btn-text"
+    >
+      {glyph}
+    </text>
+  </g>
+);
+
 export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange }: CanvasRulersProps) => {
   const axisMargin = 40;
 
-  // Только левые узлы чётных рядов — для лейблов
-  const rowAxesNodes = useMemo(() => {
-    const yGroups = new Map<number, Bead[]>();
-    beads.filter(b => b.type === 'NODE').forEach(node => {
-      const y = Math.round(node.y);
-      if (!yGroups.has(y)) yGroups.set(y, []);
-      yGroups.get(y)!.push(node);
-    });
+  const nodes = useMemo(() => beads.filter(b => b.type === 'NODE'), [beads]);
 
-    const leftMostNodes = Array.from(yGroups.values()).map(group =>
-      group.reduce((min, curr) => (curr.x < min.x ? curr : min), group[0])
-    );
+  const rowYMap = useMemo(() => {
+    const map = new Map<number, number>();
+    nodes.forEach(n => map.set(n.logicalIndex.row, n.y));
+    return map;
+  }, [nodes]);
 
-    const sortedNodes = leftMostNodes.sort((a, b) => a.y - b.y);
-    const minX = sortedNodes.length > 0 ? Math.min(...sortedNodes.map(n => n.x)) : 0;
+  const rowAxesNodes = useMemo(
+    () =>
+      nodes
+        .filter(n => n.logicalIndex.col === 0 && n.logicalIndex.row % 2 === 0)
+        .sort((a, b) => a.logicalIndex.row - b.logicalIndex.row),
+    [nodes]
+  );
 
-    return sortedNodes.filter(n => Math.abs(n.x - minX) < 1);
-  }, [beads]);
+  const colAxesNodes = useMemo(
+    () =>
+      nodes
+        .filter(n => n.logicalIndex.row === 1)
+        .sort((a, b) => a.logicalIndex.col - b.logicalIndex.col),
+    [nodes]
+  );
 
-  // Y-позиции ВСЕХ node-рядов (и чётных, и нечётных) — для позиционирования контролов
-  const allNodeRowYs = useMemo(() => {
-    const ySet = new Set<number>();
-    beads.filter(b => b.type === 'NODE').forEach(n => ySet.add(Math.round(n.y)));
-    return Array.from(ySet).sort((a, b) => a - b);
-  }, [beads]);
+  const baselineX = -axisMargin;
+  const baselineY = -axisMargin;
 
-  const colAxesNodes = useMemo(() => {
-    const distinctY = Array.from(new Set(beads.filter(b => b.type === 'NODE').map(n => Math.round(n.y))))
-      .sort((a, b) => a - b);
-
-    const targetY = distinctY[1];
-    if (targetY === undefined) return [];
-
-    return beads
-      .filter(b => b.type === 'NODE' && Math.abs(Math.round(b.y) - targetY) < 1)
-      .sort((a, b) => a.x - b.x);
-  }, [beads]);
-
-  const baselineX = useMemo(() =>
-    (rowAxesNodes.length > 0 ? Math.min(...rowAxesNodes.map(n => n.x)) : 0) - axisMargin,
-  [rowAxesNodes]);
-
-  const baselineY = useMemo(() => {
-    const nodes = beads.filter(b => b.type === 'NODE');
-    if (nodes.length === 0) return 0;
-    const minY = Math.min(...nodes.map(n => n.y));
-    return minY - axisMargin;
-  }, [beads]);
-
-  // Контролы для каждого span-ряда (между двумя consecutive node-рядами)
-  // r чётный = ножки (even→odd), r нечётный = плечи (odd→even)
   const spanRowControls = useMemo(() => {
-    return allNodeRowYs.slice(0, -1).map((y, r) => {
-      const nextY = allNodeRowYs[r + 1];
+    const rows = Array.from(rowYMap.keys()).sort((a, b) => a - b);
+    return rows.slice(0, -1).map(r => {
+      const y = rowYMap.get(r)!;
+      const nextY = rowYMap.get(r + 1)!;
       const midY = (y + nextY) / 2;
       const isBottom = r % 2 === 0;
-      const count = rowSpanOverrides[r] !== undefined
-        ? rowSpanOverrides[r]
-        : (isBottom ? bottomSpan : topSpan);
+      const count = resolveSpanCount(r, topSpan, bottomSpan, rowSpanOverrides);
       const isOverridden = rowSpanOverrides[r] !== undefined;
       return { r, midY, count, isOverridden, isBottom };
     });
-  }, [allNodeRowYs, rowSpanOverrides, topSpan, bottomSpan]);
+  }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan]);
 
   const ctrlCenterX = baselineX - 58;
 
@@ -110,30 +125,13 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
         const type = isBottom ? 'bottom' : 'top';
         return (
           <g key={`span-ctrl-${r}`}>
-            <g
-              className={`span-ctrl__btn-group span-ctrl__btn-group--${type}`}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onRowSpanChange(r, -1); }}
-            >
-              <rect
-                x={ctrlCenterX - 27}
-                y={midY - 8}
-                width={16}
-                height={16}
-                rx={4}
-                className={`span-ctrl__btn span-ctrl__btn--${type}`}
-              />
-              <text
-                x={ctrlCenterX - 19}
-                y={midY}
-                dominantBaseline="middle"
-                textAnchor="middle"
-                className="span-ctrl__btn-text"
-              >
-                −
-              </text>
-            </g>
-
+            <SpanCtrlButton
+              cx={ctrlCenterX - 19}
+              midY={midY}
+              type={type}
+              glyph="−"
+              onClick={() => onRowSpanChange(r, -1)}
+            />
             <text
               x={ctrlCenterX - 3}
               y={midY}
@@ -143,30 +141,13 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
             >
               {count}
             </text>
-
-            <g
-              className={`span-ctrl__btn-group span-ctrl__btn-group--${type}`}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onRowSpanChange(r, 1); }}
-            >
-              <rect
-                x={ctrlCenterX + 10}
-                y={midY - 8}
-                width={16}
-                height={16}
-                rx={4}
-                className={`span-ctrl__btn span-ctrl__btn--${type}`}
-              />
-              <text
-                x={ctrlCenterX + 18}
-                y={midY}
-                dominantBaseline="middle"
-                textAnchor="middle"
-                className="span-ctrl__btn-text"
-              >
-                +
-              </text>
-            </g>
+            <SpanCtrlButton
+              cx={ctrlCenterX + 18}
+              midY={midY}
+              type={type}
+              glyph="+"
+              onClick={() => onRowSpanChange(r, 1)}
+            />
           </g>
         );
       })}

@@ -5,6 +5,7 @@ import { useDrawing } from './hooks/useDrawing';
 import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { Header } from './components/Editor/Header/Header';
 import { BEAD_THEME } from './config/theme';
+import { clampSpan, resolveSpanCount } from './utils/spans';
 
 const PALETTE = [
   '#ff4757', '#ff9f43', '#ffd32a', '#2ed573',
@@ -36,26 +37,16 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [drawingControls.undo, drawingControls.redo]);
 
-  const updateWidth = (delta: number) => {
-    setGridSize(prev => ({ ...prev, width: Math.max(1, prev.width + delta) }));
-  };
-  
-  const updateHeight = (delta: number) => {
-    setGridSize(prev => ({ ...prev, height: Math.max(1, prev.height + delta) }));
+  const updateDimension = (field: 'width' | 'height', delta: number) => {
+    setGridSize(prev => ({ ...prev, [field]: Math.max(1, prev[field] + delta) }));
   };
 
   const updateTopSpan = (delta: number) => {
-    setGridSize(prev => ({ 
-      ...prev, 
-      topSpan: Math.max(3, Math.min(10, prev.topSpan + delta)) 
-    }));
+    setGridSize(prev => ({ ...prev, topSpan: clampSpan(prev.topSpan + delta) }));
   };
 
   const updateBottomSpan = (delta: number) => {
-    setGridSize(prev => ({ 
-      ...prev, 
-      bottomSpan: Math.max(3, Math.min(10, prev.bottomSpan + delta)) 
-    }));
+    setGridSize(prev => ({ ...prev, bottomSpan: clampSpan(prev.bottomSpan + delta) }));
   };
 
   const updateZoom = (delta: number) => {
@@ -64,10 +55,8 @@ function App() {
 
   const updateRowSpan = (spanRowIndex: number, delta: number) => {
     setRowSpanOverrides(prev => {
-      const global = spanRowIndex % 2 === 0 ? gridSize.bottomSpan : gridSize.topSpan;
-      const current = prev[spanRowIndex] ?? global;
-      const next = Math.max(3, Math.min(10, current + delta));
-      return { ...prev, [spanRowIndex]: next };
+      const current = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, prev);
+      return { ...prev, [spanRowIndex]: clampSpan(current + delta) };
     });
   };
 
@@ -84,13 +73,12 @@ function App() {
         gridHeight={gridSize.height}
         topSpan={gridSize.topSpan}
         bottomSpan={gridSize.bottomSpan}
-        onWidthChange={updateWidth}
-        onHeightChange={updateHeight}
+        onWidthChange={(delta) => updateDimension('width', delta)}
+        onHeightChange={(delta) => updateDimension('height', delta)}
         onTopSpanChange={updateTopSpan}
         onBottomSpanChange={updateBottomSpan}
         zoom={zoom}
         onZoomChange={updateZoom}
-        onZoomReset={() => setZoom(1)}
         onUndo={drawingControls.undo}
         onRedo={drawingControls.redo}
         canUndo={drawingControls.canUndo}

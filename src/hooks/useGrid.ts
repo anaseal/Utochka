@@ -1,12 +1,7 @@
-/* src/hooks/useGrid.ts */
 import { useMemo } from 'react';
 import { Bead, GridConfig } from '../types/bead';
 import { generateSilyankaGrid } from '../utils/generator';
 
-/**
- * Хук для получения массива бисерин.
- * Является оберткой над генератором для обеспечения мемоизации[cite: 1].
- */
 export const useGrid = (config: GridConfig, rowSpanOverrides: Record<number, number>): Bead[] => {
   return useMemo(() => {
     return generateSilyankaGrid(

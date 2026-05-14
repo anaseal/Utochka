@@ -14,6 +14,14 @@ export const useDrawing = (initialColor: string) => {
 
   const preStrokeRef = useRef<Record<string, string>>({});
 
+  const pushSnapshot = useCallback((snapshot: Record<string, string>) => {
+    setPast(prev => {
+      const next = [...prev, snapshot];
+      return next.length > MAX_HISTORY ? next.slice(1) : next;
+    });
+    setFuture([]);
+  }, []);
+
   const startDrawing = useCallback(() => {
     preStrokeRef.current = designMap;
     setIsDrawing(true);
@@ -21,14 +29,10 @@ export const useDrawing = (initialColor: string) => {
 
   const stopDrawing = useCallback(() => {
     if (isDrawing && designMap !== preStrokeRef.current) {
-      setPast(prev => {
-        const next = [...prev, preStrokeRef.current];
-        return next.length > MAX_HISTORY ? next.slice(1) : next;
-      });
-      setFuture([]);
+      pushSnapshot(preStrokeRef.current);
     }
     setIsDrawing(false);
-  }, [isDrawing, designMap]);
+  }, [isDrawing, designMap, pushSnapshot]);
 
   const paintBead = useCallback((id: string) => {
     if (activeTool === 'eraser') {
@@ -47,13 +51,9 @@ export const useDrawing = (initialColor: string) => {
 
   const clearAll = useCallback(() => {
     if (Object.keys(designMap).length === 0) return;
-    setPast(prev => {
-      const next = [...prev, designMap];
-      return next.length > MAX_HISTORY ? next.slice(1) : next;
-    });
-    setFuture([]);
+    pushSnapshot(designMap);
     setDesignMap({});
-  }, [designMap]);
+  }, [designMap, pushSnapshot]);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;

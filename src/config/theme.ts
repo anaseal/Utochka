@@ -1,8 +1,4 @@
-/**
- * ТЕМА И КОНФИГУРАЦИЯ СИСТЕМЫ
- * Здесь хранятся только те параметры, которые влияют на расчеты 
- * или требуются в JS/TS коде. Визуальное оформление вынесено в index.css.
- */
+import { BeadType } from '../types/bead';
 
 export const BEAD_THEME = {
   // Геометрические параметры бисерин (используются в расчетах генератора)
@@ -12,23 +8,27 @@ export const BEAD_THEME = {
     hitboxRadius: 11, // Расширенная область клика
   },
 
-  // Цвета по умолчанию
   colors: {
-    nodeDefault: '#a5bdcf', // Cyan-400
-    spanDefault: '#d6e2e9', // Fuchsia-400
-    background: '#1e293b',  // Slate-800
+    nodeDefault: '#a5bdcf',
+    spanDefault: '#d6e2e9',
   },
 
-  // Параметры сетки
   gridDefaults: {
     spacing: 65,
     beadsInSpan: 3,
     initialWidth: 10,
     initialHeight: 4,
-    // Новые константы для унификации логики
     verticalCompression: 0.25,
     horizontalStepMultiplier: 1.2,
     offsetX: 160,
     offsetY: 50,
-  }
+  },
+
+  constraints: {
+    minSpan: 3,
+    maxSpan: 10,
+  },
 };
+
+export const defaultColorFor = (type: BeadType): string =>
+  type === 'NODE' ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault;

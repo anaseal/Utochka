@@ -1,4 +1,3 @@
-/* src/components/Editor/Header.tsx */
 import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import './Header.css';
@@ -23,18 +22,44 @@ interface HeaderProps {
   onBottomSpanChange: (delta: number) => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
-  onZoomReset: () => void;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
 }
 
+type StepperVariant = 'bar' | 'overflow';
+
+const Stepper = ({
+  label,
+  value,
+  onDelta,
+  variant = 'bar',
+}: {
+  label: string;
+  value: React.ReactNode;
+  onDelta: (sign: -1 | 1) => void;
+  variant?: StepperVariant;
+}) => {
+  const wrapperClass = variant === 'overflow' ? 'header__overflow-row' : 'grid-controls__group';
+  const labelClass = variant === 'overflow' ? 'header__overflow-label' : 'grid-controls__label';
+  return (
+    <div className={wrapperClass}>
+      <span className={labelClass}>{label}</span>
+      <div className="grid-controls__actions">
+        <button onClick={() => onDelta(-1)} className="grid-controls__btn">−</button>
+        <span className="grid-controls__value">{value}</span>
+        <button onClick={() => onDelta(1)} className="grid-controls__btn">+</button>
+      </div>
+    </div>
+  );
+};
+
 export const Header = ({
   palette, activeColor, setActiveColor, activeTool, setActiveTool, onClearAll,
   gridWidth, gridHeight, topSpan, bottomSpan,
   onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
-  zoom, onZoomChange, onZoomReset,
+  zoom, onZoomChange,
   onUndo, onRedo, canUndo, canRedo
 }: HeaderProps) => {
   const colorInputRef = useRef<HTMLInputElement>(null);
@@ -140,56 +165,25 @@ export const Header = ({
         <div className="header__divider header__divider--collapsible" />
 
         <div className="grid-controls grid-controls--collapsible">
-          <div className="grid-controls__group">
-            <span className="grid-controls__label">Width</span>
-            <div className="grid-controls__actions">
-              <button onClick={() => onWidthChange(-1)} className="grid-controls__btn">−</button>
-              <span className="grid-controls__value">{gridWidth}</span>
-              <button onClick={() => onWidthChange(1)} className="grid-controls__btn">+</button>
-            </div>
-          </div>
-          <div className="grid-controls__group">
-            <span className="grid-controls__label">Height</span>
-            <div className="grid-controls__actions">
-              <button onClick={() => onHeightChange(-1)} className="grid-controls__btn">−</button>
-              <span className="grid-controls__value">{gridHeight}</span>
-              <button onClick={() => onHeightChange(1)} className="grid-controls__btn">+</button>
-            </div>
-          </div>
+          <Stepper label="Width" value={gridWidth} onDelta={onWidthChange} />
+          <Stepper label="Height" value={gridHeight} onDelta={onHeightChange} />
         </div>
 
         <div className="header__divider header__divider--collapsible" />
 
         <div className="grid-controls grid-controls--collapsible">
-          <div className="grid-controls__group">
-            <span className="grid-controls__label">Top Edge</span>
-            <div className="grid-controls__actions">
-              <button onClick={() => onTopSpanChange(-1)} className="grid-controls__btn">−</button>
-              <span className="grid-controls__value">{topSpan}</span>
-              <button onClick={() => onTopSpanChange(1)} className="grid-controls__btn">+</button>
-            </div>
-          </div>
-          <div className="grid-controls__group">
-            <span className="grid-controls__label">Bottom Edge</span>
-            <div className="grid-controls__actions">
-              <button onClick={() => onBottomSpanChange(-1)} className="grid-controls__btn">−</button>
-              <span className="grid-controls__value">{bottomSpan}</span>
-              <button onClick={() => onBottomSpanChange(1)} className="grid-controls__btn">+</button>
-            </div>
-          </div>
+          <Stepper label="Top Edge" value={topSpan} onDelta={onTopSpanChange} />
+          <Stepper label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} />
         </div>
 
         <div className="header__divider" />
 
         <div className="grid-controls">
-          <div className="grid-controls__group">
-            <span className="grid-controls__label">Zoom</span>
-            <div className="grid-controls__actions">
-              <button onClick={() => onZoomChange(-0.1)} className="grid-controls__btn">−</button>
-              <span className="grid-controls__value">{Math.round(zoom * 100)}%</span>
-              <button onClick={() => onZoomChange(0.1)} className="grid-controls__btn">+</button>
-            </div>
-          </div>
+          <Stepper
+            label="Zoom"
+            value={`${Math.round(zoom * 100)}%`}
+            onDelta={(s) => onZoomChange(s * 0.1)}
+          />
         </div>
 
         <div className="header__divider" />
@@ -216,38 +210,10 @@ export const Header = ({
           </button>
           {overflowOpen && (
             <div className="header__overflow-panel" role="menu">
-              <div className="header__overflow-row">
-                <span className="header__overflow-label">Width</span>
-                <div className="grid-controls__actions">
-                  <button className="grid-controls__btn" onClick={() => onWidthChange(-1)}>−</button>
-                  <span className="grid-controls__value">{gridWidth}</span>
-                  <button className="grid-controls__btn" onClick={() => onWidthChange(1)}>+</button>
-                </div>
-              </div>
-              <div className="header__overflow-row">
-                <span className="header__overflow-label">Height</span>
-                <div className="grid-controls__actions">
-                  <button className="grid-controls__btn" onClick={() => onHeightChange(-1)}>−</button>
-                  <span className="grid-controls__value">{gridHeight}</span>
-                  <button className="grid-controls__btn" onClick={() => onHeightChange(1)}>+</button>
-                </div>
-              </div>
-              <div className="header__overflow-row">
-                <span className="header__overflow-label">Top Edge</span>
-                <div className="grid-controls__actions">
-                  <button className="grid-controls__btn" onClick={() => onTopSpanChange(-1)}>−</button>
-                  <span className="grid-controls__value">{topSpan}</span>
-                  <button className="grid-controls__btn" onClick={() => onTopSpanChange(1)}>+</button>
-                </div>
-              </div>
-              <div className="header__overflow-row">
-                <span className="header__overflow-label">Bottom Edge</span>
-                <div className="grid-controls__actions">
-                  <button className="grid-controls__btn" onClick={() => onBottomSpanChange(-1)}>−</button>
-                  <span className="grid-controls__value">{bottomSpan}</span>
-                  <button className="grid-controls__btn" onClick={() => onBottomSpanChange(1)}>+</button>
-                </div>
-              </div>
+              <Stepper variant="overflow" label="Width" value={gridWidth} onDelta={onWidthChange} />
+              <Stepper variant="overflow" label="Height" value={gridHeight} onDelta={onHeightChange} />
+              <Stepper variant="overflow" label="Top Edge" value={topSpan} onDelta={onTopSpanChange} />
+              <Stepper variant="overflow" label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} />
             </div>
           )}
         </div>

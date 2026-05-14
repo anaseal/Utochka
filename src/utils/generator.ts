@@ -1,6 +1,6 @@
-/* src/utils/generator.ts */
 import { Bead } from '../types/bead';
 import { BEAD_THEME } from '../config/theme';
+import { resolveSpanCount } from './spans';
 
 type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
@@ -25,10 +25,8 @@ export const generateSilyankaGrid = (
     (internalTop + 1) * minBeadPitch
   );
 
-  const getSpanCount = (r: number): number =>
-    rowSpanOverrides[r] !== undefined ? rowSpanOverrides[r] : (r % 2 === 0 ? bottomSpan : topSpan);
-
-  const getInternalCount = (r: number): number => Math.max(0, getSpanCount(r) - 2);
+  const getInternalCount = (r: number): number =>
+    Math.max(0, resolveSpanCount(r, topSpan, bottomSpan, rowSpanOverrides) - 2);
 
   const getYStep = (r: number): number =>
     (getInternalCount(r) + 1) * (spacing * verticalCompression);
@@ -67,7 +65,6 @@ export const generateSilyankaGrid = (
         x: start.x + t * (end.x - start.x),
         y: start.y + t * (end.y - start.y),
         type: 'SPAN',
-        clusterId,
         logicalIndex: { row: r, col: c }
       });
     }
@@ -82,7 +79,6 @@ export const generateSilyankaGrid = (
         x: currentNode.x,
         y: currentNode.y,
         type: 'NODE',
-        clusterId: `node-${r}-${c}`,
         logicalIndex: { row: r, col: c }
       });
 

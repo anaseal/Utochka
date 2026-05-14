@@ -4,7 +4,7 @@ import { Bead } from '../../../types/bead';
 import { BeadView } from '../BeadView/BeadView';
 import { CanvasRulers } from '../CanvasRulers/CanvasRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
-import { BEAD_THEME } from '../../../config/theme';
+import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import './CanvasView.css';
 
 interface CanvasViewProps {
@@ -52,9 +52,7 @@ export const CanvasView = ({
   const colorStats = useMemo(() => {
     const stats = new Map<string, number>();
     beads.forEach(bead => {
-      const isNode = bead.type === 'NODE';
-      const defaultColor = isNode ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault;
-      const color = designMap[bead.id] || defaultColor;
+      const color = designMap[bead.id] || defaultColorFor(bead.type);
       stats.set(color, (stats.get(color) || 0) + 1);
     });
     return Array.from(stats.entries());
@@ -105,7 +103,7 @@ export const CanvasView = ({
                   y={bead.y}
                   type={bead.type}
                   color={designMap[bead.id]}
-                  defaultColor={bead.type === 'NODE' ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault}
+                  defaultColor={defaultColorFor(bead.type)}
                   onMouseEnter={handleMouseEnter}
                   onMouseDown={handleMouseDown}
                 />

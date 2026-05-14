@@ -13,7 +13,7 @@ Parametric SVG editor for **silyanka** (beaded net jewelry). Simulates physical 
 - **Grid geometry**: Alternating even/odd rows (shifted +50% stepX) create diamond cells.
 - **Top Row (r=0)**: Special horizontal edge chain.
 - **Design Map**: `Record<string, string>` (bead.id → color). State is decoupled from geometry.
-- **Span-row index encoding**: `r % 2 === 0 ? bottomSpan : topSpan` (even = ножки/legs, odd = плечи/shoulders). Used by both `App.tsx` `updateRowSpan` and `CanvasRulers`.
+- **Span-row index encoding**: `r % 2 === 0 ? bottomSpan : topSpan` (even = ножки/legs, odd = плечи/shoulders). Centralised in [src/utils/spans.ts](src/utils/spans.ts) (`resolveSpanCount`, `clampSpan`) — used by `generator.ts`, `App.tsx`, and `CanvasRulers`.
 
 ## Architecture
 - [src/utils/generator.ts](src/utils/generator.ts): Core algorithm. Builds `nodeGrid`, then interpolates `SPAN` beads.
