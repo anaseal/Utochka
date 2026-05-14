@@ -7,10 +7,7 @@ import { Header } from './components/Editor/Header/Header';
 import { BEAD_THEME } from './config/theme';
 import { clampSpan, resolveSpanCount } from './utils/spans';
 
-const PALETTE = [
-  '#ff4757', '#ff9f43', '#ffd32a', '#2ed573',
-  '#22d3ee', '#1e90ff', '#e879f9', '#ffffff',
-];
+const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
 function App() {
   const [gridSize, setGridSize] = useState({ 
@@ -25,7 +22,7 @@ function App() {
   const [rowSpanOverrides, setRowSpanOverrides] = useState<Record<number, number>>({});
 
   const beads = useGrid(gridSize, rowSpanOverrides);
-  const drawingControls = useDrawing(PALETTE[0]);
+  const drawingControls = useDrawing(PALETTE[0], PALETTE);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,6 +65,7 @@ function App() {
         setActiveColor={drawingControls.setActiveColor}
         activeTool={drawingControls.activeTool}
         setActiveTool={drawingControls.setActiveTool}
+        recentColors={drawingControls.recentColors}
         onClearAll={drawingControls.clearAll}
         gridWidth={gridSize.width}
         gridHeight={gridSize.height}

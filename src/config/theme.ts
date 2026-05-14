@@ -28,6 +28,10 @@ export const BEAD_THEME = {
     minSpan: 3,
     maxSpan: 10,
   },
+
+  ui: {
+    recentColorsLimit: 4,
+  },
 };
 
 export const defaultColorFor = (type: BeadType): string =>

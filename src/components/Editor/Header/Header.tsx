@@ -4,13 +4,15 @@ import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
 import colorPickerIcon from "../../../assets/colorpicker.svg";
 import { DrawingTool } from '../../../hooks/useDrawing';
+import { BEAD_THEME } from '../../../config/theme';
 
 interface HeaderProps {
-  palette: string[];
+  palette: readonly string[];
   activeColor: string;
   setActiveColor: (color: string) => void;
   activeTool: DrawingTool;
   setActiveTool: (tool: DrawingTool) => void;
+  recentColors: string[];
   onClearAll: () => void;
   gridWidth: number;
   gridHeight: number;
@@ -56,7 +58,7 @@ const Stepper = ({
 };
 
 export const Header = ({
-  palette, activeColor, setActiveColor, activeTool, setActiveTool, onClearAll,
+  palette, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, onClearAll,
   gridWidth, gridHeight, topSpan, bottomSpan,
   onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
   zoom, onZoomChange,
@@ -119,7 +121,30 @@ export const Header = ({
             />
           ))}
 
-          <div className="palette__divider" />
+          <div className="palette__recent" role="group" aria-label="Recent colors">
+            {Array.from({ length: BEAD_THEME.ui.recentColorsLimit }).map((_, i) => {
+              const color = recentColors[i];
+              if (!color) {
+                return (
+                  <div
+                    key={`empty-${i}`}
+                    className="palette__recent-slot palette__recent-slot--empty"
+                    aria-hidden="true"
+                  />
+                );
+              }
+              const isActive = activeTool === 'pencil' && activeColor === color;
+              return (
+                <button
+                  key={color}
+                  onClick={() => { setActiveColor(color); setActiveTool('pencil'); }}
+                  className={`palette__color ${isActive ? 'palette__color--active' : ''}`}
+                  style={{ '--color-value': color } as React.CSSProperties}
+                  title={color}
+                />
+              );
+            })}
+          </div>
 
           <div className="palette__custom">
             <button

@@ -1,12 +1,39 @@
 import { useState, useCallback, useRef } from 'react';
+import { BEAD_THEME } from '../config/theme';
 
 const MAX_HISTORY = 30;
+const RECENT_LIMIT = BEAD_THEME.ui.recentColorsLimit;
+const RECENT_STORAGE_KEY = 'silyanka:recentColors';
+const HEX_RE = /^#[0-9a-f]{6}$/i;
 
 export type DrawingTool = 'pencil' | 'eraser';
 
-export const useDrawing = (initialColor: string) => {
-  const [activeColor, setActiveColor] = useState(initialColor);
+export const useDrawing = (initialColor: string, basePalette: readonly string[]) => {
+  const [activeColor, setActiveColorState] = useState(initialColor);
   const [activeTool, setActiveTool] = useState<DrawingTool>('pencil');
+  const [recentColors, setRecentColors] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_STORAGE_KEY);
+      if (raw === null) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((c): c is string => typeof c === 'string' && HEX_RE.test(c))
+        .slice(0, RECENT_LIMIT);
+    } catch {
+      return [];
+    }
+  });
+
+  const setActiveColor = useCallback((color: string) => {
+    setActiveColorState(color);
+    if (basePalette.includes(color)) return;
+    setRecentColors(prev => {
+      const next = [color, ...prev.filter(c => c !== color)].slice(0, RECENT_LIMIT);
+      try { localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [basePalette]);
   const [designMap, setDesignMap] = useState<Record<string, string>>({});
   const [isDrawing, setIsDrawing] = useState(false);
   const [past, setPast] = useState<Record<string, string>[]>([]);
@@ -74,6 +101,7 @@ export const useDrawing = (initialColor: string) => {
     setActiveColor,
     activeTool,
     setActiveTool,
+    recentColors,
     designMap,
     isDrawing,
     paintBead,
