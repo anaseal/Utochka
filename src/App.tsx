@@ -56,8 +56,8 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
-      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); drawingControls.undo(); }
-      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); drawingControls.redo(); }
+      if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); drawingControls.undo(); }
+      if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); drawingControls.redo(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
