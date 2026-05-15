@@ -25,7 +25,7 @@ export const mirrorBeadId = (
     const c = Number(nodeM[2]);
     const isEven = r % 2 === 0;
     const mc = isEven ? width - 1 - c : width - 2 - c;
-    if (mc < 0 || mc >= width) return null;
+    if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
     return `node-${r}-${mc}`;
   }
 
@@ -48,7 +48,7 @@ export const mirrorBeadId = (
     const isEven = r % 2 === 0;
     const mc = isEven ? width - 1 - c : width - 2 - c;
     const ms = flipSide(side);
-    if (mc < 0 || mc >= width) return null;
+    if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
     if (isEven && ms === 'left' && mc === 0) return null;
     return `span-edge-${r}-${mc}-${ms}-bead-${i}`;
   }

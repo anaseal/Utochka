@@ -41,8 +41,9 @@ export const generateSilyankaGrid = (
     const rowNodes: SpanCoords[] = [];
     const isShifted = r % 2 !== 0;
     const currentOffsetX = isShifted ? stepX / 2 : 0;
+    const rowWidth = isShifted ? width - 1 : width;
 
-    for (let c = 0; c < width; c++) {
+    for (let c = 0; c < rowWidth; c++) {
       rowNodes.push({
         x: c * stepX + currentOffsetX,
         y: currentY
@@ -73,7 +74,7 @@ export const generateSilyankaGrid = (
   };
 
   for (let r = 0; r < nodeGrid.length; r++) {
-    for (let c = 0; c < width; c++) {
+    for (let c = 0; c < nodeGrid[r].length; c++) {
       const currentNode = nodeGrid[r][c];
       
       beads.push({

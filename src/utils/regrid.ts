@@ -12,7 +12,8 @@ const shiftId = (id: string, shift: number, newW: number): string | null => {
   if (n) {
     const r = Number(n[1]);
     const c = Number(n[2]) + shift;
-    if (c < 0 || c > newW - 1) return null;
+    const maxC = r % 2 === 0 ? newW - 1 : newW - 2;
+    if (c < 0 || c > maxC) return null;
     return `node-${r}-${c}`;
   }
 
@@ -30,9 +31,9 @@ const shiftId = (id: string, shift: number, newW: number): string | null => {
     const c = Number(v[2]) + shift;
     const side = v[3] as 'left' | 'right';
     const i = Number(v[4]);
-    if (c < 0 || c > newW - 1) return null;
+    const maxC = r % 2 === 0 ? newW - 1 : newW - 2;
+    if (c < 0 || c > maxC) return null;
     if (r % 2 === 0 && side === 'left' && c < 1) return null;
-    if (r % 2 !== 0 && side === 'right' && c > newW - 2) return null;
     return `span-edge-${r}-${c}-${side}-bead-${i}`;
   }
 
