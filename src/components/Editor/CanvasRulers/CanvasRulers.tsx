@@ -9,6 +9,8 @@ interface CanvasRulersProps {
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
   onRowSpanChange: (spanRowIndex: number, delta: number) => void;
+  mirrorMode: boolean;
+  width: number;
 }
 
 const SpanCtrlButton = ({
@@ -49,7 +51,7 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange }: CanvasRulersProps) => {
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, mirrorMode, width }: CanvasRulersProps) => {
   const axisMargin = 40;
 
   const nodes = useMemo(() => beads.filter(b => b.type === 'NODE'), [beads]);
@@ -112,8 +114,33 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
 
   const ctrlCenterX = baselineX - 58;
 
+  const mirrorAxis = useMemo(() => {
+    if (!mirrorMode || width <= 1) return null;
+    let maxX = 0;
+    for (const n of nodes) {
+      if (n.logicalIndex.row % 2 === 0 && n.x > maxX) maxX = n.x;
+    }
+    if (maxX <= 0) return null;
+    const ys = Array.from(rowYMap.values());
+    if (ys.length === 0) return null;
+    const yTop = Math.min(...ys) - axisMargin;
+    const yBottom = Math.max(...ys) + axisMargin;
+    return { x: maxX / 2, yTop, yBottom };
+  }, [mirrorMode, width, nodes, rowYMap]);
+
   return (
     <g className="canvas__ruler-group">
+      {mirrorAxis && (
+        <line
+          x1={mirrorAxis.x}
+          y1={mirrorAxis.yTop}
+          x2={mirrorAxis.x}
+          y2={mirrorAxis.yBottom}
+          className="canvas__mirror-axis"
+          pointerEvents="none"
+        />
+      )}
+
       {rowAxesNodes.map((node, i) => (
         <text
           key={`idx-row-${node.id}`}

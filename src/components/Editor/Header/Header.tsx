@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, RotateCcw } from 'lucide-react';
+import { MoreHorizontal, RotateCcw, FlipHorizontal } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
@@ -26,6 +26,8 @@ interface HeaderProps {
   onBottomSpanChange: (delta: number) => void;
   onTopEdgeReset: () => void;
   onBottomEdgeReset: () => void;
+  mirrorMode: boolean;
+  setMirrorMode: (v: boolean) => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
   onUndo: () => void;
@@ -79,6 +81,7 @@ export const Header = ({
   gridWidth, gridHeight, topSpan, bottomSpan,
   onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
   onTopEdgeReset, onBottomEdgeReset,
+  mirrorMode, setMirrorMode,
   zoom, onZoomChange,
   onUndo, onRedo, canUndo, canRedo
 }: HeaderProps) => {
@@ -207,6 +210,15 @@ export const Header = ({
           title="Eraser"
         >
           <img src={eraserIcon} alt="Eraser" />
+        </button>
+
+        <button
+          onClick={() => setMirrorMode(!mirrorMode)}
+          className={`tool-btn ${mirrorMode ? 'tool-btn--active' : ''}`}
+          title="Mirror Mode"
+          aria-pressed={mirrorMode}
+        >
+          <FlipHorizontal size={14} />
         </button>
 
         <div className="header__divider header__divider--collapsible" />

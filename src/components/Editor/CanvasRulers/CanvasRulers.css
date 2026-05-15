@@ -70,3 +70,11 @@
 .span-ctrl__count--overridden {
   fill: #f59e0b;
 }
+
+/* Ось зеркалирования (Mirror Mode) — вертикальный пунктир */
+.canvas__mirror-axis {
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+  pointer-events: none;
+}

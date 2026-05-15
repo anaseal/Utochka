@@ -96,6 +96,17 @@ export const useDrawing = (initialColor: string, basePalette: readonly string[])
     setDesignMap({});
   }, [designMap, pushSnapshot]);
 
+  // Управляемая трансформация Design Map (например, пересчёт при смене ширины).
+  // Снимок сохраняется в историю — результат можно отменить через Undo.
+  const remapDesignMap = useCallback((
+    fn: (m: Record<string, string>) => Record<string, string>,
+  ) => {
+    const next = fn(designMap);
+    if (next === designMap) return;
+    pushSnapshot(designMap);
+    setDesignMap(next);
+  }, [designMap, pushSnapshot]);
+
   const undo = useCallback(() => {
     if (past.length === 0) return;
     setFuture(f => [designMap, ...f]);
@@ -123,6 +134,7 @@ export const useDrawing = (initialColor: string, basePalette: readonly string[])
     startDrawing,
     stopDrawing,
     clearAll,
+    remapDesignMap,
     undo,
     redo,
     canUndo: past.length > 0,

@@ -8,6 +8,7 @@ import { Header } from './components/Editor/Header/Header';
 import { BEAD_THEME } from './config/theme';
 import { GridConfig } from './types/bead';
 import { clampSpan, resolveSpanCount } from './utils/spans';
+import { shiftDesignMapColumns } from './utils/regrid';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
@@ -40,9 +41,17 @@ function App() {
   const [rowSpanOverrides, setRowSpanOverrides] = usePersistedState<Record<number, number>>(
     'silyanka:rowSpanOverrides', {}, isRowSpanOverrides,
   );
+  const [mirrorMode, setMirrorMode] = usePersistedState<boolean>(
+    'silyanka:mirrorMode', false, (v): v is boolean => typeof v === 'boolean',
+  );
 
   const beads = useGrid(gridSize, rowSpanOverrides);
   const drawingControls = useDrawing(PALETTE[0], PALETTE);
+
+  const internalTop = Math.max(
+    0,
+    resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2,
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,6 +64,17 @@ function App() {
   }, [drawingControls.undo, drawingControls.redo]);
 
   const updateDimension = (field: 'width' | 'height', delta: number) => {
+    if (field === 'width' && mirrorMode) {
+      // ±2: добавляем/убираем по колонке с каждой стороны, рисунок остаётся по центру
+      const newW = gridSize.width + delta * 2;
+      if (newW >= 1 && newW !== gridSize.width) {
+        drawingControls.remapDesignMap(map =>
+          shiftDesignMapColumns(map, delta, newW),
+        );
+        setGridSize(prev => ({ ...prev, width: newW }));
+      }
+      return;
+    }
     setGridSize(prev => ({ ...prev, [field]: Math.max(1, prev[field] + delta) }));
   };
 
@@ -115,6 +135,8 @@ function App() {
         onBottomSpanChange={updateBottomSpan}
         onTopEdgeReset={() => resetEdge('top')}
         onBottomEdgeReset={() => resetEdge('bottom')}
+        mirrorMode={mirrorMode}
+        setMirrorMode={setMirrorMode}
         zoom={zoom}
         onZoomChange={updateZoom}
         onUndo={drawingControls.undo}
@@ -130,6 +152,9 @@ function App() {
         bottomSpan={gridSize.bottomSpan}
         rowSpanOverrides={rowSpanOverrides}
         onRowSpanChange={updateRowSpan}
+        mirrorMode={mirrorMode}
+        width={gridSize.width}
+        internalTop={internalTop}
         {...drawingControls}
       />
     </main>

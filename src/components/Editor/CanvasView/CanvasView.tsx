@@ -5,6 +5,7 @@ import { BeadView } from '../BeadView/BeadView';
 import { CanvasRulers } from '../CanvasRulers/CanvasRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
+import { mirrorBeadId } from '../../../utils/mirror';
 import './CanvasView.css';
 
 interface CanvasViewProps {
@@ -19,6 +20,9 @@ interface CanvasViewProps {
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
   onRowSpanChange: (spanRowIndex: number, delta: number) => void;
+  mirrorMode: boolean;
+  width: number;
+  internalTop: number;
 }
 
 export const CanvasView = ({
@@ -33,6 +37,9 @@ export const CanvasView = ({
   bottomSpan,
   rowSpanOverrides,
   onRowSpanChange,
+  mirrorMode,
+  width,
+  internalTop,
 }: CanvasViewProps) => {
   
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
@@ -58,13 +65,21 @@ export const CanvasView = ({
     return Array.from(stats.entries());
   }, [beads, designMap]);
 
+  const applyPaint = useCallback((id: string) => {
+    paintBead(id);
+    if (mirrorMode) {
+      const m = mirrorBeadId(id, width, internalTop);
+      if (m !== null && m !== id) paintBead(m);
+    }
+  }, [paintBead, mirrorMode, width, internalTop]);
+
   const handleMouseEnter = useCallback((id: string) => {
-    if (isDrawing) paintBead(id);
-  }, [isDrawing, paintBead]);
+    if (isDrawing) applyPaint(id);
+  }, [isDrawing, applyPaint]);
 
   const handleMouseDown = useCallback((id: string) => {
-    paintBead(id);
-  }, [paintBead]);
+    applyPaint(id);
+  }, [applyPaint]);
 
   return (
     <main 
@@ -93,6 +108,8 @@ export const CanvasView = ({
                 bottomSpan={bottomSpan}
                 rowSpanOverrides={rowSpanOverrides}
                 onRowSpanChange={onRowSpanChange}
+                mirrorMode={mirrorMode}
+                width={width}
               />
 
               {beads.map((bead) => (
