@@ -4,11 +4,12 @@
   position: fixed;
   top: var(--palette-height);
   left: 0;
-  right: 0;
+  right: var(--sidebar-width);
   bottom: 0;
   overflow: hidden;
   display: flex;
   background-color: #020617;
+  transition: right var(--transition-speed) ease;
 }
 
 .canvas {
@@ -30,7 +31,7 @@
   /* Адаптивный размер: до 1200x650, но сжимается чтобы влезать в viewport
      (учитываем padding-left 50px у .canvas + правый отступ ~30px,
      и сверху var(--palette-height) + padding-top 50px + место под .stats снизу) */
-  width: min(1200px, calc(100vw - 80px));
+  width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
   height: min(650px, calc(100vh - var(--palette-height) - 140px));
 
   overflow: auto;

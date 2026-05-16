@@ -1,0 +1,57 @@
+.pendant-bead__hitbox {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.pendant-hover-area {
+  fill: transparent;
+}
+
+.pendant-bead__body {
+  stroke: #000000;
+  stroke-width: 0.5px;
+  pointer-events: none;
+  shape-rendering: geometricPrecision;
+  transition: fill 0.1s ease;
+}
+
+.pendant-drop-target {
+  fill: rgba(34, 211, 238, 0.2);
+  stroke: #22d3ee;
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+
+.pendant-drop-target--replace {
+  fill: rgba(255, 211, 42, 0.2);
+  stroke: #ffd32a;
+}
+
+.pendant-remove-btn {
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity var(--transition-speed) ease;
+}
+
+.pendant-group:hover .pendant-remove-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pendant-remove-btn__bg {
+  fill: #ff4757;
+  stroke: #0f172a;
+  stroke-width: 1.5;
+}
+
+.pendant-remove-btn:hover .pendant-remove-btn__bg {
+  fill: #ff6b7a;
+}
+
+.pendant-remove-btn__icon {
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}

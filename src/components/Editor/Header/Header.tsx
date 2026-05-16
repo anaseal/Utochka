@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, RotateCcw, FlipHorizontal } from 'lucide-react';
+import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
@@ -34,6 +34,8 @@ interface HeaderProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 type StepperVariant = 'bar' | 'overflow';
@@ -53,24 +55,34 @@ const Stepper = ({
 }) => {
   const wrapperClass = variant === 'overflow' ? 'header__overflow-row' : 'grid-controls__group';
   const labelClass = variant === 'overflow' ? 'header__overflow-label' : 'grid-controls__label';
+
+  const actions = (
+    <div className="grid-controls__actions">
+      <button onClick={() => onDelta(-1)} className="grid-controls__btn">−</button>
+      <span className="grid-controls__value">{value}</span>
+      <button onClick={() => onDelta(1)} className="grid-controls__btn">+</button>
+    </div>
+  );
+
+  const reset = onReset && (
+    <button
+      type="button"
+      onClick={onReset}
+      className="grid-controls__reset"
+      title="Reset to default"
+      aria-label="Reset to default"
+    >
+      <RotateCcw size={13} />
+    </button>
+  );
+
   return (
     <div className={wrapperClass}>
       <span className={labelClass}>{label}</span>
-      <div className="grid-controls__actions">
-        <button onClick={() => onDelta(-1)} className="grid-controls__btn">−</button>
-        <span className="grid-controls__value">{value}</span>
-        <button onClick={() => onDelta(1)} className="grid-controls__btn">+</button>
-      </div>
-      {onReset && (
-        <button
-          type="button"
-          onClick={onReset}
-          className="grid-controls__reset"
-          title="Reset to default"
-          aria-label="Reset to default"
-        >
-          <RotateCcw size={13} />
-        </button>
+      {variant === 'overflow' ? (
+        <>{reset}{actions}</>
+      ) : (
+        <>{actions}{reset}</>
       )}
     </div>
   );
@@ -83,7 +95,8 @@ export const Header = ({
   onTopEdgeReset, onBottomEdgeReset,
   mirrorMode, setMirrorMode,
   zoom, onZoomChange,
-  onUndo, onRedo, canUndo, canRedo
+  onUndo, onRedo, canUndo, canRedo,
+  sidebarOpen, onToggleSidebar,
 }: HeaderProps) => {
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -286,6 +299,17 @@ export const Header = ({
             </div>
           )}
         </div>
+
+        <div className="header__divider" />
+
+        <button
+          onClick={onToggleSidebar}
+          className={`tool-btn ${sidebarOpen ? 'tool-btn--active' : ''}`}
+          title="Библиотека подвесок"
+          aria-pressed={sidebarOpen}
+        >
+          <Layers size={14} />
+        </button>
       </nav>
     </header>
   );

@@ -29,6 +29,12 @@ export const BEAD_THEME = {
     maxSpan: 10,
   },
 
+  // Промежуточный декор — горизонтальные полосы бисерин между рядами узлов.
+  decorDefaults: {
+    minRows: 1, // Меньше — полоса считается отсутствующей
+    maxRows: 10,
+  },
+
   ui: {
     recentColorsLimit: 4,
   },

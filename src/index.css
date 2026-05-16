@@ -6,6 +6,11 @@
   --color-canvas: #1e293b;
   --transition-speed: 0.2s;
   --palette-height: 64px;
+  --sidebar-width: 0px;
+}
+
+.editor--sidebar-open {
+  --sidebar-width: 260px;
 }
 
 html, body, #root {

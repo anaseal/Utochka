@@ -1,12 +1,16 @@
 /* src/App.tsx */
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
+import { usePendants } from './hooks/usePendants';
 import { usePersistedState } from './hooks/usePersistedState';
 import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { Header } from './components/Editor/Header/Header';
+import { PendantsSidebar } from './components/Sidebar/PendantsSidebar';
 import { BEAD_THEME } from './config/theme';
 import { GridConfig } from './types/bead';
+import { PendantPlacement } from './types/pendant';
+import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
 import { clampSpan, resolveSpanCount } from './utils/spans';
 import { shiftDesignMapColumns } from './utils/regrid';
 
@@ -28,6 +32,17 @@ const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
   return Object.values(v).every(n => typeof n === 'number');
 };
 
+// decorBands имеет ту же форму, что и rowSpanOverrides: Record<row, count>.
+const isDecorBands = isRowSpanOverrides;
+
+const isPendantPlacements = (v: unknown): v is PendantPlacement[] =>
+  Array.isArray(v) && v.every(p =>
+    typeof p === 'object' && p !== null &&
+    typeof p.placementId === 'string' &&
+    typeof p.templateId === 'string' &&
+    typeof p.col === 'number' &&
+    typeof p.colorMap === 'object' && p.colorMap !== null);
+
 function App() {
   const [gridSize, setGridSize] = usePersistedState<GridConfig>('silyanka:gridSize', {
     width: BEAD_THEME.gridDefaults.initialWidth,
@@ -44,9 +59,30 @@ function App() {
   const [mirrorMode, setMirrorMode] = usePersistedState<boolean>(
     'silyanka:mirrorMode', false, (v): v is boolean => typeof v === 'boolean',
   );
+  const [decorBands, setDecorBands] = usePersistedState<Record<number, number>>(
+    'silyanka:decorBands', {}, isDecorBands,
+  );
 
-  const beads = useGrid(gridSize, rowSpanOverrides);
+  const [pendantPlacements, setPendantPlacements] = usePersistedState<PendantPlacement[]>(
+    'silyanka:pendantPlacements', [], isPendantPlacements,
+  );
+
+  const beads = useGrid(gridSize, rowSpanOverrides, decorBands);
   const drawingControls = useDrawing(PALETTE[0], PALETTE);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  const canvasSvgRef = useRef<SVGSVGElement>(null);
+
+  const pendantControls = usePendants(
+    pendantPlacements, setPendantPlacements,
+    drawingControls.activeColor, drawingControls.activeTool,
+    mirrorMode, gridSize.width,
+  );
+
+  const bottomNodes = beads.filter(
+    b => b.type === 'NODE' && b.logicalIndex.row === 2 * gridSize.height,
+  );
 
   const internalTop = Math.max(
     0,
@@ -71,11 +107,35 @@ function App() {
         drawingControls.remapDesignMap(map =>
           shiftDesignMapColumns(map, delta, newW),
         );
+        // Подвески сдвигаем вместе с рисунком, иначе их col отвяжется от нод.
+        setPendantPlacements(prev => prev
+          .map(p => ({ ...p, col: p.col + delta }))
+          .filter(p => p.col >= 0 && p.col < newW));
         setGridSize(prev => ({ ...prev, width: newW }));
       }
       return;
     }
-    setGridSize(prev => ({ ...prev, [field]: Math.max(1, prev[field] + delta) }));
+    if (field === 'width') {
+      const newW = Math.max(1, gridSize.width + delta);
+      // При сужении сетки убираем подвески с исчезнувших колонок.
+      if (newW < gridSize.width) {
+        setPendantPlacements(prev => prev.filter(p => p.col < newW));
+      }
+      setGridSize(prev => ({ ...prev, width: newW }));
+      return;
+    }
+    const newH = Math.max(1, gridSize.height + delta);
+    // При уменьшении высоты убираем декор-полосы с исчезнувших рядов.
+    if (newH < gridSize.height) {
+      setDecorBands(prev => {
+        const next: Record<number, number> = {};
+        for (const [k, v] of Object.entries(prev)) {
+          if (Number(k) < 2 * newH) next[Number(k)] = v;
+        }
+        return next;
+      });
+    }
+    setGridSize(prev => ({ ...prev, height: newH }));
   };
 
   const updateTopSpan = (delta: number) => {
@@ -97,6 +157,22 @@ function App() {
     });
   };
 
+  // Промежуточный декор: ± меняет число рядов полосы между узловым рядом r и r+1.
+  // 0 (ниже minRows) — полоса удаляется.
+  const updateDecorBand = (r: number, delta: number) => {
+    setDecorBands(prev => {
+      const current = prev[r] ?? 0;
+      const next = current + delta;
+      const copy = { ...prev };
+      if (next < BEAD_THEME.decorDefaults.minRows) {
+        delete copy[r];
+      } else {
+        copy[r] = Math.min(next, BEAD_THEME.decorDefaults.maxRows);
+      }
+      return copy;
+    });
+  };
+
   const resetEdge = (edge: 'top' | 'bottom') => {
     const isTop = edge === 'top';
     setGridSize(prev => ({
@@ -115,7 +191,7 @@ function App() {
   };
 
   return (
-    <main className="editor">
+    <main className={`editor${sidebarOpen ? ' editor--sidebar-open' : ''}`}>
       <Header
         palette={PALETTE}
         activeColor={drawingControls.activeColor}
@@ -143,6 +219,8 @@ function App() {
         onRedo={drawingControls.redo}
         canUndo={drawingControls.canUndo}
         canRedo={drawingControls.canRedo}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(o => !o)}
       />
 
       <CanvasView
@@ -152,10 +230,31 @@ function App() {
         bottomSpan={gridSize.bottomSpan}
         rowSpanOverrides={rowSpanOverrides}
         onRowSpanChange={updateRowSpan}
+        decorBands={decorBands}
+        onDecorChange={updateDecorBand}
         mirrorMode={mirrorMode}
         width={gridSize.width}
         internalTop={internalTop}
+        pendantPlacements={pendantPlacements}
+        pendantTemplates={PENDANT_TEMPLATES_BY_ID}
+        bottomNodes={bottomNodes}
+        hoveredCol={hoveredCol}
+        onPaintPendantBead={pendantControls.paintPendantBead}
+        onRemovePlacement={pendantControls.removePlacement}
+        canvasSvgRef={canvasSvgRef}
         {...drawingControls}
+      />
+
+      <PendantsSidebar
+        open={sidebarOpen}
+        templates={PENDANT_TEMPLATES}
+        placements={pendantPlacements}
+        onHoveredColChange={setHoveredCol}
+        onAddPlacement={pendantControls.addPlacement}
+        onClearAll={pendantControls.clearAllPlacements}
+        canvasSvgRef={canvasSvgRef}
+        bottomNodes={bottomNodes}
+        zoom={zoom}
       />
     </main>
   );

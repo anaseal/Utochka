@@ -10,6 +10,7 @@
 const NODE_RE = /^node-(\d+)-(\d+)$/;
 const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
 const VERT_EDGE_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
+const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
 
 const flipSide = (side: 'left' | 'right'): 'left' | 'right' =>
   side === 'left' ? 'right' : 'left';
@@ -51,6 +52,18 @@ export const mirrorBeadId = (
     if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
     if (isEven && ms === 'left' && mc === 0) return null;
     return `span-edge-${r}-${mc}-${ms}-bead-${i}`;
+  }
+
+  // Декор-полоса повторяет разметку узлового ряда r → логическое зеркало как у NODE.
+  const decorM = id.match(DECOR_RE);
+  if (decorM) {
+    const r = Number(decorM[1]);
+    const k = Number(decorM[2]);
+    const c = Number(decorM[3]);
+    const isEven = r % 2 === 0;
+    const mc = isEven ? width - 1 - c : width - 2 - c;
+    if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
+    return `decor-${r}-${k}-${mc}`;
   }
 
   return null;

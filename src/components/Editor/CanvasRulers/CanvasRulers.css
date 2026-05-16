@@ -38,6 +38,18 @@
   stroke: #0284c7;
 }
 
+/* Промежуточный декор — розово-красный, по цвету декор-схемы */
+.span-ctrl__btn--decor {
+  fill: #4c0519;
+  stroke: #9f1239;
+  stroke-width: 1;
+}
+
+.span-ctrl__btn-group--decor:hover .span-ctrl__btn--decor {
+  fill: #881337;
+  stroke: #e11d48;
+}
+
 .span-ctrl__btn-text {
   fill: #94a3b8;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -69,6 +81,15 @@
 /* Ряд с индивидуальным значением — ярче */
 .span-ctrl__count--overridden {
   fill: #f59e0b;
+}
+
+/* Счётчик декор-рядов: приглушённый при 0, яркий при активной полосе */
+.span-ctrl__count--decor {
+  fill: #9f1239;
+}
+
+.span-ctrl__count--decor-active {
+  fill: #fb7185;
 }
 
 /* Ось зеркалирования (Mirror Mode) — вертикальный пунктир */
