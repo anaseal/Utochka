@@ -226,6 +226,7 @@ function App() {
       <CanvasView
         beads={beads}
         zoom={zoom}
+        onZoomChange={updateZoom}
         topSpan={gridSize.topSpan}
         bottomSpan={gridSize.bottomSpan}
         rowSpanOverrides={rowSpanOverrides}

@@ -1,5 +1,5 @@
 /* FILE: src\components\Editor\CanvasView\CanvasView.tsx */
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef, useEffect } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantPlacement, PendantTemplate } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
@@ -19,6 +19,7 @@ interface CanvasViewProps {
   startDrawing: () => void;
   stopDrawing: () => void;
   zoom: number;
+  onZoomChange: (delta: number) => void;
   topSpan: number;
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
@@ -45,6 +46,7 @@ export const CanvasView = ({
   startDrawing,
   stopDrawing,
   zoom,
+  onZoomChange,
   topSpan,
   bottomSpan,
   rowSpanOverrides,
@@ -65,6 +67,22 @@ export const CanvasView = ({
 
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
   const { nodeRadius } = BEAD_THEME.sizes;
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        onZoomChange(-e.deltaY * 0.005);
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [onZoomChange]);
 
   const dim = useMemo(() => {
     if (beads.length === 0) return { w: 100, h: 100 };
@@ -129,12 +147,12 @@ export const CanvasView = ({
       <section className="canvas">
         <div
           className="canvas__svg"
-          style={{ '--canvas-zoom': zoom } as React.CSSProperties}
+          ref={canvasContainerRef}
         >
           <svg
             ref={canvasSvgRef}
-            width={dim.w}
-            height={dim.h}
+            width={dim.w * zoom}
+            height={dim.h * zoom}
             viewBox={`0 0 ${dim.w} ${dim.h}`}
             className="canvas__svg-content"
           >
