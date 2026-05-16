@@ -124,7 +124,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
   const decorCtrlX = maxNodeX + 46;
 
   const mirrorAxis = useMemo(() => {
-    if (!mirrorMode || width <= 1) return null;
+    if (width <= 1) return null;
     let maxX = 0;
     for (const n of nodes) {
       if (n.logicalIndex.row % 2 === 0 && n.x > maxX) maxX = n.x;
@@ -135,7 +135,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     const yTop = Math.min(...ys) - axisMargin;
     const yBottom = Math.max(...ys) + axisMargin;
     return { x: maxX / 2, yTop, yBottom };
-  }, [mirrorMode, width, nodes, rowYMap]);
+  }, [width, nodes, rowYMap]);
 
   return (
     <g className="canvas__ruler-group">

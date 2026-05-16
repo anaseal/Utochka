@@ -159,6 +159,17 @@
   color: #64748b;
 }
 
+@media (max-width: 1023.98px) {
+  .pendants-sidebar {
+    width: 220px;
+  }
+
+  .pendants-sidebar__catalog {
+    padding: 10px;
+    gap: 8px;
+  }
+}
+
 .pendant-drag-ghost {
   position: fixed;
   width: 90px;

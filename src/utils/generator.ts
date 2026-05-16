@@ -84,14 +84,15 @@ export const generateSilyankaGrid = (
     count: number,
     clusterId: string,
     r: number,
-    c: number
+    c: number,
+    yOffset = 0
   ) => {
     for (let i = 1; i <= count; i++) {
       const t = i / (count + 1);
       beads.push({
         id: `span-${clusterId}-bead-${i}`,
         x: start.x + t * (end.x - start.x),
-        y: start.y + t * (end.y - start.y),
+        y: start.y + t * (end.y - start.y) + yOffset,
         type: 'SPAN',
         logicalIndex: { row: r, col: c }
       });
@@ -116,7 +117,8 @@ export const generateSilyankaGrid = (
       });
 
       if (r === 0 && c < width - 1) {
-        generateSpan(currentNode, nodeGrid[0][c + 1], internalTop, `edge-top-link-${c}`, r, c);
+        const topEdgeYOffset = -(spacing * verticalCompression);
+        generateSpan(currentNode, nodeGrid[0][c + 1], internalTop, `edge-top-link-${c}`, r, c, topEdgeYOffset);
       }
 
       const nextRow = nodeGrid[r + 1];
