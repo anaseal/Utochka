@@ -24,8 +24,7 @@ interface CanvasViewProps {
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
   onRowSpanChange: (spanRowIndex: number, delta: number) => void;
-  decorBands: Record<number, number>;
-  onDecorChange: (nodeRow: number, delta: number) => void;
+  hoveredRow: number | null;
   mirrorMode: boolean;
   width: number;
   internalTop: number;
@@ -51,8 +50,7 @@ export const CanvasView = ({
   bottomSpan,
   rowSpanOverrides,
   onRowSpanChange,
-  decorBands,
-  onDecorChange,
+  hoveredRow,
   mirrorMode,
   width,
   internalTop,
@@ -103,10 +101,8 @@ export const CanvasView = ({
     }
 
     const margin = 30;
-    // Справа от полотна CanvasRulers рисует декор-контролы — резервируем место.
-    const decorCtrlMargin = 80;
     return {
-      w: maxX + offsetX + nodeRadius + margin + decorCtrlMargin,
+      w: maxX + offsetX + nodeRadius + margin,
       h: Math.max(maxY, pendantMaxY) + offsetY + nodeRadius + margin,
     };
   }, [beads, offsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
@@ -119,6 +115,17 @@ export const CanvasView = ({
     });
     return Array.from(stats.entries());
   }, [beads, designMap]);
+
+  const highlightedNodeIds = useMemo(() => {
+    if (hoveredRow === null) return null;
+    const ids = new Set<string>();
+    beads.forEach(b => {
+      if (b.type === 'NODE' && b.logicalIndex.row === hoveredRow) {
+        ids.add(b.id);
+      }
+    });
+    return ids;
+  }, [hoveredRow, beads]);
 
   const applyPaint = useCallback((id: string) => {
     paintBead(id);
@@ -164,8 +171,7 @@ export const CanvasView = ({
                 bottomSpan={bottomSpan}
                 rowSpanOverrides={rowSpanOverrides}
                 onRowSpanChange={onRowSpanChange}
-                decorBands={decorBands}
-                onDecorChange={onDecorChange}
+                hoveredRow={hoveredRow}
                 mirrorMode={mirrorMode}
                 width={width}
               />
@@ -179,6 +185,7 @@ export const CanvasView = ({
                   type={bead.type}
                   color={designMap[bead.id]}
                   defaultColor={defaultColorFor(bead.type)}
+                  highlighted={highlightedNodeIds?.has(bead.id) ?? false}
                   onMouseEnter={handleMouseEnter}
                   onMouseDown={handleMouseDown}
                 />

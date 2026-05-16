@@ -9,8 +9,7 @@ interface CanvasRulersProps {
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
   onRowSpanChange: (spanRowIndex: number, delta: number) => void;
-  decorBands: Record<number, number>;
-  onDecorChange: (nodeRow: number, delta: number) => void;
+  hoveredRow: number | null;
   mirrorMode: boolean;
   width: number;
 }
@@ -24,7 +23,7 @@ const SpanCtrlButton = ({
 }: {
   cx: number;
   midY: number;
-  type: 'top' | 'bottom' | 'decor';
+  type: 'top' | 'bottom';
   glyph: '−' | '+';
   onClick: () => void;
 }) => (
@@ -53,7 +52,7 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, decorBands, onDecorChange, mirrorMode, width }: CanvasRulersProps) => {
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width }: CanvasRulersProps) => {
   const axisMargin = 40;
 
   const nodes = useMemo(() => beads.filter(b => b.type === 'NODE'), [beads]);
@@ -96,15 +95,16 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     });
 
     // Верхняя горизонтальная грань (r=-1) — отдельный override.
-    // Размещаем над r=0 на том же расстоянии, что и первый ромбовый контрол ниже,
-    // чтобы кнопки визуально не пересекались.
+    // Используем минимальный gap между соседними рядами как базовый шаг —
+    // он не растягивается декор-полосами и даёт стабильный отступ.
     const firstRowY = rowYMap.get(0);
-    const secondRowY = rowYMap.get(1);
     if (firstRowY !== undefined) {
-      const offset = secondRowY !== undefined ? (secondRowY - firstRowY) / 2 : 24;
+      const minGap = rows.length > 1
+        ? Math.min(...rows.slice(0, -1).map((r, i) => rowYMap.get(rows[i + 1])! - rowYMap.get(r)!))
+        : 24;
       controls.unshift({
         r: -1,
-        midY: firstRowY - offset,
+        midY: firstRowY - minGap / 2,
         count: resolveSpanCount(-1, topSpan, bottomSpan, rowSpanOverrides),
         isOverridden: rowSpanOverrides[-1] !== undefined,
         isBottom: false,
@@ -115,13 +115,6 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
   }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan]);
 
   const ctrlCenterX = baselineX - 58;
-
-  // Декор-контролы выносим к правой кромке полотна, чтобы не теснить span-контролы.
-  const maxNodeX = useMemo(
-    () => nodes.reduce((m, n) => Math.max(m, n.x), 0),
-    [nodes],
-  );
-  const decorCtrlX = maxNodeX + 46;
 
   const mirrorAxis = useMemo(() => {
     if (width <= 1) return null;
@@ -206,40 +199,6 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
         );
       })}
 
-      {/* Промежуточный декор: ± число декор-рядов полосы после узлового ряда r.
-          0 — полосы нет. Верхняя горизонтальная грань (r=-1) декор не поддерживает. */}
-      {spanRowControls
-        .filter(({ r }) => r >= 0)
-        .map(({ r, midY }) => {
-          const count = decorBands[r] ?? 0;
-          return (
-            <g key={`decor-ctrl-${r}`}>
-              <SpanCtrlButton
-                cx={decorCtrlX - 19}
-                midY={midY}
-                type="decor"
-                glyph="−"
-                onClick={() => onDecorChange(r, -1)}
-              />
-              <text
-                x={decorCtrlX - 3}
-                y={midY}
-                dominantBaseline="middle"
-                textAnchor="middle"
-                className={`span-ctrl__count span-ctrl__count--decor${count > 0 ? ' span-ctrl__count--decor-active' : ''}`}
-              >
-                {count}
-              </text>
-              <SpanCtrlButton
-                cx={decorCtrlX + 18}
-                midY={midY}
-                type="decor"
-                glyph="+"
-                onClick={() => onDecorChange(r, 1)}
-              />
-            </g>
-          );
-        })}
     </g>
   );
 };

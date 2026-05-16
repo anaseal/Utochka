@@ -17,12 +17,34 @@
   transform: translateX(0);
 }
 
-.pendants-sidebar__header {
-  padding: 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #e2e8f0;
+.sidebar-tabs {
+  display: flex;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sidebar-tab:hover {
+  color: #94a3b8;
+}
+
+.sidebar-tab--active {
+  color: #22d3ee;
+  border-bottom-color: #22d3ee;
 }
 
 .pendants-sidebar__catalog {
@@ -168,6 +190,79 @@
     padding: 10px;
     gap: 8px;
   }
+}
+
+.decor-catalog {
+  grid-template-columns: 1fr;
+  flex: 0 0 auto;
+}
+
+.decor-bands-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.decor-bands-list__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 0 6px;
+}
+
+.decor-band-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.decor-band-item__label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.decor-band-item__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.decor-band-item__btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: #1e2d3d;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  color: #fb7185;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.decor-band-item__btn:hover {
+  background: #3a2230;
+  border-color: #fb7185;
+}
+
+.decor-band-item__count {
+  min-width: 20px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fb7185;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.decor-drag-ghost {
+  width: 100px;
+  height: 60px;
 }
 
 .pendant-drag-ghost {

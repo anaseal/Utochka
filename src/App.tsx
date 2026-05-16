@@ -1,5 +1,5 @@
 /* src/App.tsx */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
 import { usePendants } from './hooks/usePendants';
@@ -72,7 +72,20 @@ function App() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
+
+  const rowGaps = useMemo(() => {
+    const nodeRowYMap = new Map<number, number>();
+    beads.filter(b => b.type === 'NODE').forEach(b => {
+      if (!nodeRowYMap.has(b.logicalIndex.row)) nodeRowYMap.set(b.logicalIndex.row, b.y);
+    });
+    const sortedRows = [...nodeRowYMap.entries()].sort(([a], [b]) => a - b);
+    return sortedRows.slice(0, -1).map(([r, y], i) => ({
+      row: r,
+      midY: (y + sortedRows[i + 1][1]) / 2,
+    }));
+  }, [beads]);
 
   const pendantControls = usePendants(
     pendantPlacements, setPendantPlacements,
@@ -173,6 +186,22 @@ function App() {
     });
   };
 
+  const handleDecorDrop = (nodeRow: number) => {
+    setDecorBands(prev => {
+      const copy = { ...prev };
+      if ((copy[nodeRow] ?? 0) > 0) {
+        delete copy[nodeRow];
+      } else {
+        copy[nodeRow] = BEAD_THEME.decorDefaults.minRows;
+      }
+      return copy;
+    });
+  };
+
+  const handleClearDecor = () => {
+    setDecorBands({});
+  };
+
   const resetEdge = (edge: 'top' | 'bottom') => {
     const isTop = edge === 'top';
     setGridSize(prev => ({
@@ -231,8 +260,7 @@ function App() {
         bottomSpan={gridSize.bottomSpan}
         rowSpanOverrides={rowSpanOverrides}
         onRowSpanChange={updateRowSpan}
-        decorBands={decorBands}
-        onDecorChange={updateDecorBand}
+        hoveredRow={hoveredRow}
         mirrorMode={mirrorMode}
         width={gridSize.width}
         internalTop={internalTop}
@@ -256,6 +284,12 @@ function App() {
         canvasSvgRef={canvasSvgRef}
         bottomNodes={bottomNodes}
         zoom={zoom}
+        decorBands={decorBands}
+        rowGaps={rowGaps}
+        onDecorDrop={handleDecorDrop}
+        onDecorCount={updateDecorBand}
+        onClearDecor={handleClearDecor}
+        onHoveredRowChange={setHoveredRow}
       />
     </main>
   );

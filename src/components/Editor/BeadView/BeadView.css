@@ -17,3 +17,10 @@
 .bead--type-node .bead__body {
   filter: drop-shadow(0 0 1px var(--bead-color));
 }
+
+.bead__highlight {
+  fill: none;
+  stroke: #22d3ee;
+  stroke-width: 1.5;
+  opacity: 0.75;
+}

@@ -11,28 +11,29 @@ interface BeadViewProps {
   type: BeadType;
   color?: string;
   defaultColor: string;
+  highlighted?: boolean;
   onMouseDown: (id: string) => void;
   onMouseEnter: (id: string) => void;
 }
 
-export const BeadView = memo(({ 
-  id, 
-  x, 
-  y, 
-  type, 
-  color, 
+export const BeadView = memo(({
+  id,
+  x,
+  y,
+  type,
+  color,
   defaultColor,
-  onMouseDown, 
-  onMouseEnter 
+  highlighted,
+  onMouseDown,
+  onMouseEnter
 }: BeadViewProps) => {
   const isNode = type === 'NODE';
   const finalColor = color || defaultColor;
 
-  // Извлекаем размеры из конфига
   const { nodeRadius, spanRadius, hitboxRadius } = BEAD_THEME.sizes;
 
   return (
-    <g 
+    <g
       className={`bead ${isNode ? 'bead--type-node' : 'bead--type-span'}`}
       onMouseEnter={() => onMouseEnter(id)}
       onMouseDown={() => onMouseDown(id)}
@@ -41,13 +42,22 @@ export const BeadView = memo(({
         className="bead__hitbox"
         cx={x}
         cy={y}
-        r={hitboxRadius} // Теперь берется из BEAD_THEME
+        r={hitboxRadius}
       />
+      {highlighted && (
+        <circle
+          className="bead__highlight"
+          cx={x}
+          cy={y}
+          r={(isNode ? nodeRadius : spanRadius) + 3.5}
+          pointerEvents="none"
+        />
+      )}
       <circle
         className="bead__body"
         cx={x}
         cy={y}
-        r={isNode ? nodeRadius : spanRadius} // Теперь берется из BEAD_THEME
+        r={isNode ? nodeRadius : spanRadius}
         fill={finalColor}
         style={{ '--bead-color': finalColor } as React.CSSProperties}
       />
