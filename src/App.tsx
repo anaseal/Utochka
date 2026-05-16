@@ -35,6 +35,27 @@ const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
 // decorBands имеет ту же форму, что и rowSpanOverrides: Record<row, count>.
 const isDecorBands = isRowSpanOverrides;
 
+// Убирает per-row override'ы, совпавшие с глобальным дефолтом.
+// Иначе такой override «протухает»: resolveSpanCount отдаёт ему приоритет
+// через `??`, и общий контрол TOP/BOTTOM EDGE перестаёт двигать этот ряд.
+const pruneRedundantOverrides = (
+  overrides: Record<number, number>,
+  topSpan: number,
+  bottomSpan: number,
+): Record<number, number> => {
+  const next: Record<number, number> = {};
+  let changed = false;
+  for (const [k, v] of Object.entries(overrides)) {
+    const r = Number(k);
+    if (v === resolveSpanCount(r, topSpan, bottomSpan, {})) {
+      changed = true;
+      continue;
+    }
+    next[r] = v;
+  }
+  return changed ? next : overrides;
+};
+
 const isPendantPlacements = (v: unknown): v is PendantPlacement[] =>
   Array.isArray(v) && v.every(p =>
     typeof p === 'object' && p !== null &&
@@ -152,11 +173,17 @@ function App() {
   };
 
   const updateTopSpan = (delta: number) => {
-    setGridSize(prev => ({ ...prev, topSpan: clampSpan(prev.topSpan + delta) }));
+    const newTop = clampSpan(gridSize.topSpan + delta);
+    if (newTop === gridSize.topSpan) return;
+    setGridSize(prev => ({ ...prev, topSpan: newTop }));
+    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, newTop, gridSize.bottomSpan));
   };
 
   const updateBottomSpan = (delta: number) => {
-    setGridSize(prev => ({ ...prev, bottomSpan: clampSpan(prev.bottomSpan + delta) }));
+    const newBottom = clampSpan(gridSize.bottomSpan + delta);
+    if (newBottom === gridSize.bottomSpan) return;
+    setGridSize(prev => ({ ...prev, bottomSpan: newBottom }));
+    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, gridSize.topSpan, newBottom));
   };
 
   const updateZoom = (delta: number) => {
@@ -166,7 +193,15 @@ function App() {
   const updateRowSpan = (spanRowIndex: number, delta: number) => {
     setRowSpanOverrides(prev => {
       const current = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, prev);
-      return { ...prev, [spanRowIndex]: clampSpan(current + delta) };
+      const newVal = clampSpan(current + delta);
+      if (newVal === current) return prev;
+      const globalDefault = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, {});
+      if (newVal === globalDefault) {
+        const next = { ...prev };
+        delete next[spanRowIndex];
+        return next;
+      }
+      return { ...prev, [spanRowIndex]: newVal };
     });
   };
 
