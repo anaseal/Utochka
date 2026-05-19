@@ -190,6 +190,46 @@ function App() {
     setZoom(prev => Math.min(3, Math.max(0.25, prev + delta)));
   };
 
+  const setWidthAbsolute = (v: number) => {
+    const newW = Math.max(1, Math.round(v));
+    if (newW === gridSize.width) return;
+    setPendantPlacements(prev => prev.filter(p => p.col < newW));
+    setGridSize(prev => ({ ...prev, width: newW }));
+  };
+
+  const setHeightAbsolute = (v: number) => {
+    const newH = Math.max(1, Math.round(v));
+    if (newH === gridSize.height) return;
+    if (newH < gridSize.height) {
+      setDecorBands(prev => {
+        const next: Record<number, number> = {};
+        for (const [k, val] of Object.entries(prev)) {
+          if (Number(k) < 2 * newH) next[Number(k)] = val;
+        }
+        return next;
+      });
+    }
+    setGridSize(prev => ({ ...prev, height: newH }));
+  };
+
+  const setTopSpanAbsolute = (v: number) => {
+    const newTop = clampSpan(Math.round(v));
+    if (newTop === gridSize.topSpan) return;
+    setGridSize(prev => ({ ...prev, topSpan: newTop }));
+    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, newTop, gridSize.bottomSpan));
+  };
+
+  const setBottomSpanAbsolute = (v: number) => {
+    const newBottom = clampSpan(Math.round(v));
+    if (newBottom === gridSize.bottomSpan) return;
+    setGridSize(prev => ({ ...prev, bottomSpan: newBottom }));
+    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, gridSize.topSpan, newBottom));
+  };
+
+  const setZoomAbsolute = (v: number) => {
+    setZoom(Math.min(3, Math.max(0.25, v)));
+  };
+
   const updateRowSpan = (spanRowIndex: number, delta: number) => {
     setRowSpanOverrides(prev => {
       const current = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, prev);
@@ -285,6 +325,11 @@ function App() {
         canRedo={drawingControls.canRedo}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(o => !o)}
+        onSetWidth={setWidthAbsolute}
+        onSetHeight={setHeightAbsolute}
+        onSetTopSpan={setTopSpanAbsolute}
+        onSetBottomSpan={setBottomSpanAbsolute}
+        onSetZoom={setZoomAbsolute}
       />
 
       <CanvasView

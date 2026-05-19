@@ -36,6 +36,11 @@ interface HeaderProps {
   canRedo: boolean;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  onSetWidth?: (v: number) => void;
+  onSetHeight?: (v: number) => void;
+  onSetTopSpan?: (v: number) => void;
+  onSetBottomSpan?: (v: number) => void;
+  onSetZoom?: (v: number) => void;
 }
 
 type StepperVariant = 'bar' | 'overflow';
@@ -46,20 +51,81 @@ const Stepper = ({
   onDelta,
   onReset,
   variant = 'bar',
+  onSet,
+  inputValue,
+  min,
+  max,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   onDelta: (sign: -1 | 1) => void;
   onReset?: () => void;
   variant?: StepperVariant;
+  onSet?: (value: number) => void;
+  inputValue?: number;
+  min?: number;
+  max?: number;
 }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const editable = onSet !== undefined && inputValue !== undefined;
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const startEdit = () => {
+    if (!editable) return;
+    setDraft(String(inputValue));
+    setEditing(true);
+  };
+
+  const confirm = () => {
+    if (!onSet) return;
+    const parsed = parseFloat(draft);
+    if (!isNaN(parsed)) {
+      let val = Math.round(parsed);
+      if (min !== undefined) val = Math.max(min, val);
+      if (max !== undefined) val = Math.min(max, val);
+      onSet(val);
+    }
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') { e.preventDefault(); confirm(); }
+    if (e.key === 'Escape') setEditing(false);
+  };
+
   const wrapperClass = variant === 'overflow' ? 'header__overflow-row' : 'grid-controls__group';
   const labelClass = variant === 'overflow' ? 'header__overflow-label' : 'grid-controls__label';
+
+  const valueEl = editing ? (
+    <input
+      ref={inputRef}
+      className="grid-controls__input"
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={confirm}
+      onKeyDown={handleKeyDown}
+      type="text"
+      inputMode="numeric"
+    />
+  ) : (
+    <span
+      className={`grid-controls__value${editable ? ' grid-controls__value--editable' : ''}`}
+      onClick={editable ? startEdit : undefined}
+      title={editable ? 'Click to edit' : undefined}
+    >
+      {value}
+    </span>
+  );
 
   const actions = (
     <div className="grid-controls__actions">
       <button onClick={() => onDelta(-1)} className="grid-controls__btn">−</button>
-      <span className="grid-controls__value">{value}</span>
+      {valueEl}
       <button onClick={() => onDelta(1)} className="grid-controls__btn">+</button>
     </div>
   );
@@ -97,6 +163,7 @@ export const Header = ({
   zoom, onZoomChange,
   onUndo, onRedo, canUndo, canRedo,
   sidebarOpen, onToggleSidebar,
+  onSetWidth, onSetHeight, onSetTopSpan, onSetBottomSpan, onSetZoom,
 }: HeaderProps) => {
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -237,8 +304,8 @@ export const Header = ({
         <div className="header__divider header__divider--collapsible" />
 
         <div className="grid-controls grid-controls--collapsible">
-          <Stepper label="Width" value={gridWidth} onDelta={onWidthChange} />
-          <Stepper label="Height" value={gridHeight} onDelta={onHeightChange} />
+          <Stepper label="Width" value={gridWidth} onDelta={onWidthChange} onSet={onSetWidth} inputValue={gridWidth} min={1} />
+          <Stepper label="Height" value={gridHeight} onDelta={onHeightChange} onSet={onSetHeight} inputValue={gridHeight} min={1} />
         </div>
 
         <div className="header__divider header__divider--collapsible" />
@@ -249,12 +316,20 @@ export const Header = ({
             value={topSpan}
             onDelta={onTopSpanChange}
             onReset={onTopEdgeReset}
+            onSet={onSetTopSpan}
+            inputValue={topSpan}
+            min={3}
+            max={10}
           />
           <Stepper
             label={<span className="grid-controls__label-stacked">Bottom<br />Edge</span>}
             value={bottomSpan}
             onDelta={onBottomSpanChange}
             onReset={onBottomEdgeReset}
+            onSet={onSetBottomSpan}
+            inputValue={bottomSpan}
+            min={3}
+            max={10}
           />
         </div>
 
@@ -265,6 +340,10 @@ export const Header = ({
             label="Zoom"
             value={`${Math.round(zoom * 100)}%`}
             onDelta={(s) => onZoomChange(s * 0.1)}
+            onSet={onSetZoom ? (v) => onSetZoom(v / 100) : undefined}
+            inputValue={Math.round(zoom * 100)}
+            min={25}
+            max={300}
           />
         </div>
 
@@ -292,10 +371,10 @@ export const Header = ({
           </button>
           {overflowOpen && (
             <div className="header__overflow-panel" role="menu">
-              <Stepper variant="overflow" label="Width" value={gridWidth} onDelta={onWidthChange} />
-              <Stepper variant="overflow" label="Height" value={gridHeight} onDelta={onHeightChange} />
-              <Stepper variant="overflow" label="Top Edge" value={topSpan} onDelta={onTopSpanChange} onReset={onTopEdgeReset} />
-              <Stepper variant="overflow" label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} onReset={onBottomEdgeReset} />
+              <Stepper variant="overflow" label="Width" value={gridWidth} onDelta={onWidthChange} onSet={onSetWidth} inputValue={gridWidth} min={1} />
+              <Stepper variant="overflow" label="Height" value={gridHeight} onDelta={onHeightChange} onSet={onSetHeight} inputValue={gridHeight} min={1} />
+              <Stepper variant="overflow" label="Top Edge" value={topSpan} onDelta={onTopSpanChange} onReset={onTopEdgeReset} onSet={onSetTopSpan} inputValue={topSpan} min={3} max={10} />
+              <Stepper variant="overflow" label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} onReset={onBottomEdgeReset} onSet={onSetBottomSpan} inputValue={bottomSpan} min={3} max={10} />
             </div>
           )}
         </div>

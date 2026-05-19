@@ -160,6 +160,32 @@
   font-size: 12px;
   color: #22d3ee;
 }
+.grid-controls__value--editable {
+  cursor: text;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s;
+}
+.grid-controls__value--editable:hover {
+  border-bottom-color: rgba(34, 211, 238, 0.5);
+}
+.grid-controls__input {
+  width: 36px;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: #22d3ee;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #22d3ee;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+.grid-controls__input::-webkit-outer-spin-button,
+.grid-controls__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
 .tool-btn {
   width: 1.625rem;
