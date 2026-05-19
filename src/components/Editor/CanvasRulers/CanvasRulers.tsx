@@ -53,7 +53,8 @@ const SpanCtrlButton = ({
 );
 
 export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width }: CanvasRulersProps) => {
-  const axisMargin = 40;
+  const axisMarginX = 30;
+  const axisMarginY = 40;
 
   const nodes = useMemo(() => beads.filter(b => b.type === 'NODE'), [beads]);
 
@@ -79,8 +80,8 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     [nodes]
   );
 
-  const baselineX = -axisMargin;
-  const baselineY = -axisMargin;
+  const baselineX = -axisMarginX;
+  const baselineY = -axisMarginY;
 
   const spanRowControls = useMemo(() => {
     const rows = Array.from(rowYMap.keys()).sort((a, b) => a - b);
@@ -114,7 +115,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     return controls;
   }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan]);
 
-  const ctrlCenterX = baselineX - 58;
+  const ctrlCenterX = baselineX - 60;
 
   const mirrorAxis = useMemo(() => {
     if (width <= 1) return null;
@@ -125,8 +126,8 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     if (maxX <= 0) return null;
     const ys = Array.from(rowYMap.values());
     if (ys.length === 0) return null;
-    const yTop = Math.min(...ys) - axisMargin;
-    const yBottom = Math.max(...ys) + axisMargin;
+    const yTop = Math.min(...ys) - axisMarginY;
+    const yBottom = Math.max(...ys) + axisMarginY;
     return { x: maxX / 2, yTop, yBottom };
   }, [width, nodes, rowYMap]);
 

@@ -46,6 +46,36 @@
   overflow: visible;
 }
 
+/* Кнопка экспорта схемы в PNG — стиль консистентен с .color-picker__confirm */
+.export-btn {
+  position: fixed;
+  bottom: 16px;
+  right: calc(var(--sidebar-width) + 16px);
+  z-index: 50;
+  padding: 0 16px;
+  height: 32px;
+  background: #111727;
+  color: #607086;
+  border: 1px solid #607086;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s,
+    right var(--transition-speed) ease;
+}
+
+.export-btn:hover {
+  color: #21cfe9;
+  border-color: #21cfe9;
+}
+
+.export-btn:active {
+  transform: translateY(1px);
+}
+
 /* Webkit Scrollbar */
 .canvas__svg::-webkit-scrollbar {
   width: 8px;

@@ -9,6 +9,7 @@ import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
+import { exportSchemeToPng } from '../../../utils/exportScheme';
 import './CanvasView.css';
 
 interface CanvasViewProps {
@@ -143,6 +144,14 @@ export const CanvasView = ({
     applyPaint(id);
   }, [applyPaint]);
 
+  const handleExport = useCallback(() => {
+    const svg = canvasSvgRef.current;
+    if (!svg) return;
+    exportSchemeToPng(svg, colorStats, beads.length).catch((err) => {
+      console.error('Failed to export scheme:', err);
+    });
+  }, [canvasSvgRef, colorStats, beads.length]);
+
   return (
     <main 
       className="editor__viewport"
@@ -208,6 +217,15 @@ export const CanvasView = ({
       </section>
 
       <CanvasStats totalCount={beads.length} colorStats={colorStats} />
+
+      <button
+        type="button"
+        className="export-btn"
+        onClick={handleExport}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        Download PNG
+      </button>
     </main>
   );
 };

@@ -20,7 +20,7 @@ export const BEAD_THEME = {
     initialHeight: 4,
     verticalCompression: 0.2,
     horizontalStepMultiplier: 0.8,
-    offsetX: 160,
+    offsetX: 120,
     offsetY: 50,
   },
 
