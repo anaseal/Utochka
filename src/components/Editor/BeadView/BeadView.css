@@ -14,13 +14,25 @@
   pointer-events: none;
 }
 
-.bead--type-node .bead__body {
-  filter: drop-shadow(0 0 1px var(--bead-color));
+.bead--type-node:not(.bead--empty) .bead__body {
+  filter: drop-shadow(0 0 2px var(--bead-color));
+}
+
+.bead--empty .bead__body {
+  stroke: rgba(160, 200, 230, 0.6);
+  stroke-width: 1px;
+  fill: rgba(255, 255, 255, 0.04);
+}
+
+.bead--type-node.bead--empty .bead__body {
+  fill: rgba(140, 185, 220, 0.07);
+  stroke: rgba(140, 185, 220, 0.85);
+  filter: drop-shadow(0 0 8px rgba(140, 185, 220, 1));
 }
 
 .bead__highlight {
   fill: none;
   stroke: #22d3ee;
-  stroke-width: 1.5;
+  stroke-width: 2;
   opacity: 0.75;
 }

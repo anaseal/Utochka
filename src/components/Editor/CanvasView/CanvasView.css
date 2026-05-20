@@ -46,6 +46,10 @@
   overflow: visible;
 }
 
+.editor__viewport--flood-fill .canvas__svg {
+  cursor: crosshair;
+}
+
 /* Кнопка экспорта схемы в PNG — стиль консистентен с .color-picker__confirm */
 .export-btn {
   position: fixed;

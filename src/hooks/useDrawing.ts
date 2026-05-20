@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { BEAD_THEME } from '../config/theme';
 import { usePersistedState } from './usePersistedState';
+import { Bead } from '../types/bead';
+import { computeFloodFill } from '../utils/floodFill';
 
 const MAX_HISTORY = 30;
 const RECENT_LIMIT = BEAD_THEME.ui.recentColorsLimit;
@@ -13,7 +15,7 @@ const isDesignMap = (v: unknown): v is Record<string, string> => {
   return Object.values(v).every(c => typeof c === 'string');
 };
 
-export type DrawingTool = 'pencil' | 'eraser';
+export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill';
 
 export const useDrawing = (initialColor: string, basePalette: readonly string[]) => {
   const [activeColor, setActiveColorState] = useState(initialColor);
@@ -107,6 +109,18 @@ export const useDrawing = (initialColor: string, basePalette: readonly string[])
     setDesignMap(next);
   }, [designMap, pushSnapshot]);
 
+  const floodFillAt = useCallback((startId: string, beads: Bead[], mirrorId: string | null) => {
+    const fillSet1 = computeFloodFill(startId, beads, designMap, activeColor);
+    const fillSet2 = mirrorId ? computeFloodFill(mirrorId, beads, designMap, activeColor) : [];
+    const union = [...new Set([...fillSet1, ...fillSet2])];
+    if (union.length === 0) return;
+    remapDesignMap(prev => {
+      const next = { ...prev };
+      for (const id of union) next[id] = activeColor;
+      return next;
+    });
+  }, [activeColor, designMap, remapDesignMap]);
+
   const undo = useCallback(() => {
     if (past.length === 0) return;
     setFuture(f => [designMap, ...f]);
@@ -135,6 +149,7 @@ export const useDrawing = (initialColor: string, basePalette: readonly string[])
     stopDrawing,
     clearAll,
     remapDesignMap,
+    floodFillAt,
     undo,
     redo,
     canUndo: past.length > 0,

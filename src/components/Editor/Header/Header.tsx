@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers } from 'lucide-react';
+import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers, PaintBucket } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
@@ -290,6 +290,15 @@ export const Header = ({
           title="Eraser"
         >
           <img src={eraserIcon} alt="Eraser" />
+        </button>
+
+        <button
+          onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
+          className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
+          title="Flood Fill"
+          aria-pressed={activeTool === 'flood-fill'}
+        >
+          <PaintBucket size={14} />
         </button>
 
         <button

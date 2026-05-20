@@ -9,16 +9,19 @@ import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
+import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
 import './CanvasView.css';
 
 interface CanvasViewProps {
   beads: Bead[];
   designMap: Record<string, string>;
+  activeTool: DrawingTool;
   isDrawing: boolean;
   paintBead: (id: string) => void;
   startDrawing: () => void;
   stopDrawing: () => void;
+  onFloodFill: (id: string) => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
   topSpan: number;
@@ -41,10 +44,12 @@ interface CanvasViewProps {
 export const CanvasView = ({
   beads,
   designMap,
+  activeTool,
   isDrawing,
   paintBead,
   startDrawing,
   stopDrawing,
+  onFloodFill,
   zoom,
   onZoomChange,
   topSpan,
@@ -137,12 +142,16 @@ export const CanvasView = ({
   }, [paintBead, mirrorMode, width, internalTop]);
 
   const handleMouseEnter = useCallback((id: string) => {
-    if (isDrawing) applyPaint(id);
-  }, [isDrawing, applyPaint]);
+    if (activeTool !== 'flood-fill' && isDrawing) applyPaint(id);
+  }, [activeTool, isDrawing, applyPaint]);
 
   const handleMouseDown = useCallback((id: string) => {
-    applyPaint(id);
-  }, [applyPaint]);
+    if (activeTool === 'flood-fill') {
+      onFloodFill(id);
+    } else {
+      applyPaint(id);
+    }
+  }, [activeTool, applyPaint, onFloodFill]);
 
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
@@ -153,11 +162,11 @@ export const CanvasView = ({
   }, [canvasSvgRef, colorStats, beads.length]);
 
   return (
-    <main 
-      className="editor__viewport"
-      onMouseDown={() => startDrawing()}
-      onMouseUp={() => stopDrawing()}
-      onMouseLeave={() => stopDrawing()}
+    <main
+      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}`}
+      onMouseDown={() => { if (activeTool !== 'flood-fill') startDrawing(); }}
+      onMouseUp={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
+      onMouseLeave={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">

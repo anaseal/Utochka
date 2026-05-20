@@ -28,13 +28,14 @@ export const BeadView = memo(({
   onMouseEnter
 }: BeadViewProps) => {
   const isNode = type === 'NODE';
+  const isEmpty = !color;
   const finalColor = color || defaultColor;
 
   const { nodeRadius, spanRadius, hitboxRadius } = BEAD_THEME.sizes;
 
   return (
     <g
-      className={`bead ${isNode ? 'bead--type-node' : 'bead--type-span'}`}
+      className={`bead ${isNode ? 'bead--type-node' : 'bead--type-span'}${isEmpty ? ' bead--empty' : ''}`}
       onMouseEnter={() => onMouseEnter(id)}
       onMouseDown={() => onMouseDown(id)}
     >

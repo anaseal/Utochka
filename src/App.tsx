@@ -1,5 +1,5 @@
 /* src/App.tsx */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGrid } from './hooks/useGrid';
 import { useDrawing } from './hooks/useDrawing';
 import { usePendants } from './hooks/usePendants';
@@ -13,6 +13,7 @@ import { PendantPlacement } from './types/pendant';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
 import { clampSpan, resolveSpanCount } from './utils/spans';
 import { shiftDesignMapColumns } from './utils/regrid';
+import { mirrorBeadId } from './utils/mirror';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
@@ -277,6 +278,13 @@ function App() {
     setDecorBands({});
   };
 
+  const handleFloodFill = useCallback((startId: string) => {
+    const mirrorId = mirrorMode
+      ? mirrorBeadId(startId, gridSize.width, internalTop)
+      : null;
+    drawingControls.floodFillAt(startId, beads, mirrorId !== startId ? mirrorId : null);
+  }, [drawingControls.floodFillAt, beads, mirrorMode, gridSize.width, internalTop]);
+
   const resetEdge = (edge: 'top' | 'bottom') => {
     const isTop = edge === 'top';
     setGridSize(prev => ({
@@ -351,6 +359,7 @@ function App() {
         onPaintPendantBead={pendantControls.paintPendantBead}
         onRemovePlacement={pendantControls.removePlacement}
         canvasSvgRef={canvasSvgRef}
+        onFloodFill={handleFloodFill}
         {...drawingControls}
       />
 
