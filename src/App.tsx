@@ -105,7 +105,7 @@ function App() {
   );
 
   const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor);
-  const drawingControls = useDrawing(PALETTE[0], PALETTE);
+  const drawingControls = useDrawing(PALETTE[0], PALETTE, pendantPlacements, setPendantPlacements);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
@@ -378,23 +378,25 @@ function App() {
     if (gridIds.length === 0 && pendantHits.length === 0) return;
 
     const activeColor = drawingControls.activeColor;
-    if (gridIds.length > 0) {
-      drawingControls.remapDesignMap(prev => {
-        const next = { ...prev };
-        for (const id of gridIds) next[id] = activeColor;
-        return next;
-      });
-    }
-    if (pendantHits.length > 0) {
-      setPendantPlacements(prev => prev.map((p) => {
-        const hits = pendantHits.filter(h => h.placementId === p.placementId);
-        if (hits.length === 0) return p;
-        const colorMap = { ...p.colorMap };
-        for (const h of hits) colorMap[h.index] = activeColor;
-        return { ...p, colorMap };
-      }));
-    }
-  }, [beads, drawingControls, pendantPlacements, bottomNodes, setPendantPlacements]);
+    drawingControls.applyPatch(
+      gridIds.length > 0
+        ? (prev) => {
+          const next = { ...prev };
+          for (const id of gridIds) next[id] = activeColor;
+          return next;
+        }
+        : null,
+      pendantHits.length > 0
+        ? (prev) => prev.map((p) => {
+          const hits = pendantHits.filter(h => h.placementId === p.placementId);
+          if (hits.length === 0) return p;
+          const colorMap = { ...p.colorMap };
+          for (const h of hits) colorMap[h.index] = activeColor;
+          return { ...p, colorMap };
+        })
+        : null,
+    );
+  }, [beads, drawingControls, pendantPlacements, bottomNodes]);
 
   const handleFloodFill = useCallback((startId: string) => {
     const mirrorId = mirrorMode
