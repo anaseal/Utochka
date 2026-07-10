@@ -14,33 +14,33 @@
   cursor: pointer;
 }
 
-/* Ножки (r чётный, even→odd) — янтарный */
+/* Ножки (r чётный, even→odd) — янтарный. Значения в fallback — тёмная тема. */
 .span-ctrl__btn--bottom {
-  fill: #451a03;
-  stroke: #92400e;
+  fill: var(--span-btn-bottom-fill, #451a03);
+  stroke: var(--span-btn-bottom-stroke, #92400e);
   stroke-width: 1;
 }
 
 .span-ctrl__btn-group--bottom:hover .span-ctrl__btn--bottom {
-  fill: #78350f;
-  stroke: #d97706;
+  fill: var(--span-btn-bottom-fill-hover, #78350f);
+  stroke: var(--span-btn-bottom-stroke-hover, #d97706);
 }
 
 /* Плечи (r нечётный, odd→even) — синий */
 .span-ctrl__btn--top {
-  fill: #082f49;
-  stroke: #075985;
+  fill: var(--span-btn-top-fill, #082f49);
+  stroke: var(--span-btn-top-stroke, #075985);
   stroke-width: 1;
 }
 
 .span-ctrl__btn-group--top:hover .span-ctrl__btn--top {
-  fill: #0c4a6e;
-  stroke: #0284c7;
+  fill: var(--span-btn-top-fill-hover, #0c4a6e);
+  stroke: var(--span-btn-top-stroke-hover, #0284c7);
 }
 
 
 .span-ctrl__btn-text {
-  fill: #94a3b8;
+  fill: var(--span-btn-text, #94a3b8);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   font-weight: 700;
@@ -74,10 +74,26 @@
 
 
 
-/* Центральная ось плетения — вертикальный пунктир */
+/* Центральная ось плетения — вертикальный пунктир.
+   На светлом холсте белая линия невидима — переопределяем токеном. */
 .canvas__mirror-axis {
-  stroke: rgba(255, 255, 255, 0.5);
+  stroke: var(--canvas-mirror-axis, rgba(255, 255, 255, 0.5));
   stroke-width: 1.5;
   stroke-dasharray: 6 6;
   pointer-events: none;
+}
+
+.canvas__svg[data-canvas-theme="light"] {
+  --canvas-mirror-axis: rgba(15, 23, 42, 0.35);
+
+  /* Светлые чипы span-контролов вместо тяжёлых тёмных заливок на белом. */
+--span-btn-bottom-fill: #fee2e2;
+--span-btn-bottom-stroke: #e11d48;
+--span-btn-bottom-fill-hover: #fecaca;
+--span-btn-bottom-stroke-hover: #be123c;
+  --span-btn-top-fill: #e0f2fe;
+  --span-btn-top-stroke: #0284c7;
+  --span-btn-top-fill-hover: #bae6fd;
+  --span-btn-top-stroke-hover: #0369a1;
+  --span-btn-text: #475569;
 }

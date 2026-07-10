@@ -18,16 +18,29 @@
   filter: drop-shadow(0 0 2px var(--bead-color));
 }
 
+/* Базовый (незакрашенный) бисер. Значения в fallback — тёмная тема;
+   светлую задаёт .canvas__svg[data-canvas-theme="light"] через токены. */
 .bead--empty .bead__body {
-  stroke: rgba(160, 200, 230, 0.6);
+  stroke: var(--bead-empty-stroke, rgba(160, 200, 230, 0.6));
   stroke-width: 1px;
-  fill: rgba(255, 255, 255, 0.04);
+  fill: var(--bead-empty-fill, rgba(255, 255, 255, 0.04));
 }
 
 .bead--type-node.bead--empty .bead__body {
-  fill: rgba(140, 185, 220, 0.07);
-  stroke: rgba(140, 185, 220, 0.85);
-  filter: drop-shadow(0 0 8px rgba(140, 185, 220, 1));
+  fill: var(--bead-node-empty-fill, rgba(140, 185, 220, 0.07));
+  stroke: var(--bead-node-empty-stroke, rgba(140, 185, 220, 0.85));
+  filter: drop-shadow(0 0 8px var(--bead-node-empty-glow, rgba(140, 185, 220, 1)));
+}
+
+/* Светлая тема холста: базовый бисер — чистые контуры без мутной заливки и
+   без серого свечения (иначе на светлом фоне бусины выглядят «грязно»).
+   Дифференциация ноды — более тёмным и плотным контуром, а не glow. */
+.canvas__svg[data-canvas-theme="light"] {
+  --bead-empty-stroke: rgba(100, 116, 139, 0.5);
+  --bead-empty-fill: transparent;
+  --bead-node-empty-fill: transparent;
+  --bead-node-empty-stroke: rgba(71, 85, 105, 0.75);
+  --bead-node-empty-glow: transparent;
 }
 
 .bead__highlight {

@@ -12,6 +12,13 @@
   transition: right var(--transition-speed) ease;
 }
 
+/* Светлый режим холста: рама остаётся тёмной, но менее чёрной (navy),
+   чтобы снизить контраст со светлой карточкой. Атрибут дублируется на
+   viewport (ancestor карточки) — отсюда фон рамы. */
+.editor__viewport[data-canvas-theme="light"] {
+  background-color: #0e1b33;
+}
+
 .canvas {
   position: relative;
   display: flex;
@@ -22,11 +29,18 @@
 
 /* Канвас: визуальное окно фиксированного размера со скроллом внутри, если SVG больше */
 .canvas__svg {
+  /* Токены темы холста. Дефолт — тёмная тема; светлая переопределяет их
+     через [data-canvas-theme="light"] ниже. Область — только карточка холста. */
+  --canvas-surface: #0f172a;
+  --canvas-border: rgba(255, 255, 255, 0.05);
+  --canvas-scrollbar-thumb: #334155;
+  --canvas-scrollbar-track: rgba(15, 23, 42, 0.5);
+
   display: block;
-  background-color: #0f172a;
+  background-color: var(--canvas-surface);
   border-radius: 24px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--canvas-border);
 
   /* Адаптивный размер: до 1200x650, но сжимается чтобы влезать в viewport
      (учитываем padding-left 50px у .canvas + правый отступ ~30px,
@@ -37,8 +51,17 @@
   overflow: auto;
   position: relative;
   scrollbar-width: thin;
-  scrollbar-color: #334155 rgba(0, 0, 0, 0.2);
+  scrollbar-color: var(--canvas-scrollbar-thumb) var(--canvas-scrollbar-track);
   padding: 30px;
+}
+
+/* Светлая тема холста (slate-50). Переключается кнопкой в хедере,
+   область — только карточка .canvas__svg и её содержимое. */
+.canvas__svg[data-canvas-theme="light"] {
+  --canvas-surface: #e3f3ff;
+  --canvas-border: rgba(15, 23, 42, 0.08);
+  --canvas-scrollbar-thumb: #94a3b8;
+  --canvas-scrollbar-track: rgba(148, 163, 184, 0.25);
 }
 
 .canvas__svg-content {
@@ -88,6 +111,36 @@
   transform: translateY(1px);
 }
 
+/* Переключатель темы холста — плавающая иконка над кнопкой экспорта,
+   рядом с холстом. Стиль консистентен с .export-btn. */
+.canvas-theme-toggle {
+  position: fixed;
+  bottom: 56px;
+  right: calc(var(--sidebar-width) + 16px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #111727;
+  color: #607086;
+  border: 1px solid #607086;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s,
+    right var(--transition-speed) ease;
+}
+
+.canvas-theme-toggle:hover {
+  color: #21cfe9;
+  border-color: #21cfe9;
+}
+
+.canvas-theme-toggle:active {
+  transform: translateY(1px);
+}
+
 /* Webkit Scrollbar */
 .canvas__svg::-webkit-scrollbar {
   width: 8px;
@@ -95,12 +148,12 @@
 }
 
 .canvas__svg::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--canvas-scrollbar-track);
   border-radius: 10px;
 }
 
 .canvas__svg::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--canvas-scrollbar-thumb);
   border-radius: 10px;
 }
 

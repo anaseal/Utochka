@@ -9,8 +9,42 @@
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/** Цвет фонового поля холста (`.canvas__svg` в CanvasView.css). */
-const BG_COLOR = '#0f172a';
+export type CanvasTheme = 'dark' | 'light';
+
+/**
+ * Палитра экспорта по теме холста — согласована с токенами `.canvas__svg`
+ * и `[data-canvas-theme="light"]` в CSS, чтобы PNG совпадал с видом на экране.
+ */
+interface ExportPalette {
+  bg: string;
+  axisText: string;
+  mirrorAxis: string;
+  legendDivider: string;
+  legendTitle: string;
+  legendLabel: string;
+  swatchStroke: string;
+}
+
+const PALETTES: Record<CanvasTheme, ExportPalette> = {
+  dark: {
+    bg: '#0f172a',
+    axisText: '#64748b',
+    mirrorAxis: 'rgba(255, 255, 255, 0.5)',
+    legendDivider: 'rgba(255, 255, 255, 0.1)',
+    legendTitle: '#e2e8f0',
+    legendLabel: '#e2e8f0',
+    swatchStroke: 'rgba(255, 255, 255, 0.25)',
+  },
+  light: {
+    bg: '#f8fafc',
+    axisText: '#475569',
+    mirrorAxis: 'rgba(15, 23, 42, 0.35)',
+    legendDivider: 'rgba(15, 23, 42, 0.12)',
+    legendTitle: '#1e293b',
+    legendLabel: '#334155',
+    swatchStroke: 'rgba(15, 23, 42, 0.25)',
+  },
+};
 
 /** Множитель разрешения PNG — ×2 для резкости при печати. */
 const QUALITY_SCALE = 2;
@@ -37,8 +71,9 @@ const STRIP_SELECTORS = [
 /**
  * Стили, которые в приложении приходят из внешних CSS-файлов и теряются при
  * сериализации SVG. Цвета бусин не включены — они уже инлайн (`fill`).
+ * Цвета осей/оси зеркала зависят от темы холста (`pal`).
  */
-const EXPORT_STYLE = `
+const buildExportStyle = (pal: ExportPalette): string => `
 .bead__body, .pendant-bead__body {
   stroke: #000000;
   stroke-width: 0.5px;
@@ -48,13 +83,13 @@ const EXPORT_STYLE = `
   filter: drop-shadow(0 0 1px var(--bead-color));
 }
 .canvas__axis-text {
-  fill: #64748b;
+  fill: ${pal.axisText};
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 20px;
   font-weight: 600;
 }
 .canvas__mirror-axis {
-  stroke: rgba(255, 255, 255, 0.5);
+  stroke: ${pal.mirrorAxis};
   stroke-width: 1.5;
   stroke-dasharray: 6 6;
 }
@@ -75,6 +110,7 @@ const buildLegend = (
   originX: number,
   yOffset: number,
   width: number,
+  pal: ExportPalette,
 ): { group: SVGGElement; height: number } => {
   const { pad, titleHeight, itemHeight, swatch } = LEGEND;
   const height = pad + titleHeight + colorStats.length * itemHeight + pad;
@@ -87,7 +123,7 @@ const buildLegend = (
   divider.setAttribute('y1', '0');
   divider.setAttribute('x2', String(width - pad));
   divider.setAttribute('y2', '0');
-  divider.setAttribute('stroke', 'rgba(255, 255, 255, 0.1)');
+  divider.setAttribute('stroke', pal.legendDivider);
   group.appendChild(divider);
 
   const title = document.createElementNS(SVG_NS, 'text');
@@ -96,7 +132,7 @@ const buildLegend = (
   title.setAttribute('font-family', 'sans-serif');
   title.setAttribute('font-size', '13');
   title.setAttribute('font-weight', '700');
-  title.setAttribute('fill', '#e2e8f0');
+  title.setAttribute('fill', pal.legendTitle);
   title.textContent = `Materials — total beads: ${totalCount}`;
   group.appendChild(title);
 
@@ -110,7 +146,7 @@ const buildLegend = (
     rect.setAttribute('height', String(swatch));
     rect.setAttribute('rx', '4');
     rect.setAttribute('fill', color);
-    rect.setAttribute('stroke', 'rgba(255, 255, 255, 0.25)');
+    rect.setAttribute('stroke', pal.swatchStroke);
     group.appendChild(rect);
 
     const label = document.createElementNS(SVG_NS, 'text');
@@ -119,7 +155,7 @@ const buildLegend = (
     label.setAttribute('dominant-baseline', 'middle');
     label.setAttribute('font-family', 'monospace');
     label.setAttribute('font-size', '15');
-    label.setAttribute('fill', '#e2e8f0');
+    label.setAttribute('fill', pal.legendLabel);
     label.textContent = `${color}  ×  ${count}`;
     group.appendChild(label);
   });
@@ -152,18 +188,21 @@ const measureContent = (clone: SVGSVGElement): DOMRect => {
  * @param svg        Живой корневой `<svg>` холста (`canvasSvgRef.current`).
  * @param colorStats Спецификация материалов: пары `[цвет, количество]`.
  * @param totalCount Общее число бусин.
+ * @param theme      Тема холста — задаёт фон и цвета осей/легенды в PNG.
  */
 export const exportSchemeToPng = (
   svg: SVGSVGElement,
   colorStats: [string, number][],
   totalCount: number,
+  theme: CanvasTheme = 'dark',
 ): Promise<void> => {
+  const pal = PALETTES[theme];
   const clone = svg.cloneNode(true) as SVGSVGElement;
 
   clone.querySelectorAll(STRIP_SELECTORS).forEach((el) => el.remove());
 
   const style = document.createElementNS(SVG_NS, 'style');
-  style.textContent = EXPORT_STYLE;
+  style.textContent = buildExportStyle(pal);
   clone.appendChild(style);
 
   clone.setAttribute('xmlns', SVG_NS);
@@ -185,6 +224,7 @@ export const exportSchemeToPng = (
     contentX,
     contentY + contentH,
     contentW,
+    pal,
   );
   clone.appendChild(legend);
 
@@ -196,7 +236,7 @@ export const exportSchemeToPng = (
   background.setAttribute('y', String(contentY));
   background.setAttribute('width', String(fullW));
   background.setAttribute('height', String(fullH));
-  background.setAttribute('fill', BG_COLOR);
+  background.setAttribute('fill', pal.bg);
   clone.insertBefore(background, clone.firstChild);
 
   clone.setAttribute('width', String(fullW));
@@ -223,7 +263,7 @@ export const exportSchemeToPng = (
         return;
       }
 
-      ctx.fillStyle = BG_COLOR;
+      ctx.fillStyle = pal.bg;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 

@@ -12,6 +12,7 @@ import { mirrorBeadId } from '../../../utils/mirror';
 import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
+import { Sun, Moon } from 'lucide-react';
 import './CanvasView.css';
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
@@ -20,6 +21,8 @@ const STAMP_DRAG_THRESHOLD = 4;
 
 interface CanvasViewProps {
   beads: Bead[];
+  canvasTheme: 'dark' | 'light';
+  onToggleCanvasTheme: () => void;
   designMap: Record<string, string>;
   activeTool: DrawingTool;
   isDrawing: boolean;
@@ -57,6 +60,8 @@ interface CanvasViewProps {
 
 export const CanvasView = ({
   beads,
+  canvasTheme,
+  onToggleCanvasTheme,
   designMap,
   activeTool,
   isDrawing,
@@ -313,13 +318,14 @@ export const CanvasView = ({
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
     if (!svg) return;
-    exportSchemeToPng(svg, colorStats, totalCount).catch((err) => {
+    exportSchemeToPng(svg, colorStats, totalCount, canvasTheme).catch((err) => {
       console.error('Failed to export scheme:', err);
     });
-  }, [canvasSvgRef, colorStats, totalCount]);
+  }, [canvasSvgRef, colorStats, totalCount, canvasTheme]);
 
   return (
     <main
+      data-canvas-theme={canvasTheme}
       className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}`}
       onMouseDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') startDrawing(); }}
       onMouseUp={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
@@ -329,6 +335,7 @@ export const CanvasView = ({
       <section className="canvas">
         <div
           className="canvas__svg"
+          data-canvas-theme={canvasTheme}
           ref={canvasContainerRef}
           onMouseDown={handleStampContainerMouseDown}
           onMouseMove={handleStampContainerMouseMove}
@@ -400,6 +407,17 @@ export const CanvasView = ({
       </section>
 
       <CanvasStats totalCount={totalCount} colorStats={colorStats} />
+
+      <button
+        type="button"
+        className="canvas-theme-toggle"
+        onClick={onToggleCanvasTheme}
+        onMouseDown={(e) => e.stopPropagation()}
+        title={canvasTheme === 'dark' ? 'Светлый холст' : 'Тёмный холст'}
+        aria-label={canvasTheme === 'dark' ? 'Переключить на светлый холст' : 'Переключить на тёмный холст'}
+      >
+        {canvasTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+      </button>
 
       <button
         type="button"

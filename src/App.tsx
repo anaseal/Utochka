@@ -104,6 +104,10 @@ function App() {
     'silyanka:pendantPlacements', [], isPendantPlacements,
   );
 
+  const [canvasTheme, setCanvasTheme] = usePersistedState<'dark' | 'light'>(
+    'silyanka:canvasTheme', 'dark', (v): v is 'dark' | 'light' => v === 'dark' || v === 'light',
+  );
+
   const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor);
   const drawingControls = useDrawing(PALETTE[0], PALETTE, pendantPlacements, setPendantPlacements);
 
@@ -482,6 +486,8 @@ function App() {
 
       <CanvasView
         beads={beads}
+        canvasTheme={canvasTheme}
+        onToggleCanvasTheme={() => setCanvasTheme(t => (t === 'dark' ? 'light' : 'dark'))}
         zoom={zoom}
         onZoomChange={updateZoom}
         topSpan={gridSize.topSpan}
