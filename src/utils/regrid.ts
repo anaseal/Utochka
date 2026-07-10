@@ -4,6 +4,7 @@
 
 const NODE_RE = /^node-(\d+)-(\d+)$/;
 const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
+const BOTTOM_LINK_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
 const VERT_EDGE_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
 
 // Новый ID со сдвигом колонки на shift; null — если бисерина выходит за сетку.
@@ -23,6 +24,14 @@ const shiftId = (id: string, shift: number, newW: number): string | null => {
     const i = Number(t[2]);
     if (c < 0 || c > newW - 2) return null;
     return `span-edge-top-link-${c}-bead-${i}`;
+  }
+
+  const b = id.match(BOTTOM_LINK_RE);
+  if (b) {
+    const c = Number(b[1]) + shift;
+    const i = Number(b[2]);
+    if (c < 0 || c > newW - 2) return null;
+    return `span-edge-bottom-link-${c}-bead-${i}`;
   }
 
   const v = id.match(VERT_EDGE_RE);

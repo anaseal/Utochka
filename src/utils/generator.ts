@@ -11,21 +11,27 @@ export const generateSilyankaGrid = (
   topSpan: number,
   bottomSpan: number,
   rowSpanOverrides: Record<number, number> = {},
-  decorBands: Record<number, number> = {}
+  decorBands: Record<number, number> = {},
+  bottomEdgeEnabled: boolean = false,
+  bottomEdgeSpan: number = 3
 ): Bead[] => {
   const beads: Bead[] = [];
   const {
     verticalCompression,
-    horizontalStepMultiplier
+    horizontalStepMultiplier,
+    edgeArcHeight
   } = BEAD_THEME.gridDefaults;
 
   // Верхняя горизонтальная цепочка (r=0) — отдельный per-row override с ключом -1
   const topEdgeCount = resolveSpanCount(-1, topSpan, bottomSpan, rowSpanOverrides);
   const internalTop = Math.max(0, topEdgeCount - 2);
+  // Нижняя горизонтальная цепочка — независима от rowSpanOverrides/topSpan/bottomSpan
+  const internalBottom = bottomEdgeEnabled ? Math.max(0, bottomEdgeSpan - 2) : 0;
   const minBeadPitch = BEAD_THEME.sizes.spanRadius * 2 + 2; // минимальный шаг без перекрытия ≈ 14px
   const stepX = Math.max(
     spacing * horizontalStepMultiplier,
-    (internalTop + 1) * minBeadPitch
+    (internalTop + 1) * minBeadPitch,
+    (internalBottom + 1) * minBeadPitch
   );
 
   const getInternalCount = (r: number): number =>
@@ -99,6 +105,30 @@ export const generateSilyankaGrid = (
     }
   };
 
+  // Дуга: бисерины расходятся от узлов к середине пролёта по sin-профилю —
+  // в отличие от generateSpan, не наползают друг на друга при большом count.
+  const generateArcSpan = (
+    start: SpanCoords,
+    end: SpanCoords,
+    count: number,
+    clusterId: string,
+    r: number,
+    c: number,
+    arcHeight: number,
+    direction: 1 | -1
+  ) => {
+    for (let i = 1; i <= count; i++) {
+      const t = i / (count + 1);
+      beads.push({
+        id: `span-${clusterId}-bead-${i}`,
+        x: start.x + t * (end.x - start.x),
+        y: start.y + t * (end.y - start.y) + direction * arcHeight * Math.sin(Math.PI * t),
+        type: 'SPAN',
+        logicalIndex: { row: r, col: c }
+      });
+    }
+  };
+
   for (let r = 0; r < nodeGrid.length; r++) {
     // Декор-полоса раздвигает ряд r и r+1: диагональные грани ромбов стартуют
     // от нижнего декор-ряда полосы, а не от самого узлового ряда.
@@ -117,8 +147,7 @@ export const generateSilyankaGrid = (
       });
 
       if (r === 0 && c < width - 1) {
-        const topEdgeYOffset = -(spacing * verticalCompression);
-        generateSpan(currentNode, nodeGrid[0][c + 1], internalTop, `edge-top-link-${c}`, r, c, topEdgeYOffset);
+        generateArcSpan(currentNode, nodeGrid[0][c + 1], internalTop, `edge-top-link-${c}`, r, c, edgeArcHeight, -1);
       }
 
       const nextRow = nodeGrid[r + 1];
@@ -152,6 +181,15 @@ export const generateSilyankaGrid = (
           });
         });
       });
+    }
+  }
+
+  if (bottomEdgeEnabled) {
+    const lastR = 2 * height;
+    const lastRow = nodeGrid[lastR];
+
+    for (let c = 0; c < lastRow.length - 1; c++) {
+      generateArcSpan(lastRow[c], lastRow[c + 1], internalBottom, `edge-bottom-link-${c}`, lastR, c, edgeArcHeight, 1);
     }
   }
 

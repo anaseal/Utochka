@@ -22,6 +22,7 @@ export const BEAD_THEME = {
     horizontalStepMultiplier: 0.8,
     offsetX: 120,
     offsetY: 50,
+    edgeArcHeight: 13, // ≈ spacing(65) * verticalCompression(0.2) — высота дуги верхней/нижней кромки
   },
 
   constraints: {

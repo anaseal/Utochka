@@ -12,6 +12,9 @@ interface CanvasRulersProps {
   hoveredRow: number | null;
   mirrorMode: boolean;
   width: number;
+  bottomEdgeEnabled: boolean;
+  bottomEdgeSpan: number;
+  onBottomEdgeSpanChange: (delta: number) => void;
 }
 
 const SpanCtrlButton = ({
@@ -52,7 +55,7 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width }: CanvasRulersProps) => {
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange }: CanvasRulersProps) => {
   const axisMarginX = 30;
   const axisMarginY = 40;
 
@@ -85,7 +88,19 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
 
   const spanRowControls = useMemo(() => {
     const rows = Array.from(rowYMap.keys()).sort((a, b) => a - b);
-    const controls = rows.slice(0, -1).map(r => {
+
+    const minGap = rows.length > 1
+      ? Math.min(...rows.slice(0, -1).map((r, i) => rowYMap.get(rows[i + 1])! - rowYMap.get(r)!))
+      : 24;
+
+    const controls: {
+      r: number;
+      midY: number;
+      count: number;
+      isOverridden: boolean;
+      isBottom: boolean;
+      onDelta?: (delta: number) => void;
+    }[] = rows.slice(0, -1).map(r => {
       const y = rowYMap.get(r)!;
       const nextY = rowYMap.get(r + 1)!;
       const midY = (y + nextY) / 2;
@@ -100,9 +115,6 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     // он не растягивается декор-полосами и даёт стабильный отступ.
     const firstRowY = rowYMap.get(0);
     if (firstRowY !== undefined) {
-      const minGap = rows.length > 1
-        ? Math.min(...rows.slice(0, -1).map((r, i) => rowYMap.get(rows[i + 1])! - rowYMap.get(r)!))
-        : 24;
       controls.unshift({
         r: -1,
         midY: firstRowY - minGap / 2,
@@ -112,8 +124,22 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
       });
     }
 
+    // Нижняя горизонтальная цепочка (r=-2) — независимый BottomEdgeDecor,
+    // не связан с rowSpanOverrides; располагается под последним рядом.
+    if (bottomEdgeEnabled && rows.length > 0) {
+      const lastRowY = rowYMap.get(rows[rows.length - 1])!;
+      controls.push({
+        r: -2,
+        midY: lastRowY + minGap / 2,
+        count: bottomEdgeSpan,
+        isOverridden: false,
+        isBottom: true,
+        onDelta: onBottomEdgeSpanChange,
+      });
+    }
+
     return controls;
-  }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan]);
+  }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange]);
 
   const ctrlCenterX = baselineX - 60;
 
@@ -169,8 +195,9 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
         </text>
       ))}
 
-      {spanRowControls.map(({ r, midY, count, isOverridden, isBottom }) => {
+      {spanRowControls.map(({ r, midY, count, isOverridden, isBottom, onDelta }) => {
         const type = isBottom ? 'bottom' : 'top';
+        const changeBy = onDelta ?? ((delta: number) => onRowSpanChange(r, delta));
         return (
           <g key={`span-ctrl-${r}`}>
             <SpanCtrlButton
@@ -178,7 +205,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
               midY={midY}
               type={type}
               glyph="−"
-              onClick={() => onRowSpanChange(r, -1)}
+              onClick={() => changeBy(-1)}
             />
             <text
               x={ctrlCenterX - 3}
@@ -194,7 +221,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
               midY={midY}
               type={type}
               glyph="+"
-              onClick={() => onRowSpanChange(r, 1)}
+              onClick={() => changeBy(1)}
             />
           </g>
         );

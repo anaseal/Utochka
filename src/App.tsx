@@ -8,7 +8,7 @@ import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { Header } from './components/Editor/Header/Header';
 import { PendantsSidebar } from './components/Sidebar/PendantsSidebar';
 import { BEAD_THEME } from './config/theme';
-import { GridConfig } from './types/bead';
+import { BottomEdgeDecor, GridConfig } from './types/bead';
 import { PendantPlacement } from './types/pendant';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
 import { clampSpan, resolveSpanCount } from './utils/spans';
@@ -17,13 +17,21 @@ import { mirrorBeadId } from './utils/mirror';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
-const isGridConfig = (v: unknown): v is GridConfig =>
+const isGridConfig = (v: unknown): v is GridConfig => {
+  if (typeof v !== 'object' || v === null) return false;
+  const obj = v as Record<string, unknown>;
+  if (typeof obj.width !== 'number') return false;
+  if (typeof obj.height !== 'number') return false;
+  if (typeof obj.spacing !== 'number') return false;
+  if (typeof obj.topSpan !== 'number') return false;
+  if (typeof obj.bottomSpan !== 'number') return false;
+  return true;
+};
+
+const isBottomEdgeDecor = (v: unknown): v is BottomEdgeDecor =>
   typeof v === 'object' && v !== null &&
-  typeof (v as GridConfig).width === 'number' &&
-  typeof (v as GridConfig).height === 'number' &&
-  typeof (v as GridConfig).spacing === 'number' &&
-  typeof (v as GridConfig).topSpan === 'number' &&
-  typeof (v as GridConfig).bottomSpan === 'number';
+  typeof (v as BottomEdgeDecor).enabled === 'boolean' &&
+  typeof (v as BottomEdgeDecor).span === 'number';
 
 const isZoom = (v: unknown): v is number =>
   typeof v === 'number' && v >= 0.25 && v <= 3;
@@ -84,12 +92,17 @@ function App() {
   const [decorBands, setDecorBands] = usePersistedState<Record<number, number>>(
     'silyanka:decorBands', {}, isDecorBands,
   );
+  const [bottomEdgeDecor, setBottomEdgeDecor] = usePersistedState<BottomEdgeDecor>(
+    'silyanka:bottomEdgeDecor',
+    { enabled: false, span: BEAD_THEME.gridDefaults.beadsInSpan },
+    isBottomEdgeDecor,
+  );
 
   const [pendantPlacements, setPendantPlacements] = usePersistedState<PendantPlacement[]>(
     'silyanka:pendantPlacements', [], isPendantPlacements,
   );
 
-  const beads = useGrid(gridSize, rowSpanOverrides, decorBands);
+  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor);
   const drawingControls = useDrawing(PALETTE[0], PALETTE);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -123,6 +136,8 @@ function App() {
     0,
     resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2,
   );
+
+  const internalBottom = Math.max(0, bottomEdgeDecor.span - 2);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -231,6 +246,17 @@ function App() {
     setZoom(Math.min(3, Math.max(0.25, v)));
   };
 
+  const toggleBottomEdgeEnabled = () => {
+    setBottomEdgeDecor(prev => {
+      if (!prev.enabled && pendantPlacements.length > 0) return prev;
+      return { ...prev, enabled: !prev.enabled };
+    });
+  };
+
+  const updateBottomEdgeSpan = (delta: number) => {
+    setBottomEdgeDecor(prev => ({ ...prev, span: clampSpan(prev.span + delta) }));
+  };
+
   const updateRowSpan = (spanRowIndex: number, delta: number) => {
     setRowSpanOverrides(prev => {
       const current = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, prev);
@@ -280,10 +306,10 @@ function App() {
 
   const handleFloodFill = useCallback((startId: string) => {
     const mirrorId = mirrorMode
-      ? mirrorBeadId(startId, gridSize.width, internalTop)
+      ? mirrorBeadId(startId, gridSize.width, internalTop, internalBottom)
       : null;
     drawingControls.floodFillAt(startId, beads, mirrorId !== startId ? mirrorId : null);
-  }, [drawingControls.floodFillAt, beads, mirrorMode, gridSize.width, internalTop]);
+  }, [drawingControls.floodFillAt, beads, mirrorMode, gridSize.width, internalTop, internalBottom]);
 
   const resetEdge = (edge: 'top' | 'bottom') => {
     const isTop = edge === 'top';
@@ -352,6 +378,7 @@ function App() {
         mirrorMode={mirrorMode}
         width={gridSize.width}
         internalTop={internalTop}
+        internalBottom={internalBottom}
         pendantPlacements={pendantPlacements}
         pendantTemplates={PENDANT_TEMPLATES_BY_ID}
         bottomNodes={bottomNodes}
@@ -360,6 +387,9 @@ function App() {
         onRemovePlacement={pendantControls.removePlacement}
         canvasSvgRef={canvasSvgRef}
         onFloodFill={handleFloodFill}
+        bottomEdgeEnabled={bottomEdgeDecor.enabled}
+        bottomEdgeSpan={bottomEdgeDecor.span}
+        onBottomEdgeSpanChange={updateBottomEdgeSpan}
         {...drawingControls}
       />
 
@@ -379,6 +409,8 @@ function App() {
         onDecorCount={updateDecorBand}
         onClearDecor={handleClearDecor}
         onHoveredRowChange={setHoveredRow}
+        bottomEdgeEnabled={bottomEdgeDecor.enabled}
+        onBottomEdgeToggle={toggleBottomEdgeEnabled}
       />
     </main>
   );

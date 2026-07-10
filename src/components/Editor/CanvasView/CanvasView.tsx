@@ -32,6 +32,7 @@ interface CanvasViewProps {
   mirrorMode: boolean;
   width: number;
   internalTop: number;
+  internalBottom: number;
   pendantPlacements: PendantPlacement[];
   pendantTemplates: Record<string, PendantTemplate>;
   bottomNodes: Bead[];
@@ -39,6 +40,9 @@ interface CanvasViewProps {
   onPaintPendantBead: (placementId: string, beadIndex: number) => void;
   onRemovePlacement: (placementId: string) => void;
   canvasSvgRef: React.RefObject<SVGSVGElement | null>;
+  bottomEdgeEnabled: boolean;
+  bottomEdgeSpan: number;
+  onBottomEdgeSpanChange: (delta: number) => void;
 }
 
 export const CanvasView = ({
@@ -60,6 +64,7 @@ export const CanvasView = ({
   mirrorMode,
   width,
   internalTop,
+  internalBottom,
   pendantPlacements,
   pendantTemplates,
   bottomNodes,
@@ -67,6 +72,9 @@ export const CanvasView = ({
   onPaintPendantBead,
   onRemovePlacement,
   canvasSvgRef,
+  bottomEdgeEnabled,
+  bottomEdgeSpan,
+  onBottomEdgeSpanChange,
 }: CanvasViewProps) => {
 
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
@@ -113,14 +121,39 @@ export const CanvasView = ({
     };
   }, [beads, offsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
 
+  // Подвеска учитывается в статистике, только если у неё есть и валидный
+  // шаблон, и живая нода-якорь на нижнем ряду (та же проверка, что и в
+  // PendantLayer для occupiedCols).
+  const validPendantPlacements = useMemo(() => {
+    const bottomCols = new Set(bottomNodes.map(n => n.logicalIndex.col));
+    return pendantPlacements.filter(
+      (p) => pendantTemplates[p.templateId] && bottomCols.has(p.col),
+    );
+  }, [pendantPlacements, pendantTemplates, bottomNodes]);
+
   const colorStats = useMemo(() => {
     const stats = new Map<string, number>();
     beads.forEach(bead => {
       const color = designMap[bead.id] || defaultColorFor(bead.type);
       stats.set(color, (stats.get(color) || 0) + 1);
     });
+    validPendantPlacements.forEach((p) => {
+      const template = pendantTemplates[p.templateId];
+      template.beads.forEach((bead, index) => {
+        const color = p.colorMap[index] ?? defaultColorFor(bead.type);
+        stats.set(color, (stats.get(color) || 0) + 1);
+      });
+    });
     return Array.from(stats.entries());
-  }, [beads, designMap]);
+  }, [beads, designMap, validPendantPlacements, pendantTemplates]);
+
+  const totalCount = useMemo(() => {
+    const pendantBeadCount = validPendantPlacements.reduce(
+      (sum, p) => sum + pendantTemplates[p.templateId].beads.length,
+      0,
+    );
+    return beads.length + pendantBeadCount;
+  }, [beads.length, validPendantPlacements, pendantTemplates]);
 
   const highlightedNodeIds = useMemo(() => {
     if (hoveredRow === null) return null;
@@ -136,10 +169,10 @@ export const CanvasView = ({
   const applyPaint = useCallback((id: string) => {
     paintBead(id);
     if (mirrorMode) {
-      const m = mirrorBeadId(id, width, internalTop);
+      const m = mirrorBeadId(id, width, internalTop, internalBottom);
       if (m !== null && m !== id) paintBead(m);
     }
-  }, [paintBead, mirrorMode, width, internalTop]);
+  }, [paintBead, mirrorMode, width, internalTop, internalBottom]);
 
   const handleMouseEnter = useCallback((id: string) => {
     if (activeTool !== 'flood-fill' && isDrawing) applyPaint(id);
@@ -156,10 +189,10 @@ export const CanvasView = ({
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
     if (!svg) return;
-    exportSchemeToPng(svg, colorStats, beads.length).catch((err) => {
+    exportSchemeToPng(svg, colorStats, totalCount).catch((err) => {
       console.error('Failed to export scheme:', err);
     });
-  }, [canvasSvgRef, colorStats, beads.length]);
+  }, [canvasSvgRef, colorStats, totalCount]);
 
   return (
     <main
@@ -192,6 +225,9 @@ export const CanvasView = ({
                 hoveredRow={hoveredRow}
                 mirrorMode={mirrorMode}
                 width={width}
+                bottomEdgeEnabled={bottomEdgeEnabled}
+                bottomEdgeSpan={bottomEdgeSpan}
+                onBottomEdgeSpanChange={onBottomEdgeSpanChange}
               />
 
               {beads.map((bead) => (
@@ -225,7 +261,7 @@ export const CanvasView = ({
         </div>
       </section>
 
-      <CanvasStats totalCount={beads.length} colorStats={colorStats} />
+      <CanvasStats totalCount={totalCount} colorStats={colorStats} />
 
       <button
         type="button"

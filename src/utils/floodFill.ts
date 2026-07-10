@@ -4,6 +4,7 @@ import { defaultColorFor } from '../config/theme';
 type AdjMap = Map<string, string[]>;
 
 const TOP_LINK_BEAD_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
+const BOTTOM_LINK_BEAD_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
 const VERT_EDGE_BEAD_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
 const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
 
@@ -43,6 +44,7 @@ function buildAdjacencyMap(beads: Bead[]): AdjMap {
   const map: AdjMap = new Map(beads.map(b => [b.id, []]));
 
   const chains = new Map<string, [number, string][]>();
+  const bottomChains = new Map<string, { row: number; entries: [number, string][] }>();
   const decorGroups = new Map<string, Map<number, Map<number, string>>>();
 
   for (const bead of beads) {
@@ -51,6 +53,15 @@ function buildAdjacencyMap(beads: Bead[]): AdjMap {
       const key = `edge-top-link-${topM[1]}`;
       if (!chains.has(key)) chains.set(key, []);
       chains.get(key)!.push([Number(topM[2]), bead.id]);
+      continue;
+    }
+
+    const botM = bead.id.match(BOTTOM_LINK_BEAD_RE);
+    if (botM) {
+      const c = Number(botM[1]);
+      const key = `edge-bottom-link-${c}`;
+      if (!bottomChains.has(key)) bottomChains.set(key, { row: bead.logicalIndex.row, entries: [] });
+      bottomChains.get(key)!.entries.push([Number(botM[2]), bead.id]);
       continue;
     }
 
@@ -86,6 +97,23 @@ function buildAdjacencyMap(beads: Bead[]): AdjMap {
     if (map.has(eps[0])) addEdge(map, eps[0], ids[0]);
     for (let i = 0; i < ids.length - 1; i++) addEdge(map, ids[i], ids[i + 1]);
     if (map.has(eps[1])) addEdge(map, eps[1], ids[ids.length - 1]);
+  }
+
+  // Bottom chain: node-{lastR}-c ← bead-1 → ... → bead-N → node-{lastR}-{c+1}
+  for (const [key, { row, entries }] of bottomChains) {
+    const cMatch = key.match(/^edge-bottom-link-(\d+)$/);
+    if (!cMatch) continue;
+    const c = Number(cMatch[1]);
+    const ep0 = `node-${row}-${c}`;
+    const ep1 = `node-${row}-${c + 1}`;
+
+    entries.sort((a, b) => a[0] - b[0]);
+    const ids = entries.map(e => e[1]);
+    if (ids.length === 0) continue;
+
+    if (map.has(ep0)) addEdge(map, ep0, ids[0]);
+    for (let i = 0; i < ids.length - 1; i++) addEdge(map, ids[i], ids[i + 1]);
+    if (map.has(ep1)) addEdge(map, ep1, ids[ids.length - 1]);
   }
 
   // Decor: horizontal within k-row, vertical between k and k+1

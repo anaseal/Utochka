@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bead } from '../../types/bead';
 import { PendantPlacement, PendantTemplate } from '../../types/pendant';
-import { BEAD_THEME, defaultColorFor } from '../../config/theme';
+import { BEAD_THEME } from '../../config/theme';
 import './PendantsSidebar.css';
 
 interface PendantsSidebarProps {
@@ -21,6 +21,8 @@ interface PendantsSidebarProps {
   onDecorCount: (nodeRow: number, delta: number) => void;
   onClearDecor: () => void;
   onHoveredRowChange: (row: number | null) => void;
+  bottomEdgeEnabled: boolean;
+  onBottomEdgeToggle: () => void;
 }
 
 const ANCHOR_R = 18;
@@ -53,29 +55,30 @@ const PendantPreview = ({ template }: { template: PendantTemplate }) => {
       preserveAspectRatio="xMidYMid meet"
     >
       <circle className="pendant-preview__anchor" cx={0} cy={0} r={ANCHOR_R} />
-      {template.beads.map((bead, index) => bead.shape === 'circle' ? (
-        <circle
-          key={index}
-          cx={bead.dx}
-          cy={bead.dy}
-          r={bead.r ?? 0}
-          fill={defaultColorFor(bead.type)}
-          stroke="#0f172a"
-          strokeWidth={1}
-        />
-      ) : (
-        <rect
-          key={index}
-          x={bead.dx - (bead.w ?? 0) / 2}
-          y={bead.dy - (bead.h ?? 0) / 2}
-          width={bead.w ?? 0}
-          height={bead.h ?? 0}
-          rx={4}
-          fill={defaultColorFor(bead.type)}
-          stroke="#0f172a"
-          strokeWidth={1}
-        />
-      ))}
+      {template.beads.map((bead, index) => {
+        const beadTypeClass = bead.type === 'NODE' ? 'bead--type-node' : 'bead--type-span';
+        return (
+          <g key={index} className={`bead ${beadTypeClass} bead--empty`}>
+            {bead.shape === 'circle' ? (
+              <circle
+                className="bead__body"
+                cx={bead.dx}
+                cy={bead.dy}
+                r={bead.r ?? 0}
+              />
+            ) : (
+              <rect
+                className="bead__body"
+                x={bead.dx - (bead.w ?? 0) / 2}
+                y={bead.dy - (bead.h ?? 0) / 2}
+                width={bead.w ?? 0}
+                height={bead.h ?? 0}
+                rx={4}
+              />
+            )}
+          </g>
+        );
+      })}
     </svg>
   );
 };
@@ -89,15 +92,9 @@ const BandPreview = () => (
     preserveAspectRatio="xMidYMid meet"
   >
     {BAND_YS.map((y) => (
-      <circle
-        key={y}
-        cx={0}
-        cy={y}
-        r={6}
-        fill={defaultColorFor('SPAN')}
-        stroke="#0f172a"
-        strokeWidth={1}
-      />
+      <g key={y} className="bead bead--type-span bead--empty">
+        <circle className="bead__body" cx={0} cy={y} r={6} />
+      </g>
     ))}
   </svg>
 );
@@ -118,6 +115,8 @@ export const PendantsSidebar = ({
   onDecorCount,
   onClearDecor,
   onHoveredRowChange,
+  bottomEdgeEnabled,
+  onBottomEdgeToggle,
 }: PendantsSidebarProps) => {
   const [activeTab, setActiveTab] = useState<'pendants' | 'decor'>('pendants');
   const [drag, setDrag] = useState<{ templateId: string; x: number; y: number } | null>(null);
@@ -218,6 +217,8 @@ export const PendantsSidebar = ({
     [rowGaps, decorBands],
   );
 
+  const hasPendants = placements.length > 0;
+
   return (
     <>
       <aside className={`pendants-sidebar${open ? ' pendants-sidebar--open' : ''}`}>
@@ -247,8 +248,10 @@ export const PendantsSidebar = ({
                   <button
                     key={template.id}
                     type="button"
-                    className="pendant-card"
+                    className={`pendant-card${bottomEdgeEnabled ? ' pendant-card--disabled' : ''}`}
+                    aria-disabled={bottomEdgeEnabled}
                     onPointerDown={(e) => {
+                      if (bottomEdgeEnabled) return;
                       e.preventDefault();
                       setDrag({ templateId: template.id, x: e.clientX, y: e.clientY });
                     }}
@@ -264,6 +267,25 @@ export const PendantsSidebar = ({
                 );
               })}
             </div>
+            <div className="bottom-chain-control">
+              <div className="bottom-chain-control__header">
+                <span className="bottom-chain-control__title">Bottom Chain</span>
+                <button
+                  type="button"
+                  className={`bottom-chain-control__toggle${bottomEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
+                  onClick={onBottomEdgeToggle}
+                  aria-pressed={bottomEdgeEnabled}
+                  disabled={!bottomEdgeEnabled && hasPendants}
+                  title={!bottomEdgeEnabled && hasPendants ? 'Remove all pendants to enable Bottom Chain' : undefined}
+                />
+              </div>
+              {!bottomEdgeEnabled && hasPendants && (
+                <p className="bottom-chain-control__hint">
+                  Remove all pendants (Reset all) to enable Bottom Chain
+                </p>
+              )}
+            </div>
+
             <div className="pendants-sidebar__footer">
               <button
                 type="button"
@@ -274,7 +296,7 @@ export const PendantsSidebar = ({
                 Reset all
               </button>
               <p className="pendants-sidebar__hint">
-                Drag a pendant onto a bottom-row node
+                {bottomEdgeEnabled ? 'Unavailable while Bottom Chain is on' : 'Drag a pendant onto a bottom-row node'}
               </p>
             </div>
           </>

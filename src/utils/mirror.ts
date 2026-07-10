@@ -9,6 +9,7 @@
 
 const NODE_RE = /^node-(\d+)-(\d+)$/;
 const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
+const BOTTOM_LINK_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
 const VERT_EDGE_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
 const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
 
@@ -19,6 +20,7 @@ export const mirrorBeadId = (
   id: string,
   width: number,
   internalTop: number,
+  internalBottom?: number,
 ): string | null => {
   const nodeM = id.match(NODE_RE);
   if (nodeM) {
@@ -38,6 +40,17 @@ export const mirrorBeadId = (
     if (mc < 0) return null;
     const mi = internalTop + 1 - i;
     return `span-edge-top-link-${mc}-bead-${mi}`;
+  }
+
+  const bottomM = id.match(BOTTOM_LINK_RE);
+  if (bottomM) {
+    if (internalBottom === undefined) return null;
+    const c = Number(bottomM[1]);
+    const i = Number(bottomM[2]);
+    const mc = width - 2 - c;
+    if (mc < 0) return null;
+    const mi = internalBottom + 1 - i;
+    return `span-edge-bottom-link-${mc}-bead-${mi}`;
   }
 
   const vertM = id.match(VERT_EDGE_RE);

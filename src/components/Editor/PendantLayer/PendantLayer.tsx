@@ -127,12 +127,16 @@ export const PendantLayer = ({
               const id = `${placement.placementId}${ID_SEP}${index}`;
               const cx = anchor.x + bead.dx * PENDANT_SCALE;
               const cy = anchor.y + bead.dy * PENDANT_SCALE;
+              const hasColor = placement.colorMap[index] !== undefined;
               const color = placement.colorMap[index] ?? defaultColorFor(bead.type);
+              const beadTypeClass = bead.type === 'NODE' ? 'bead--type-node' : 'bead--type-span';
+              const groupClassName = `pendant-bead bead ${beadTypeClass}${!hasColor ? ' bead--empty' : ''}`;
+              const bodyStyle = { '--bead-color': color } as React.CSSProperties;
 
               return (
                 <g
                   key={index}
-                  className="pendant-bead"
+                  className={groupClassName}
                   onMouseDown={() => handleMouseDown(id)}
                   onMouseEnter={() => handleMouseEnter(id)}
                 >
@@ -145,11 +149,12 @@ export const PendantLayer = ({
                         r={(bead.r ?? 0) * PENDANT_SCALE + 4}
                       />
                       <circle
-                        className="pendant-bead__body"
+                        className="pendant-bead__body bead__body"
                         cx={cx}
                         cy={cy}
                         r={(bead.r ?? 0) * PENDANT_SCALE}
                         fill={color}
+                        style={bodyStyle}
                       />
                     </>
                   ) : (
@@ -162,13 +167,14 @@ export const PendantLayer = ({
                         height={(bead.h ?? 0) * PENDANT_SCALE + 6}
                       />
                       <rect
-                        className="pendant-bead__body"
+                        className="pendant-bead__body bead__body"
                         x={cx - ((bead.w ?? 0) * PENDANT_SCALE) / 2}
                         y={cy - ((bead.h ?? 0) * PENDANT_SCALE) / 2}
                         width={(bead.w ?? 0) * PENDANT_SCALE}
                         height={(bead.h ?? 0) * PENDANT_SCALE}
                         rx={2}
                         fill={color}
+                        style={bodyStyle}
                       />
                     </>
                   )}
