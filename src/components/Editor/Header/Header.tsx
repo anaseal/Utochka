@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers, PaintBucket } from 'lucide-react';
+import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers, PaintBucket, Stamp } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
@@ -299,6 +299,15 @@ export const Header = ({
           aria-pressed={activeTool === 'flood-fill'}
         >
           <PaintBucket size={14} />
+        </button>
+
+        <button
+          onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
+          className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
+          title="Stamp"
+          aria-pressed={activeTool === 'stamp'}
+        >
+          <Stamp size={14} />
         </button>
 
         <button

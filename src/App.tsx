@@ -15,6 +15,7 @@ import { clampSpan, resolveSpanCount } from './utils/spans';
 import { shiftDesignMapColumns } from './utils/regrid';
 import { mirrorBeadId } from './utils/mirror';
 import { computeUnifiedFloodFill, pendantBeadId } from './utils/floodFill';
+import { StampPattern, StampContext, captureStampPattern, applyStampPattern } from './utils/stamp';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
@@ -109,6 +110,8 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [stampPattern, setStampPattern] = useState<StampPattern | null>(null);
+  const [stampHoverNodeId, setStampHoverNodeId] = useState<string | null>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
 
   const rowGaps = useMemo(() => {
@@ -140,15 +143,70 @@ function App() {
 
   const internalBottom = Math.max(0, bottomEdgeDecor.span - 2);
 
+  // Контекст трансляции id для штампа — та же геометрия, что видит generator.ts.
+  const stampCtx = useMemo<StampContext>(() => ({
+    topSpan: gridSize.topSpan,
+    bottomSpan: gridSize.bottomSpan,
+    rowSpanOverrides,
+    decorBands,
+    beadIds: new Set(beads.map(b => b.id)),
+  }), [gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides, decorBands, beads]);
+
+  const stampPreviewIds = useMemo<Set<string> | null>(() => {
+    if (!stampPattern || !stampHoverNodeId) return null;
+    const targetBead = beads.find(b => b.id === stampHoverNodeId);
+    if (!targetBead) return null;
+    const patch = applyStampPattern(stampPattern, {
+      row: targetBead.logicalIndex.row,
+      col: targetBead.logicalIndex.col,
+    }, stampCtx);
+    return new Set(Object.keys(patch));
+  }, [stampPattern, stampHoverNodeId, beads, stampCtx]);
+
+  const handleStampSelect = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    const pattern = captureStampPattern(ids, beads, drawingControls.designMap);
+    if (pattern.entries.length === 0) return;
+    setStampPattern(pattern);
+    setStampHoverNodeId(null);
+  }, [beads, drawingControls.designMap]);
+
+  const handleStampPlace = useCallback((nodeId: string) => {
+    if (!stampPattern) return;
+    const targetBead = beads.find(b => b.id === nodeId);
+    if (!targetBead) return;
+    const patch = applyStampPattern(stampPattern, {
+      row: targetBead.logicalIndex.row,
+      col: targetBead.logicalIndex.col,
+    }, stampCtx);
+    if (Object.keys(patch).length === 0) return;
+
+    drawingControls.remapDesignMap(prev => {
+      const next = { ...prev, ...patch };
+      if (mirrorMode) {
+        for (const [id, color] of Object.entries(patch)) {
+          const m = mirrorBeadId(id, gridSize.width, internalTop, internalBottom);
+          if (m !== null && m !== id && stampCtx.beadIds.has(m)) next[m] = color;
+        }
+      }
+      return next;
+    });
+  }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && stampPattern) {
+        setStampPattern(null);
+        setStampHoverNodeId(null);
+        return;
+      }
       if (!e.ctrlKey && !e.metaKey) return;
       if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); drawingControls.undo(); }
       if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); drawingControls.redo(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [drawingControls.undo, drawingControls.redo]);
+  }, [drawingControls.undo, drawingControls.redo, stampPattern]);
 
   const updateDimension = (field: 'width' | 'height', delta: number) => {
     if (field === 'width' && mirrorMode) {
@@ -444,6 +502,11 @@ function App() {
         bottomEdgeEnabled={bottomEdgeDecor.enabled}
         bottomEdgeSpan={bottomEdgeDecor.span}
         onBottomEdgeSpanChange={updateBottomEdgeSpan}
+        stampPattern={stampPattern}
+        stampPreviewIds={stampPreviewIds}
+        onStampSelect={handleStampSelect}
+        onStampHover={setStampHoverNodeId}
+        onStampPlace={handleStampPlace}
         {...drawingControls}
       />
 

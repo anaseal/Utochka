@@ -13,7 +13,7 @@ const isDesignMap = (v: unknown): v is Record<string, string> => {
   return Object.values(v).every(c => typeof c === 'string');
 };
 
-export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill';
+export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp';
 
 export const useDrawing = (initialColor: string, basePalette: readonly string[]) => {
   const [activeColor, setActiveColorState] = useState(initialColor);

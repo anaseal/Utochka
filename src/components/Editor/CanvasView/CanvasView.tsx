@@ -1,5 +1,5 @@
 /* FILE: src\components\Editor\CanvasView\CanvasView.tsx */
-import { useMemo, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantPlacement, PendantTemplate } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
@@ -9,9 +9,14 @@ import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
+import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
 import './CanvasView.css';
+
+// Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
+// (выделение рамкой) — независим от zoom, т.к. сравнивается в client-координатах.
+const STAMP_DRAG_THRESHOLD = 4;
 
 interface CanvasViewProps {
   beads: Bead[];
@@ -43,6 +48,11 @@ interface CanvasViewProps {
   bottomEdgeEnabled: boolean;
   bottomEdgeSpan: number;
   onBottomEdgeSpanChange: (delta: number) => void;
+  stampPattern: StampPattern | null;
+  stampPreviewIds: Set<string> | null;
+  onStampSelect: (ids: string[]) => void;
+  onStampHover: (nodeId: string | null) => void;
+  onStampPlace: (nodeId: string) => void;
 }
 
 export const CanvasView = ({
@@ -75,11 +85,23 @@ export const CanvasView = ({
   bottomEdgeEnabled,
   bottomEdgeSpan,
   onBottomEdgeSpanChange,
+  stampPattern,
+  stampPreviewIds,
+  onStampSelect,
+  onStampHover,
+  onStampPlace,
 }: CanvasViewProps) => {
 
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
   const { nodeRadius } = BEAD_THEME.sizes;
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const stampGroupRef = useRef<SVGGElement>(null);
+  const stampDragRef = useRef<{
+    startClient: { x: number; y: number };
+    startBead: { x: number; y: number };
+    dragging: boolean;
+  } | null>(null);
+  const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
   useEffect(() => {
     const container = canvasContainerRef.current;
@@ -175,16 +197,118 @@ export const CanvasView = ({
   }, [paintBead, mirrorMode, width, internalTop, internalBottom]);
 
   const handleMouseEnter = useCallback((id: string) => {
-    if (activeTool !== 'flood-fill' && isDrawing) applyPaint(id);
+    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && isDrawing) applyPaint(id);
   }, [activeTool, isDrawing, applyPaint]);
 
   const handleMouseDown = useCallback((id: string) => {
+    if (activeTool === 'stamp') return;
     if (activeTool === 'flood-fill') {
       onFloodFill(id);
     } else {
       applyPaint(id);
     }
   }, [activeTool, applyPaint, onFloodFill]);
+
+  // Переводит client-координаты мыши в локальную систему координат <g>,
+  // которая совпадает с bead.x/y — без ручного учёта zoom/offset.
+  const toBeadCoords = useCallback((clientX: number, clientY: number) => {
+    const g = stampGroupRef.current;
+    const svg = canvasSvgRef.current;
+    if (!g || !svg) return null;
+    const ctm = g.getScreenCTM();
+    if (!ctm) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const local = pt.matrixTransform(ctm.inverse());
+    return { x: local.x, y: local.y };
+  }, [canvasSvgRef]);
+
+  const findNearestNode = useCallback((point: { x: number; y: number }): Bead | null => {
+    let nearest: Bead | null = null;
+    let bestDist = Infinity;
+    for (const bead of beads) {
+      if (bead.type !== 'NODE') continue;
+      const dx = bead.x - point.x;
+      const dy = bead.y - point.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < bestDist) {
+        bestDist = dist;
+        nearest = bead;
+      }
+    }
+    return nearest;
+  }, [beads]);
+
+  const handleStampContainerMouseDown = useCallback((e: React.MouseEvent) => {
+    if (activeTool !== 'stamp') return;
+    const beadPoint = toBeadCoords(e.clientX, e.clientY);
+    if (!beadPoint) return;
+    stampDragRef.current = {
+      startClient: { x: e.clientX, y: e.clientY },
+      startBead: beadPoint,
+      dragging: false,
+    };
+  }, [activeTool, toBeadCoords]);
+
+  const handleStampContainerMouseMove = useCallback((e: React.MouseEvent) => {
+    if (activeTool !== 'stamp') return;
+    const drag = stampDragRef.current;
+    if (drag) {
+      const dx = e.clientX - drag.startClient.x;
+      const dy = e.clientY - drag.startClient.y;
+      if (drag.dragging || Math.hypot(dx, dy) > STAMP_DRAG_THRESHOLD) {
+        drag.dragging = true;
+        const beadPoint = toBeadCoords(e.clientX, e.clientY);
+        if (beadPoint) {
+          setSelectionRect({
+            x: Math.min(drag.startBead.x, beadPoint.x),
+            y: Math.min(drag.startBead.y, beadPoint.y),
+            w: Math.abs(beadPoint.x - drag.startBead.x),
+            h: Math.abs(beadPoint.y - drag.startBead.y),
+          });
+        }
+      }
+      return;
+    }
+    if (stampPattern) {
+      const beadPoint = toBeadCoords(e.clientX, e.clientY);
+      const nearest = beadPoint ? findNearestNode(beadPoint) : null;
+      onStampHover(nearest?.id ?? null);
+    }
+  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover]);
+
+  const handleStampContainerMouseUp = useCallback((e: React.MouseEvent) => {
+    if (activeTool !== 'stamp') return;
+    const drag = stampDragRef.current;
+    stampDragRef.current = null;
+    if (!drag) return;
+
+    if (drag.dragging) {
+      const beadPoint = toBeadCoords(e.clientX, e.clientY) ?? drag.startBead;
+      const minX = Math.min(drag.startBead.x, beadPoint.x);
+      const maxX = Math.max(drag.startBead.x, beadPoint.x);
+      const minY = Math.min(drag.startBead.y, beadPoint.y);
+      const maxY = Math.max(drag.startBead.y, beadPoint.y);
+      const ids = beads
+        .filter(b => b.x >= minX && b.x <= maxX && b.y >= minY && b.y <= maxY)
+        .map(b => b.id);
+      setSelectionRect(null);
+      onStampSelect(ids);
+      return;
+    }
+
+    if (stampPattern) {
+      const nearest = findNearestNode(drag.startBead);
+      if (nearest) onStampPlace(nearest.id);
+    }
+  }, [activeTool, toBeadCoords, beads, onStampSelect, stampPattern, findNearestNode, onStampPlace]);
+
+  const handleStampContainerMouseLeave = useCallback(() => {
+    stampDragRef.current = null;
+    setSelectionRect(null);
+    onStampHover(null);
+  }, [onStampHover]);
 
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
@@ -196,16 +320,20 @@ export const CanvasView = ({
 
   return (
     <main
-      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}`}
-      onMouseDown={() => { if (activeTool !== 'flood-fill') startDrawing(); }}
-      onMouseUp={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
-      onMouseLeave={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
+      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}`}
+      onMouseDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') startDrawing(); }}
+      onMouseUp={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
+      onMouseLeave={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
         <div
           className="canvas__svg"
           ref={canvasContainerRef}
+          onMouseDown={handleStampContainerMouseDown}
+          onMouseMove={handleStampContainerMouseMove}
+          onMouseUp={handleStampContainerMouseUp}
+          onMouseLeave={handleStampContainerMouseLeave}
         >
           <svg
             ref={canvasSvgRef}
@@ -215,7 +343,7 @@ export const CanvasView = ({
             className="canvas__svg-content"
           >
             {/* Группа трансформации: отделяем визуальный отступ от логики координат */}
-            <g transform={`translate(${offsetX}, ${offsetY})`}>
+            <g ref={stampGroupRef} transform={`translate(${offsetX}, ${offsetY})`}>
               <CanvasRulers
                 beads={beads}
                 topSpan={topSpan}
@@ -239,11 +367,21 @@ export const CanvasView = ({
                   type={bead.type}
                   color={designMap[bead.id]}
                   defaultColor={defaultColorFor(bead.type)}
-                  highlighted={highlightedNodeIds?.has(bead.id) ?? false}
+                  highlighted={(highlightedNodeIds?.has(bead.id) ?? false) || (stampPreviewIds?.has(bead.id) ?? false)}
                   onMouseEnter={handleMouseEnter}
                   onMouseDown={handleMouseDown}
                 />
               ))}
+
+              {selectionRect && (
+                <rect
+                  className="canvas__stamp-rect"
+                  x={selectionRect.x}
+                  y={selectionRect.y}
+                  width={selectionRect.w}
+                  height={selectionRect.h}
+                />
+              )}
 
               <PendantLayer
                 placements={pendantPlacements}

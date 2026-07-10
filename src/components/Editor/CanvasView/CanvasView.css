@@ -46,8 +46,16 @@
   overflow: visible;
 }
 
-.editor__viewport--flood-fill .canvas__svg {
+.editor__viewport--flood-fill .canvas__svg,
+.editor__viewport--stamp .canvas__svg {
   cursor: crosshair;
+}
+
+.canvas__stamp-rect {
+  fill: rgba(34, 211, 238, 0.15);
+  stroke: #22d3ee;
+  stroke-width: 1;
+  pointer-events: none;
 }
 
 /* Кнопка экспорта схемы в PNG — стиль консистентен с .color-picker__confirm */
