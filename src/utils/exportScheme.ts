@@ -23,6 +23,8 @@ interface ExportPalette {
   legendTitle: string;
   legendLabel: string;
   swatchStroke: string;
+  /** Значение filter для закрашенной ноды: glow в тёмной теме, none в светлой. */
+  nodeGlow: string;
 }
 
 const PALETTES: Record<CanvasTheme, ExportPalette> = {
@@ -34,6 +36,7 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     legendTitle: '#e2e8f0',
     legendLabel: '#e2e8f0',
     swatchStroke: 'rgba(255, 255, 255, 0.25)',
+    nodeGlow: 'drop-shadow(0 0 1px var(--bead-color))',
   },
   light: {
     bg: '#f8fafc',
@@ -43,6 +46,7 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     legendTitle: '#1e293b',
     legendLabel: '#334155',
     swatchStroke: 'rgba(15, 23, 42, 0.25)',
+    nodeGlow: 'drop-shadow(0 0 0.5px var(--bead-color))',
   },
 };
 
@@ -80,7 +84,7 @@ const buildExportStyle = (pal: ExportPalette): string => `
   shape-rendering: geometricPrecision;
 }
 .bead--type-node .bead__body {
-  filter: drop-shadow(0 0 1px var(--bead-color));
+  filter: ${pal.nodeGlow};
 }
 .canvas__axis-text {
   fill: ${pal.axisText};

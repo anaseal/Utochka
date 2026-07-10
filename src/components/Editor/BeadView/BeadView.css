@@ -43,6 +43,13 @@
   --bead-node-empty-glow: transparent;
 }
 
+/* Светлая тема: у закрашенной ноды приглушаем glow собственным цветом —
+   полный 2px-ореол на светлом фоне у тёмных бусин выглядит мутно, поэтому
+   уменьшаем радиус размытия (но не убираем — «pop» ноды сохраняется). */
+.canvas__svg[data-canvas-theme="light"] .bead--type-node:not(.bead--empty) .bead__body {
+  filter: drop-shadow(0 0 1px var(--bead-color));
+}
+
 .bead__highlight {
   fill: none;
   stroke: #22d3ee;
