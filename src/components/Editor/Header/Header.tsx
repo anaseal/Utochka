@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers, PaintBucket, Stamp, Pencil } from 'lucide-react';
+import { MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
-import { EraserIcon, EyedropperIcon } from './icons';
+import { EraserIcon, EyedropperIcon, PendantIcon } from './icons';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { BEAD_THEME } from '../../../config/theme';
 
@@ -413,7 +413,7 @@ export const Header = ({
           title="Библиотека подвесок"
           aria-pressed={sidebarOpen}
         >
-          <Layers size={14} />
+          <PendantIcon size={14} />
         </button>
       </nav>
     </header>

@@ -17,6 +17,20 @@ export const EraserIcon = ({ size = 14 }: IconProps) => (
   </svg>
 );
 
+// Подвеска (кулон): ушко-колечко + каплевидная подвеска. Заменяет прежний
+// значок «стопка слоёв» (lucide Layers) у кнопки библиотеки подвесок.
+export const PendantIcon = ({ size = 14 }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="3.4" r="1.9" stroke="currentColor" strokeWidth={1.8} />
+    <path
+      d="M12 5.3 C 7.6 10, 7.6 15, 12 20.7 C 16.4 15, 16.4 10, 12 5.3 Z"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const EyedropperIcon = ({ size = 14 }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
