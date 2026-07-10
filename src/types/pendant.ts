@@ -20,7 +20,10 @@ export interface PendantTemplateBead {
 export interface PendantTemplate {
   id: string;
   name: string;
+  /** beads[0] всегда касается ноды-якоря — заливка перетекает через неё */
   beads: PendantTemplateBead[];
+  /** Пары индексов физически соприкасающихся бусин — граф смежности для заливки */
+  links: [number, number][];
 }
 
 export interface PendantPlacement {

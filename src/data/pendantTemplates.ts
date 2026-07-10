@@ -21,6 +21,7 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: 0, dy: 40, shape: 'circle', r: R, type: 'NODE' },
       { dx: 0, dy: 80, shape: 'circle', r: R, type: 'NODE' },
     ],
+    links: [[0, 1]],
   },
   {
     id: 'rhombus',
@@ -31,6 +32,7 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: 24, dy: 70, shape: 'circle', r: R, type: 'NODE' },
       { dx: 0, dy: 100, shape: 'circle', r: R, type: 'NODE' },
     ],
+    links: [[0, 1], [0, 2], [1, 3], [2, 3]],
   },
   {
     id: 'triangle',
@@ -40,6 +42,7 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: 24, dy: 33, shape: 'circle', r: R, type: 'NODE' },
       { dx: 0, dy: 61, shape: 'circle', r: R, type: 'NODE' },
     ],
+    links: [[0, 2], [1, 2]],
   },
   {
     id: 'fringe',
@@ -51,6 +54,7 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: 0, dy: 160, shape: 'circle', r: R, type: 'NODE' },
       { dx: 0, dy: 205, shape: 'circle', r: R_BIG, type: 'NODE' },
     ],
+    links: [[0, 1], [1, 2], [2, 3], [3, 4]],
   },
   {
     id: 'net',
@@ -65,6 +69,7 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: 20, dy: 148, shape: 'circle', r: R, type: 'NODE' },
       { dx: 0, dy: 182, shape: 'circle', r: R, type: 'NODE' },
     ],
+    links: [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 6], [5, 7], [6, 7]],
   },
   {
     id: 'net-cluster',
@@ -82,6 +87,10 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: 24, dy: 214, shape: 'circle', r: R, type: 'NODE' },
       { dx: 0, dy: 242, shape: 'circle', r: R, type: 'NODE' },
     ],
+    links: [
+      [0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 6], [5, 7], [6, 7],
+      [7, 8], [7, 9], [8, 10], [9, 10],
+    ],
   },
   {
     id: 'focal-berry',
@@ -97,6 +106,7 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: -13, dy: 199, shape: 'circle', r: R_BERRY, type: 'SPAN' },
       { dx: 13, dy: 199, shape: 'circle', r: R_BERRY, type: 'SPAN' },
     ],
+    links: [[0, 1], [1, 2], [2, 3], [2, 4], [3, 4], [3, 5], [4, 6], [5, 7], [6, 8], [7, 8]],
   },
   {
     id: 'bugle',
@@ -109,6 +119,7 @@ export const PENDANT_TEMPLATES: PendantTemplate[] = [
       { dx: 17, dy: 169, shape: 'circle', r: R_CLUSTER, type: 'SPAN' },
       { dx: 0, dy: 194, shape: 'circle', r: R_CLUSTER, type: 'SPAN' },
     ],
+    links: [[0, 1], [1, 2], [2, 3], [2, 4], [3, 4], [3, 5], [4, 5]],
   },
 ];
 

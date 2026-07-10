@@ -1,5 +1,6 @@
 import { Bead } from '../types/bead';
 import { defaultColorFor } from '../config/theme';
+import { PendantPlacement, PendantTemplate } from '../types/pendant';
 
 type AdjMap = Map<string, string[]>;
 
@@ -140,28 +141,99 @@ function buildAdjacencyMap(beads: Bead[]): AdjMap {
   return map;
 }
 
-export function computeFloodFill(
+const PENDANT_PREFIX = 'pendant:';
+
+export const pendantBeadId = (placementId: string, beadIndex: number): string =>
+  `${PENDANT_PREFIX}${placementId}:${beadIndex}`;
+
+interface PendantHit {
+  placementId: string;
+  index: number;
+}
+
+interface UnifiedFloodFillResult {
+  gridIds: string[];
+  pendantHits: PendantHit[];
+}
+
+// Заливка через сетку и подвески как единый граф: подвеска соединена с сеткой
+// через свою якорную ноду (beads[0] всегда касается ноды нижнего ряда).
+export function computeUnifiedFloodFill(
   startId: string,
   beads: Bead[],
   designMap: Record<string, string>,
   activeColor: string,
-): string[] {
+  placements: PendantPlacement[],
+  templates: Record<string, PendantTemplate>,
+  bottomNodes: Bead[],
+): UnifiedFloodFillResult {
   const beadMap = new Map(beads.map(b => [b.id, b]));
-  const effectiveColor = (id: string): string =>
-    designMap[id] ?? defaultColorFor(beadMap.get(id)?.type ?? 'SPAN');
+  const nodeByCol = new Map<number, Bead>();
+  bottomNodes.forEach(n => nodeByCol.set(n.logicalIndex.col, n));
+  const placementById = new Map(placements.map(p => [p.placementId, p]));
+
+  const anchorPendants = (nodeId: string): PendantPlacement[] =>
+    placements.filter(p => {
+      const anchor = nodeByCol.get(p.col);
+      return anchor?.id === nodeId && templates[p.templateId];
+    });
+
+  const parsePendantId = (id: string): [string, number] => {
+    const [, placementId, idxStr] = id.split(':');
+    return [placementId, Number(idxStr)];
+  };
+
+  const effectiveColor = (id: string): string => {
+    if (id.startsWith(PENDANT_PREFIX)) {
+      const [placementId, index] = parsePendantId(id);
+      const p = placementById.get(placementId);
+      const beadDef = p ? templates[p.templateId]?.beads[index] : undefined;
+      return p?.colorMap[index] ?? defaultColorFor(beadDef?.type ?? 'SPAN');
+    }
+    return designMap[id] ?? defaultColorFor(beadMap.get(id)?.type ?? 'SPAN');
+  };
 
   const startColor = effectiveColor(startId);
-  if (startColor === activeColor) return [];
+  if (startColor === activeColor) return { gridIds: [], pendantHits: [] };
 
   const adjMap = buildAdjacencyMap(beads);
+
+  const neighborsOf = (id: string): string[] => {
+    if (id.startsWith(PENDANT_PREFIX)) {
+      const [placementId, index] = parsePendantId(id);
+      const p = placementById.get(placementId);
+      const template = p ? templates[p.templateId] : undefined;
+      if (!p || !template) return [];
+      const result: string[] = [];
+      for (const [a, b] of template.links) {
+        if (a === index) result.push(pendantBeadId(placementId, b));
+        else if (b === index) result.push(pendantBeadId(placementId, a));
+      }
+      if (index === 0) {
+        const anchor = nodeByCol.get(p.col);
+        if (anchor) result.push(anchor.id);
+      }
+      return result;
+    }
+    const gridNeighbors = adjMap.get(id) ?? [];
+    const pendantRoots = anchorPendants(id).map(p => pendantBeadId(p.placementId, 0));
+    return [...gridNeighbors, ...pendantRoots];
+  };
+
   const visited = new Set([startId]);
   const queue = [startId];
-  const result: string[] = [];
+  const gridIds: string[] = [];
+  const pendantHits: PendantHit[] = [];
 
   while (queue.length > 0) {
     const current = queue.shift()!;
-    result.push(current);
-    for (const neighbor of adjMap.get(current) ?? []) {
+    if (current.startsWith(PENDANT_PREFIX)) {
+      const [placementId, index] = parsePendantId(current);
+      pendantHits.push({ placementId, index });
+    } else {
+      gridIds.push(current);
+    }
+    for (const neighbor of neighborsOf(current)) {
       if (!visited.has(neighbor) && effectiveColor(neighbor) === startColor) {
         visited.add(neighbor);
         queue.push(neighbor);
@@ -169,5 +241,5 @@ export function computeFloodFill(
     }
   }
 
-  return result;
+  return { gridIds, pendantHits };
 }

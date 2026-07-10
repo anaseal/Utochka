@@ -14,6 +14,7 @@ import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTempla
 import { clampSpan, resolveSpanCount } from './utils/spans';
 import { shiftDesignMapColumns } from './utils/regrid';
 import { mirrorBeadId } from './utils/mirror';
+import { computeUnifiedFloodFill, pendantBeadId } from './utils/floodFill';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
@@ -304,12 +305,65 @@ function App() {
     setDecorBands({});
   };
 
+  // Заливка — единый граф сетки и подвесок: подвеска соединена со своей
+  // якорной нодой, поэтому цвет может «перетекать» между сеткой и декором.
+  const applyUnifiedFloodFill = useCallback((startId: string, mirrorStartId: string | null) => {
+    const args = [
+      beads, drawingControls.designMap, drawingControls.activeColor,
+      pendantPlacements, PENDANT_TEMPLATES_BY_ID, bottomNodes,
+    ] as const;
+    const r1 = computeUnifiedFloodFill(startId, ...args);
+    const r2 = mirrorStartId ? computeUnifiedFloodFill(mirrorStartId, ...args) : { gridIds: [], pendantHits: [] };
+
+    const gridIds = [...new Set([...r1.gridIds, ...r2.gridIds])];
+    const pendantHits = [...r1.pendantHits, ...r2.pendantHits];
+    if (gridIds.length === 0 && pendantHits.length === 0) return;
+
+    const activeColor = drawingControls.activeColor;
+    if (gridIds.length > 0) {
+      drawingControls.remapDesignMap(prev => {
+        const next = { ...prev };
+        for (const id of gridIds) next[id] = activeColor;
+        return next;
+      });
+    }
+    if (pendantHits.length > 0) {
+      setPendantPlacements(prev => prev.map((p) => {
+        const hits = pendantHits.filter(h => h.placementId === p.placementId);
+        if (hits.length === 0) return p;
+        const colorMap = { ...p.colorMap };
+        for (const h of hits) colorMap[h.index] = activeColor;
+        return { ...p, colorMap };
+      }));
+    }
+  }, [beads, drawingControls, pendantPlacements, bottomNodes, setPendantPlacements]);
+
   const handleFloodFill = useCallback((startId: string) => {
     const mirrorId = mirrorMode
       ? mirrorBeadId(startId, gridSize.width, internalTop, internalBottom)
       : null;
-    drawingControls.floodFillAt(startId, beads, mirrorId !== startId ? mirrorId : null);
-  }, [drawingControls.floodFillAt, beads, mirrorMode, gridSize.width, internalTop, internalBottom]);
+    applyUnifiedFloodFill(startId, mirrorId !== startId ? mirrorId : null);
+  }, [applyUnifiedFloodFill, mirrorMode, gridSize.width, internalTop, internalBottom]);
+
+  const handlePendantPaint = useCallback((placementId: string, beadIndex: number) => {
+    if (drawingControls.activeTool !== 'flood-fill') {
+      pendantControls.paintPendantBead(placementId, beadIndex);
+      return;
+    }
+    const startId = pendantBeadId(placementId, beadIndex);
+    let mirrorStartId: string | null = null;
+    if (mirrorMode && gridSize.width > 1) {
+      const placement = pendantPlacements.find(p => p.placementId === placementId);
+      const mirrorCol = placement ? gridSize.width - 1 - placement.col : null;
+      const mirrorPlacement = mirrorCol !== null
+        ? pendantPlacements.find(p => p.col === mirrorCol)
+        : undefined;
+      if (mirrorPlacement && mirrorPlacement.placementId !== placementId) {
+        mirrorStartId = pendantBeadId(mirrorPlacement.placementId, beadIndex);
+      }
+    }
+    applyUnifiedFloodFill(startId, mirrorStartId);
+  }, [drawingControls.activeTool, pendantControls, mirrorMode, gridSize.width, pendantPlacements, applyUnifiedFloodFill]);
 
   const resetEdge = (edge: 'top' | 'bottom') => {
     const isTop = edge === 'top';
@@ -383,7 +437,7 @@ function App() {
         pendantTemplates={PENDANT_TEMPLATES_BY_ID}
         bottomNodes={bottomNodes}
         hoveredCol={hoveredCol}
-        onPaintPendantBead={pendantControls.paintPendantBead}
+        onPaintPendantBead={handlePendantPaint}
         onRemovePlacement={pendantControls.removePlacement}
         canvasSvgRef={canvasSvgRef}
         onFloodFill={handleFloodFill}
