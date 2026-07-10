@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers, PaintBucket, Stamp } from 'lucide-react';
+import { MoreHorizontal, RotateCcw, FlipHorizontal, Layers, PaintBucket, Stamp, Pencil } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import eraserIcon from "../../../assets/eraser.svg";
@@ -283,6 +283,15 @@ export const Header = ({
             </button>
           )}
         </div>
+
+        <button
+          onClick={() => setActiveTool('pencil')}
+          className={`tool-btn ${activeTool === 'pencil' ? 'tool-btn--active' : ''}`}
+          title="Карандаш"
+          aria-pressed={activeTool === 'pencil'}
+        >
+          <Pencil size={14} />
+        </button>
 
         <button
           onClick={() => setActiveTool(activeTool === 'eraser' ? 'pencil' : 'eraser')}
