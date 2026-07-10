@@ -118,7 +118,6 @@ export const PendantsSidebar = ({
   bottomEdgeEnabled,
   onBottomEdgeToggle,
 }: PendantsSidebarProps) => {
-  const [activeTab, setActiveTab] = useState<'pendants' | 'decor'>('pendants');
   const [drag, setDrag] = useState<{ templateId: string; x: number; y: number } | null>(null);
   const [decorDrag, setDecorDrag] = useState<{ x: number; y: number } | null>(null);
 
@@ -219,28 +218,72 @@ export const PendantsSidebar = ({
 
   const hasPendants = placements.length > 0;
 
+  const handleClearAll = useCallback(() => {
+    onClearAll();
+    onClearDecor();
+    if (bottomEdgeEnabled) onBottomEdgeToggle();
+  }, [onClearAll, onClearDecor, bottomEdgeEnabled, onBottomEdgeToggle]);
+
   return (
     <>
       <aside className={`pendants-sidebar${open ? ' pendants-sidebar--open' : ''}`}>
-        <div className="sidebar-tabs">
-          <button
-            type="button"
-            className={`sidebar-tab${activeTab === 'pendants' ? ' sidebar-tab--active' : ''}`}
-            onClick={() => setActiveTab('pendants')}
-          >
-            Pendants
-          </button>
-          <button
-            type="button"
-            className={`sidebar-tab${activeTab === 'decor' ? ' sidebar-tab--active' : ''}`}
-            onClick={() => setActiveTab('decor')}
-          >
-            Decor
-          </button>
+        <div className="pendants-sidebar__header">
+          <h2 className="pendants-sidebar__title">Pendants &amp; Decor</h2>
         </div>
 
-        {activeTab === 'pendants' && (
-          <>
+        <div className="pendants-sidebar__body">
+          <section className="pendants-sidebar__section">
+            <header className="pendants-sidebar__section-heading">
+              <div className="pendants-sidebar__section-heading-row">
+                <h3 className="pendants-sidebar__section-title">Bottom Chain</h3>
+                <button
+                  type="button"
+                  className="pendants-sidebar__section-clear"
+                  onClick={onBottomEdgeToggle}
+                  disabled={!bottomEdgeEnabled}
+                  aria-label="Clear Bottom Chain"
+                  title="Clear Bottom Chain"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="pendants-sidebar__section-desc">Decorative edge added below the last row</p>
+            </header>
+            <div className="bottom-chain-control">
+              <button
+                type="button"
+                className={`bottom-chain-control__toggle${bottomEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
+                onClick={onBottomEdgeToggle}
+                aria-pressed={bottomEdgeEnabled}
+                aria-label="Toggle Bottom Chain"
+                disabled={!bottomEdgeEnabled && hasPendants}
+                title={!bottomEdgeEnabled && hasPendants ? 'Clear pendants to enable Bottom Chain' : undefined}
+              />
+              {!bottomEdgeEnabled && hasPendants && (
+                <p className="bottom-chain-control__hint">
+                  Clear pendants (above) to enable Bottom Chain
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="pendants-sidebar__section">
+            <header className="pendants-sidebar__section-heading">
+              <div className="pendants-sidebar__section-heading-row">
+                <h3 className="pendants-sidebar__section-title">Pendants</h3>
+                <button
+                  type="button"
+                  className="pendants-sidebar__section-clear"
+                  onClick={onClearAll}
+                  disabled={!hasPendants}
+                  aria-label="Clear Pendants"
+                  title="Clear Pendants"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="pendants-sidebar__section-desc">Drag a template onto a bottom-row node</p>
+            </header>
             <div className="pendants-sidebar__catalog">
               {templates.map((template) => {
                 const placedCount = placements.filter((p) => p.templateId === template.id).length;
@@ -267,43 +310,25 @@ export const PendantsSidebar = ({
                 );
               })}
             </div>
-            <div className="bottom-chain-control">
-              <div className="bottom-chain-control__header">
-                <span className="bottom-chain-control__title">Bottom Chain</span>
+          </section>
+
+          <section className="pendants-sidebar__section">
+            <header className="pendants-sidebar__section-heading">
+              <div className="pendants-sidebar__section-heading-row">
+                <h3 className="pendants-sidebar__section-title">Decor</h3>
                 <button
                   type="button"
-                  className={`bottom-chain-control__toggle${bottomEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
-                  onClick={onBottomEdgeToggle}
-                  aria-pressed={bottomEdgeEnabled}
-                  disabled={!bottomEdgeEnabled && hasPendants}
-                  title={!bottomEdgeEnabled && hasPendants ? 'Remove all pendants to enable Bottom Chain' : undefined}
-                />
+                  className="pendants-sidebar__section-clear"
+                  onClick={onClearDecor}
+                  disabled={activeBands.length === 0}
+                  aria-label="Clear Decor"
+                  title="Clear Decor"
+                >
+                  ×
+                </button>
               </div>
-              {!bottomEdgeEnabled && hasPendants && (
-                <p className="bottom-chain-control__hint">
-                  Remove all pendants (Reset all) to enable Bottom Chain
-                </p>
-              )}
-            </div>
-
-            <div className="pendants-sidebar__footer">
-              <button
-                type="button"
-                className="pendants-sidebar__clear"
-                onClick={onClearAll}
-                disabled={placements.length === 0}
-              >
-                Reset all
-              </button>
-              <p className="pendants-sidebar__hint">
-                {bottomEdgeEnabled ? 'Unavailable while Bottom Chain is on' : 'Drag a pendant onto a bottom-row node'}
-              </p>
-            </div>
-          </>
-        )}
-
-        {activeTab === 'decor' && (
-          <>
+              <p className="pendants-sidebar__section-desc">Drag a band onto a gap between rows</p>
+            </header>
             <div className="pendants-sidebar__catalog decor-catalog">
               <button
                 type="button"
@@ -347,22 +372,24 @@ export const PendantsSidebar = ({
                 ))}
               </div>
             )}
+          </section>
+        </div>
 
-            <div className="pendants-sidebar__footer">
-              <button
-                type="button"
-                className="pendants-sidebar__clear"
-                onClick={onClearDecor}
-                disabled={activeBands.length === 0}
-              >
-                Reset all
-              </button>
-              <p className="pendants-sidebar__hint">
-                Drag a band onto a row gap
-              </p>
-            </div>
-          </>
-        )}
+        <div className="pendants-sidebar__footer">
+          <button
+            type="button"
+            className="pendants-sidebar__clear"
+            onClick={handleClearAll}
+            disabled={!hasPendants && activeBands.length === 0 && !bottomEdgeEnabled}
+          >
+            Reset all
+          </button>
+          <p className="pendants-sidebar__hint">
+            {bottomEdgeEnabled
+              ? 'Drag a band onto a row gap (pendants unavailable while Bottom Chain is on)'
+              : 'Drag a pendant onto a bottom-row node, or a band onto a row gap'}
+          </p>
+        </div>
       </aside>
 
       {drag && dragTemplate && createPortal(
