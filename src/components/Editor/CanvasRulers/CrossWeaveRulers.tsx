@@ -1,17 +1,17 @@
 import { useMemo } from 'react';
-import { KrestikBead } from '../../../types/krestikBead';
+import { CrossWeaveBead } from '../../../types/crossWeaveBead';
 import '../CanvasRulers/CanvasRulers.css';
 
-interface KrestikRulersProps {
-  beads: KrestikBead[];
+interface CrossWeaveRulersProps {
+  beads: CrossWeaveBead[];
   width: number;
   height: number;
 }
 
-// Простая нумерация рядов/колонок — в отличие от силянки, у крестика нет
+// Простая нумерация рядов/колонок — в отличие от силянки, у CrossWeave нет
 // per-row span-контролов и оси зеркала, поэтому это не ветка CanvasRulers,
 // а отдельный минимальный компонент.
-export const KrestikRulers = ({ beads, width, height }: KrestikRulersProps) => {
+export const CrossWeaveRulers = ({ beads, width, height }: CrossWeaveRulersProps) => {
   const axisMarginX = 30;
   const axisMarginY = 40;
 

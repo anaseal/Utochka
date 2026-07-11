@@ -1,10 +1,10 @@
 /* src/App.tsx */
 import { useEffect, useState } from 'react';
 import { useSilyankaProject } from './hooks/useSilyankaProject';
-import { useKrestikProject } from './hooks/useKrestikProject';
+import { useCrossWeaveProject } from './hooks/useCrossWeaveProject';
 import { usePersistedState } from './hooks/usePersistedState';
 import { CanvasView } from './components/Editor/CanvasView/CanvasView';
-import { KrestikCanvasView } from './components/Editor/CanvasView/KrestikCanvasView';
+import { CrossWeaveCanvasView } from './components/Editor/CanvasView/CrossWeaveCanvasView';
 import { Header, Technique } from './components/Editor/Header/Header';
 import { PendantsSidebar } from './components/Sidebar/PendantsSidebar';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
@@ -15,7 +15,7 @@ const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const
 const isZoom = (v: unknown): v is number =>
   typeof v === 'number' && v >= 0.25 && v <= 3;
 
-const isTechnique = (v: unknown): v is Technique => v === 'silyanka' || v === 'krestik';
+const isTechnique = (v: unknown): v is Technique => v === 'silyanka' || v === 'crossWeave';
 
 function App() {
   const [technique, setTechnique] = usePersistedState<Technique>('app:technique', 'silyanka', isTechnique);
@@ -35,7 +35,7 @@ function App() {
   // просто не монтируется в разметке, но её состояние живёт и не пропадает
   // при переключении назад.
   const silyanka = useSilyankaProject(PALETTE);
-  const krestik = useKrestikProject(PALETTE);
+  const crossWeave = useCrossWeaveProject(PALETTE);
 
   // Уход с инструмента «штамп» сбрасывает захваченный узор — иначе при
   // следующем заходе в штамп сразу показывается старый preview и мешает
@@ -75,13 +75,13 @@ function App() {
         return;
       }
       if (!e.ctrlKey && !e.metaKey) return;
-      const active = technique === 'silyanka' ? silyanka.drawingControls : krestik.drawingControls;
+      const active = technique === 'silyanka' ? silyanka.drawingControls : crossWeave.drawingControls;
       if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); active.undo(); }
       if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); active.redo(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [technique, silyanka.drawingControls, krestik.drawingControls, silyanka.stampPattern, silyanka]);
+  }, [technique, silyanka.drawingControls, crossWeave.drawingControls, silyanka.stampPattern, silyanka]);
 
   const sidebarOpen = technique === 'silyanka' && silyanka.sidebarOpen;
 
@@ -139,33 +139,33 @@ function App() {
         />
       ) : (
         <Header
-          technique="krestik"
+          technique="crossWeave"
           onTechniqueChange={setTechnique}
           palette={PALETTE}
-          activeColor={krestik.drawingControls.activeColor}
-          setActiveColor={krestik.drawingControls.setActiveColor}
-          activeTool={krestik.drawingControls.activeTool}
-          setActiveTool={krestik.drawingControls.setActiveTool}
-          recentColors={krestik.drawingControls.recentColors}
-          commitRecentColor={krestik.drawingControls.commitRecentColor}
-          onClearAll={krestik.drawingControls.clearAll}
+          activeColor={crossWeave.drawingControls.activeColor}
+          setActiveColor={crossWeave.drawingControls.setActiveColor}
+          activeTool={crossWeave.drawingControls.activeTool}
+          setActiveTool={crossWeave.drawingControls.setActiveTool}
+          recentColors={crossWeave.drawingControls.recentColors}
+          commitRecentColor={crossWeave.drawingControls.commitRecentColor}
+          onClearAll={crossWeave.drawingControls.clearAll}
           zoom={zoom}
           onZoomChange={updateZoom}
           onSetZoom={setZoomAbsolute}
-          onUndo={krestik.drawingControls.undo}
-          onRedo={krestik.drawingControls.redo}
-          canUndo={krestik.drawingControls.canUndo}
-          canRedo={krestik.drawingControls.canRedo}
-          krestikProps={{
-            gridWidth: krestik.gridSize.width,
-            gridHeight: krestik.gridSize.height,
-            spacing: krestik.gridSize.pitchX,
-            onWidthChange: (delta) => krestik.updateDimension('width', delta),
-            onHeightChange: (delta) => krestik.updateDimension('height', delta),
-            onSpacingChange: krestik.updateSpacing,
-            onSetWidth: krestik.setWidthAbsolute,
-            onSetHeight: krestik.setHeightAbsolute,
-            onSetSpacing: krestik.setSpacingAbsolute,
+          onUndo={crossWeave.drawingControls.undo}
+          onRedo={crossWeave.drawingControls.redo}
+          canUndo={crossWeave.drawingControls.canUndo}
+          canRedo={crossWeave.drawingControls.canRedo}
+          crossWeaveProps={{
+            gridWidth: crossWeave.gridSize.width,
+            gridHeight: crossWeave.gridSize.height,
+            spacing: crossWeave.gridSize.pitchX,
+            onWidthChange: (delta) => crossWeave.updateDimension('width', delta),
+            onHeightChange: (delta) => crossWeave.updateDimension('height', delta),
+            onSpacingChange: crossWeave.updateSpacing,
+            onSetWidth: crossWeave.setWidthAbsolute,
+            onSetHeight: crossWeave.setHeightAbsolute,
+            onSetSpacing: crossWeave.setSpacingAbsolute,
           }}
         />
       )}
@@ -205,20 +205,20 @@ function App() {
           {...silyanka.drawingControls}
         />
       ) : (
-        <KrestikCanvasView
-          beads={krestik.beads}
-          width={krestik.gridSize.width}
-          height={krestik.gridSize.height}
+        <CrossWeaveCanvasView
+          beads={crossWeave.beads}
+          width={crossWeave.gridSize.width}
+          height={crossWeave.gridSize.height}
           canvasTheme={canvasTheme}
           onToggleCanvasTheme={() => setCanvasTheme(t => (t === 'dark' ? 'light' : 'dark'))}
           zoom={zoom}
           onZoomChange={updateZoom}
-          designMap={krestik.drawingControls.designMap}
-          activeTool={krestik.drawingControls.activeTool}
-          isDrawing={krestik.drawingControls.isDrawing}
-          paintBead={krestik.drawingControls.paintBead}
-          startDrawing={krestik.drawingControls.startDrawing}
-          stopDrawing={krestik.drawingControls.stopDrawing}
+          designMap={crossWeave.drawingControls.designMap}
+          activeTool={crossWeave.drawingControls.activeTool}
+          isDrawing={crossWeave.drawingControls.isDrawing}
+          paintBead={crossWeave.drawingControls.paintBead}
+          startDrawing={crossWeave.drawingControls.startDrawing}
+          stopDrawing={crossWeave.drawingControls.stopDrawing}
         />
       )}
 

@@ -1,6 +1,6 @@
 export type BeadOrientation = 'vertical' | 'horizontal';
 
-export interface KrestikBead {
+export interface CrossWeaveBead {
   id: string;
   x: number;
   y: number;
@@ -9,9 +9,9 @@ export interface KrestikBead {
 }
 
 // width/height — логические размеры (число колонн/рядов, как их подписывает
-// линейка), не сырые параметры generateKrestikGrid. Перевод — см.
-// toRawDimensions в useKrestikProject.ts.
-export interface KrestikGridConfig {
+// линейка), не сырые параметры generateCrossWeaveGrid. Перевод — см.
+// toRawDimensions в useCrossWeaveProject.ts.
+export interface CrossWeaveGridConfig {
   width: number;
   height: number;
   pitchX: number;

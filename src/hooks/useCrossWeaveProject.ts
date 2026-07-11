@@ -1,17 +1,17 @@
 import { useMemo } from 'react';
 import { useDrawing } from './useDrawing';
 import { usePersistedState } from './usePersistedState';
-import { KRESTIK_THEME } from '../config/krestikTheme';
-import { KrestikGridConfig } from '../types/krestikBead';
+import { CROSS_WEAVE_THEME } from '../config/crossWeaveTheme';
+import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
 import { PendantPlacement } from '../types/pendant';
-import { generateKrestikGrid } from '../utils/krestikGenerator';
+import { generateCrossWeaveGrid } from '../utils/crossWeaveGenerator';
 
-// Крестик не поддерживает подвески (MVP) — стабильные пустая ссылка и
+// CrossWeave не поддерживает подвески (MVP) — стабильные пустая ссылка и
 // no-op сеттер, чтобы useDrawing не считал их «изменившимися» на каждый рендер.
 const EMPTY_PENDANT_PLACEMENTS: PendantPlacement[] = [];
 const noopSetPendantPlacements = () => {};
 
-const isKrestikGridConfig = (v: unknown): v is KrestikGridConfig => {
+const isCrossWeaveGridConfig = (v: unknown): v is CrossWeaveGridConfig => {
   if (typeof v !== 'object' || v === null) return false;
   const obj = v as Record<string, unknown>;
   return typeof obj.width === 'number' && typeof obj.height === 'number' &&
@@ -19,7 +19,7 @@ const isKrestikGridConfig = (v: unknown): v is KrestikGridConfig => {
 };
 
 // gridSize.width/height — «логические» размеры: ровно то, что подписывает
-// KrestikRulers (число колонн = вертикальных овалов, число рядов =
+// CrossWeaveRulers (число колонн = вертикальных овалов, число рядов =
 // горизонтальных овалов), а не сырые параметры генератора. Раскладка
 // генератора: вертикальный ряд короче горизонтального на 1 бусину, а между
 // каждой парой горизонтальных рядов вклинивается вертикальный (и по одному
@@ -34,23 +34,23 @@ const toRawDimensions = (logicalWidth: number, logicalHeight: number) => ({
   rawHeight: logicalHeight * 2 + 1,
 });
 
-// Состояние и обработчики крестика — независимый MVP-проект: простая
+// Состояние и обработчики CrossWeave — независимый MVP-проект: простая
 // прямоугольная сетка овальных бисерин, без span/decor/pendant-концепций силянки.
-export const useKrestikProject = (palette: readonly string[]) => {
-  const [gridSize, setGridSize] = usePersistedState<KrestikGridConfig>('krestik:gridSize', {
-    width: KRESTIK_THEME.gridDefaults.initialWidth,
-    height: KRESTIK_THEME.gridDefaults.initialHeight,
-    pitchX: KRESTIK_THEME.gridDefaults.spacing,
-    pitchY: KRESTIK_THEME.gridDefaults.spacing,
-  }, isKrestikGridConfig);
+export const useCrossWeaveProject = (palette: readonly string[]) => {
+  const [gridSize, setGridSize] = usePersistedState<CrossWeaveGridConfig>('crossWeave:gridSize', {
+    width: CROSS_WEAVE_THEME.gridDefaults.initialWidth,
+    height: CROSS_WEAVE_THEME.gridDefaults.initialHeight,
+    pitchX: CROSS_WEAVE_THEME.gridDefaults.spacing,
+    pitchY: CROSS_WEAVE_THEME.gridDefaults.spacing,
+  }, isCrossWeaveGridConfig);
 
   const beads = useMemo(() => {
     const { rawWidth, rawHeight } = toRawDimensions(gridSize.width, gridSize.height);
-    return generateKrestikGrid(rawWidth, rawHeight, gridSize.pitchX, gridSize.pitchY);
+    return generateCrossWeaveGrid(rawWidth, rawHeight, gridSize.pitchX, gridSize.pitchY);
   }, [gridSize.width, gridSize.height, gridSize.pitchX, gridSize.pitchY]);
 
   const drawingControls = useDrawing(
-    palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements, 'krestik',
+    palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements, 'crossWeave',
   );
 
   const updateDimension = (field: 'width' | 'height', delta: number) => {
@@ -67,7 +67,7 @@ export const useKrestikProject = (palette: readonly string[]) => {
   };
 
   const updateSpacing = (delta: number) => {
-    const { minSpacing, maxSpacing } = KRESTIK_THEME.constraints;
+    const { minSpacing, maxSpacing } = CROSS_WEAVE_THEME.constraints;
     setGridSize(prev => {
       const next = Math.min(maxSpacing, Math.max(minSpacing, prev.pitchX + delta));
       return { ...prev, pitchX: next, pitchY: next };
@@ -75,7 +75,7 @@ export const useKrestikProject = (palette: readonly string[]) => {
   };
 
   const setSpacingAbsolute = (v: number) => {
-    const { minSpacing, maxSpacing } = KRESTIK_THEME.constraints;
+    const { minSpacing, maxSpacing } = CROSS_WEAVE_THEME.constraints;
     setGridSize(prev => {
       const next = Math.min(maxSpacing, Math.max(minSpacing, Math.round(v)));
       return { ...prev, pitchX: next, pitchY: next };
@@ -89,4 +89,4 @@ export const useKrestikProject = (palette: readonly string[]) => {
   };
 };
 
-export type KrestikProject = ReturnType<typeof useKrestikProject>;
+export type CrossWeaveProject = ReturnType<typeof useCrossWeaveProject>;

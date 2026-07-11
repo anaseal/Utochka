@@ -13,8 +13,8 @@ const bottomNodes = beads.filter(
 const noPendants: PendantPlacement[] = [];
 const noTemplates: Record<string, PendantTemplate> = {};
 
-describe('computeUnifiedFloodFill — базовое поведение сетки', () => {
-  it('startColor === activeColor → пустой результат (нечего заливать)', () => {
+describe('computeUnifiedFloodFill — basic grid behavior', () => {
+  it('startColor === activeColor → empty result (nothing to fill)', () => {
     const res = computeUnifiedFloodFill(
       'node-0-0',
       beads,
@@ -27,7 +27,7 @@ describe('computeUnifiedFloodFill — базовое поведение сетк
     expect(res).toEqual({ gridIds: [], pendantHits: [] });
   });
 
-  it('равномерно прозрачная сетка заливается целиком (граф связен)', () => {
+  it('uniformly transparent grid is filled entirely (graph is connected)', () => {
     const res = computeUnifiedFloodFill(
       'node-0-0',
       beads,
@@ -41,7 +41,7 @@ describe('computeUnifiedFloodFill — базовое поведение сетк
     expect(res.pendantHits).toHaveLength(0);
   });
 
-  it('бисерина другого цвета не попадает в заливку (барьер)', () => {
+  it('a bead of a different color does not get filled (barrier)', () => {
     const res = computeUnifiedFloodFill(
       'node-0-0',
       beads,
@@ -58,7 +58,7 @@ describe('computeUnifiedFloodFill — базовое поведение сетк
   });
 });
 
-describe('computeUnifiedFloodFill — переход сетка ↔ подвеска', () => {
+describe('computeUnifiedFloodFill — grid ↔ pendant transition', () => {
   const template: PendantTemplate = {
     id: 't1',
     name: 'test',
@@ -77,7 +77,7 @@ describe('computeUnifiedFloodFill — переход сетка ↔ подвес
     colorMap: {},
   };
 
-  it('заливка перетекает через якорную ноду в бусины подвески', () => {
+  it('fill flows through the anchor node into pendant beads', () => {
     const res = computeUnifiedFloodFill(
       'node-2-1',
       beads,
@@ -95,7 +95,7 @@ describe('computeUnifiedFloodFill — переход сетка ↔ подвес
     );
   });
 
-  it('подвеска с иным цветом якорной бусины не заливается', () => {
+  it('a pendant with a different anchor bead color is not filled', () => {
     const res = computeUnifiedFloodFill(
       'node-2-1',
       beads,

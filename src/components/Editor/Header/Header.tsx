@@ -5,13 +5,13 @@ import {
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
-import { EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, KrestikIcon } from './icons';
+import { EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, CrossWeaveIcon } from './icons';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { StampAnchorEdge } from '../../../utils/stamp';
 import { BEAD_THEME } from '../../../config/theme';
-import { KRESTIK_THEME } from '../../../config/krestikTheme';
+import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
 
-export type Technique = 'silyanka' | 'krestik';
+export type Technique = 'silyanka' | 'crossWeave';
 
 interface SharedHeaderProps {
   palette: readonly string[];
@@ -60,7 +60,7 @@ interface SilyankaHeaderProps {
   onToggleStampAnchorEdge: () => void;
 }
 
-interface KrestikHeaderProps {
+interface CrossWeaveHeaderProps {
   gridWidth: number;
   gridHeight: number;
   spacing: number;
@@ -73,8 +73,8 @@ interface KrestikHeaderProps {
 }
 
 type HeaderProps = SharedHeaderProps & (
-  | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; krestikProps?: undefined }
-  | { technique: 'krestik'; krestikProps: KrestikHeaderProps; silyankaProps?: undefined }
+  | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; crossWeaveProps?: undefined }
+  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveHeaderProps; silyankaProps?: undefined }
 );
 
 type StepperVariant = 'bar' | 'overflow';
@@ -252,28 +252,28 @@ export const Header = (props: HeaderProps) => {
   };
 
   const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
-  const krestikProps = props.technique === 'krestik' ? props.krestikProps : undefined;
+  const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
 
   return (
     <header className="header">
       <nav className="header__nav">
-        <div className="technique-switch" role="group" aria-label="Switch technique / Переключить технику">
+        <div className="technique-switch" role="group" aria-label="Switch technique">
           <button
             onClick={() => onTechniqueChange('silyanka')}
             className={`technique-switch__btn ${technique === 'silyanka' ? 'technique-switch__btn--active' : ''}`}
-            title="Бисерная сетка (Silyanka)"
+            title="Traditional Ukrainian beadwork"
             aria-pressed={technique === 'silyanka'}
           >
-            <SilyankaIcon size={13} />
+            <SilyankaIcon size={25} />
             <span>sylianka</span>
           </button>
           <button
-            onClick={() => onTechniqueChange('krestik')}
-            className={`technique-switch__btn ${technique === 'krestik' ? 'technique-switch__btn--active' : ''}`}
-            title="Вышивка крестиком (Krestik)"
-            aria-pressed={technique === 'krestik'}
+            onClick={() => onTechniqueChange('crossWeave')}
+            className={`technique-switch__btn ${technique === 'crossWeave' ? 'technique-switch__btn--active' : ''}`}
+            title="Right-Angle Weave"
+            aria-pressed={technique === 'crossWeave'}
           >
-            <KrestikIcon size={13} />
+            <CrossWeaveIcon size={25} />
             <span>RAW</span>
           </button>
         </div>
@@ -353,7 +353,7 @@ export const Header = (props: HeaderProps) => {
         <button
           onClick={() => setActiveTool('pencil')}
           className={`tool-btn ${activeTool === 'pencil' ? 'tool-btn--active' : ''}`}
-          title="Карандаш"
+          title="Pencil"
           aria-pressed={activeTool === 'pencil'}
         >
           <Pencil size={14} />
@@ -393,8 +393,8 @@ export const Header = (props: HeaderProps) => {
                   onClick={silyankaProps.onToggleStampAnchorEdge}
                   className="tool-btn-group__badge"
                   title={silyankaProps.stampAnchorEdge === 'top'
-                    ? 'Точка привязки штампа: верх (клик или Shift — переключить на низ, Alt — сбросить штамп)'
-                    : 'Точка привязки штампа: низ (клик или Shift — переключить на верх, Alt — сбросить штамп)'}
+                    ? 'Stamp anchor point: top (click or Shift to switch to bottom, Alt to reset stamp)'
+                    : 'Stamp anchor point: bottom (click or Shift to switch to top, Alt to reset stamp)'}
                   aria-pressed={silyankaProps.stampAnchorEdge === 'bottom'}
                 >
                   {silyankaProps.stampAnchorEdge === 'top'
@@ -420,18 +420,18 @@ export const Header = (props: HeaderProps) => {
         <div className="grid-controls grid-controls--collapsible grid-controls--stacked">
           <Stepper
             label="Width"
-            value={silyankaProps ? silyankaProps.gridWidth : krestikProps!.gridWidth}
-            onDelta={silyankaProps ? silyankaProps.onWidthChange : krestikProps!.onWidthChange}
-            onSet={silyankaProps ? silyankaProps.onSetWidth : krestikProps!.onSetWidth}
-            inputValue={silyankaProps ? silyankaProps.gridWidth : krestikProps!.gridWidth}
+            value={silyankaProps ? silyankaProps.gridWidth : crossWeaveProps!.gridWidth}
+            onDelta={silyankaProps ? silyankaProps.onWidthChange : crossWeaveProps!.onWidthChange}
+            onSet={silyankaProps ? silyankaProps.onSetWidth : crossWeaveProps!.onSetWidth}
+            inputValue={silyankaProps ? silyankaProps.gridWidth : crossWeaveProps!.gridWidth}
             min={1}
           />
           <Stepper
             label="Height"
-            value={silyankaProps ? silyankaProps.gridHeight : krestikProps!.gridHeight}
-            onDelta={silyankaProps ? silyankaProps.onHeightChange : krestikProps!.onHeightChange}
-            onSet={silyankaProps ? silyankaProps.onSetHeight : krestikProps!.onSetHeight}
-            inputValue={silyankaProps ? silyankaProps.gridHeight : krestikProps!.gridHeight}
+            value={silyankaProps ? silyankaProps.gridHeight : crossWeaveProps!.gridHeight}
+            onDelta={silyankaProps ? silyankaProps.onHeightChange : crossWeaveProps!.onHeightChange}
+            onSet={silyankaProps ? silyankaProps.onSetHeight : crossWeaveProps!.onSetHeight}
+            inputValue={silyankaProps ? silyankaProps.gridHeight : crossWeaveProps!.gridHeight}
             min={silyankaProps ? 2 : 1}
           />
         </div>
@@ -488,15 +488,15 @@ export const Header = (props: HeaderProps) => {
               max={BEAD_THEME.constraints.maxSpacing}
             />
           )}
-          {krestikProps && (
+          {crossWeaveProps && (
             <Stepper
               label="Spacing"
-              value={krestikProps.spacing}
-              onDelta={(s) => krestikProps.onSpacingChange(s * KRESTIK_THEME.constraints.spacingStep)}
-              onSet={krestikProps.onSetSpacing}
-              inputValue={krestikProps.spacing}
-              min={KRESTIK_THEME.constraints.minSpacing}
-              max={KRESTIK_THEME.constraints.maxSpacing}
+              value={crossWeaveProps.spacing}
+              onDelta={(s) => crossWeaveProps.onSpacingChange(s * CROSS_WEAVE_THEME.constraints.spacingStep)}
+              onSet={crossWeaveProps.onSetSpacing}
+              inputValue={crossWeaveProps.spacing}
+              min={CROSS_WEAVE_THEME.constraints.minSpacing}
+              max={CROSS_WEAVE_THEME.constraints.maxSpacing}
             />
           )}
         </div>
@@ -541,11 +541,11 @@ export const Header = (props: HeaderProps) => {
 
             <button
               onClick={silyankaProps.onToggleSidebar}
-              className={`tool-btn ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
-              title="Библиотека подвесок"
+              className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
+              title="Pendant library"
               aria-pressed={silyankaProps.sidebarOpen}
             >
-              <PendantIcon size={14} />
+              <PendantIcon size={22} />
             </button>
           </>
         )}

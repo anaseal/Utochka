@@ -3,7 +3,7 @@ import { shiftDesignMapColumns } from './regrid';
 
 const NEW_W = 6;
 
-describe('shiftDesignMapColumns — сдвиг вправо (+1)', () => {
+describe('shiftDesignMapColumns — shift right (+1)', () => {
   const result = shiftDesignMapColumns(
     {
       'node-0-0': 'a', // чётный ряд, c→1, maxC=5 → ok
@@ -20,7 +20,7 @@ describe('shiftDesignMapColumns — сдвиг вправо (+1)', () => {
     NEW_W,
   );
 
-  it('сохраняет цвета сдвинутых бисерин', () => {
+  it('preserves colors of shifted beads', () => {
     expect(result['node-0-1']).toBe('a');
     expect(result['node-1-4']).toBe('c');
     expect(result['span-edge-top-link-4-bead-1']).toBe('e');
@@ -28,7 +28,7 @@ describe('shiftDesignMapColumns — сдвиг вправо (+1)', () => {
     expect(result['span-edge-2-5-right-bead-1']).toBe('h');
   });
 
-  it('отбрасывает всё, что вышло за сетку, и необрабатываемый декор', () => {
+  it('drops everything that falls outside the grid, and unhandled decor', () => {
     // 5 из 9 входов доживают до результата
     expect(Object.keys(result)).toHaveLength(5);
     expect(result).not.toHaveProperty('node-0-6');
@@ -36,7 +36,7 @@ describe('shiftDesignMapColumns — сдвиг вправо (+1)', () => {
   });
 });
 
-describe('shiftDesignMapColumns — сдвиг влево (-1)', () => {
+describe('shiftDesignMapColumns — shift left (-1)', () => {
   const result = shiftDesignMapColumns(
     {
       'span-edge-2-1-left-bead-1': 'k', // чётный left, c→0 → нет левой грани в кол.0
@@ -47,15 +47,15 @@ describe('shiftDesignMapColumns — сдвиг влево (-1)', () => {
     NEW_W,
   );
 
-  it('левая грань в колонке 0 чётного ряда отсутствует → отброшена', () => {
+  it('the left edge in column 0 of an even row is absent → dropped', () => {
     expect(result).not.toHaveProperty('span-edge-2-0-left-bead-1');
   });
 
-  it('корректный сдвиг влево сохраняется', () => {
+  it('a valid left shift is preserved', () => {
     expect(result['span-edge-2-1-left-bead-1']).toBe('m');
   });
 
-  it('колонка -1 за пределами сетки → отброшена', () => {
+  it('column -1 outside the grid → dropped', () => {
     expect(Object.keys(result)).toHaveLength(1);
   });
 });

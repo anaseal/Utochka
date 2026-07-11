@@ -1,6 +1,6 @@
-import { KrestikBead } from '../types/krestikBead';
+import { CrossWeaveBead } from '../types/crossWeaveBead';
 
-// Крестик: та же чередующаяся решётка, что и у силянки (каждый второй ряд
+// CrossWeave: та же чередующаяся решётка, что и у силянки (каждый второй ряд
 // сдвинут на полшага по X и содержит на одну колонку меньше), но без
 // node/span — каждая позиция решётки это одна реальная бисерина. Ориентация
 // овала чередуется по чётности ряда (вертикальный/горизонтальный), а сдвиг
@@ -11,13 +11,13 @@ import { KrestikBead } from '../types/krestikBead';
 // есть между двумя горизонтальными рядами или двумя вертикальными. Так как
 // между ними всегда вклинивается ряд другой ориентации, фактический шаг по Y
 // между соседними рядами (r и r+1) — pitchY/2.
-export const generateKrestikGrid = (
+export const generateCrossWeaveGrid = (
   width: number,
   height: number,
   pitchX: number,
   pitchY: number,
-): KrestikBead[] => {
-  const beads: KrestikBead[] = [];
+): CrossWeaveBead[] => {
+  const beads: CrossWeaveBead[] = [];
   const rowStepY = pitchY / 2;
 
   for (let r = 0; r < height; r++) {

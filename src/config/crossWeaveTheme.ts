@@ -1,4 +1,4 @@
-export const KRESTIK_THEME = {
+export const CROSS_WEAVE_THEME = {
   // Радиусы овала: minor — короткая полуось, major — длинная. Для
   // вертикальной бисерины rx=minor/ry=major, для горизонтальной — наоборот.
   sizes: {
@@ -14,7 +14,7 @@ export const KRESTIK_THEME = {
   gridDefaults: {
     // width/height здесь — «логические» размеры (число колонн/рядов, как их
     // подписывает линейка), а не сырые параметры генератора. Перевод в сырые
-    // параметры — см. toRawDimensions в useKrestikProject.ts.
+    // параметры — см. toRawDimensions в useCrossWeaveProject.ts.
     initialWidth: 30,
     initialHeight: 15,
     // spacing = pitchX = pitchY: расстояние между соседними овалами внутри
@@ -30,4 +30,4 @@ export const KRESTIK_THEME = {
   },
 };
 
-export const defaultColorForKrestik = (): string => KRESTIK_THEME.colors.beadDefault;
+export const defaultColorForCrossWeave = (): string => CROSS_WEAVE_THEME.colors.beadDefault;

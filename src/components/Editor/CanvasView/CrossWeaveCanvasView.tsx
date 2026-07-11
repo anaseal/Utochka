@@ -1,17 +1,17 @@
-/* FILE: src\components\Editor\CanvasView\KrestikCanvasView.tsx */
+/* FILE: src\components\Editor\CanvasView\CrossWeaveCanvasView.tsx */
 import { useMemo, useCallback, useRef, useEffect } from 'react';
-import { KrestikBead } from '../../../types/krestikBead';
-import { KrestikBeadView } from '../BeadView/KrestikBeadView';
-import { KrestikRulers } from '../CanvasRulers/KrestikRulers';
+import { CrossWeaveBead } from '../../../types/crossWeaveBead';
+import { CrossWeaveBeadView } from '../BeadView/CrossWeaveBeadView';
+import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
-import { KRESTIK_THEME, defaultColorForKrestik } from '../../../config/krestikTheme';
+import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../../../config/crossWeaveTheme';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
 import { Sun, Moon } from 'lucide-react';
 import './CanvasView.css';
 
-interface KrestikCanvasViewProps {
-  beads: KrestikBead[];
+interface CrossWeaveCanvasViewProps {
+  beads: CrossWeaveBead[];
   width: number;
   height: number;
   canvasTheme: 'dark' | 'light';
@@ -26,10 +26,10 @@ interface KrestikCanvasViewProps {
   onZoomChange: (delta: number) => void;
 }
 
-// Крестик — MVP-канвас: только карандаш/ластик, без mirror/stamp/flood-fill/подвесок.
+// CrossWeave — MVP-канвас: только карандаш/ластик, без mirror/stamp/flood-fill/подвесок.
 // Не ветка CanvasView, а отдельный компонент — переиспользует общий CSS-шелл
 // (canvas__svg, editor__viewport, export-btn, canvas-theme-toggle) и CanvasStats.
-export const KrestikCanvasView = ({
+export const CrossWeaveCanvasView = ({
   beads,
   width,
   height,
@@ -43,13 +43,13 @@ export const KrestikCanvasView = ({
   stopDrawing,
   zoom,
   onZoomChange,
-}: KrestikCanvasViewProps) => {
+}: CrossWeaveCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
 
   const offsetX = 60;
   const offsetY = 60;
-  const { beadMajorRadius } = KRESTIK_THEME.sizes;
+  const { beadMajorRadius } = CROSS_WEAVE_THEME.sizes;
 
   useEffect(() => {
     const container = canvasContainerRef.current;
@@ -80,7 +80,7 @@ export const KrestikCanvasView = ({
   const colorStats = useMemo(() => {
     const stats = new Map<string, number>();
     beads.forEach(bead => {
-      const color = designMap[bead.id] || defaultColorForKrestik();
+      const color = designMap[bead.id] || defaultColorForCrossWeave();
       stats.set(color, (stats.get(color) || 0) + 1);
     });
     return Array.from(stats.entries());
@@ -127,17 +127,17 @@ export const KrestikCanvasView = ({
             className="canvas__svg-content"
           >
             <g transform={`translate(${offsetX}, ${offsetY})`}>
-              <KrestikRulers beads={beads} width={width} height={height} />
+              <CrossWeaveRulers beads={beads} width={width} height={height} />
 
               {beads.map((bead) => (
-                <KrestikBeadView
+                <CrossWeaveBeadView
                   key={bead.id}
                   id={bead.id}
                   x={bead.x}
                   y={bead.y}
                   orientation={bead.orientation}
                   color={designMap[bead.id]}
-                  defaultColor={defaultColorForKrestik()}
+                  defaultColor={defaultColorForCrossWeave()}
                   onMouseEnter={handleMouseEnter}
                   onMouseDown={handleMouseDown}
                 />
@@ -154,8 +154,8 @@ export const KrestikCanvasView = ({
         className="canvas-theme-toggle"
         onClick={onToggleCanvasTheme}
         onMouseDown={(e) => e.stopPropagation()}
-        title={canvasTheme === 'dark' ? 'Светлый холст' : 'Тёмный холст'}
-        aria-label={canvasTheme === 'dark' ? 'Переключить на светлый холст' : 'Переключить на тёмный холст'}
+        title={canvasTheme === 'dark' ? 'Light canvas' : 'Dark canvas'}
+        aria-label={canvasTheme === 'dark' ? 'Switch to light canvas' : 'Switch to dark canvas'}
       >
         {canvasTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
       </button>

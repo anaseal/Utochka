@@ -1,10 +1,10 @@
-/* FILE: src\components\Editor\BeadView\KrestikBeadView.tsx */
+/* FILE: src\components\Editor\BeadView\CrossWeaveBeadView.tsx */
 import { memo } from 'react';
-import { BeadOrientation } from '../../../types/krestikBead';
-import { KRESTIK_THEME } from '../../../config/krestikTheme';
+import { BeadOrientation } from '../../../types/crossWeaveBead';
+import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
 import './BeadView.css';
 
-interface KrestikBeadViewProps {
+interface CrossWeaveBeadViewProps {
   id: string;
   x: number;
   y: number;
@@ -16,7 +16,7 @@ interface KrestikBeadViewProps {
   onMouseEnter: (id: string) => void;
 }
 
-export const KrestikBeadView = memo(({
+export const CrossWeaveBeadView = memo(({
   id,
   x,
   y,
@@ -26,11 +26,11 @@ export const KrestikBeadView = memo(({
   highlighted,
   onMouseDown,
   onMouseEnter,
-}: KrestikBeadViewProps) => {
+}: CrossWeaveBeadViewProps) => {
   const isEmpty = !color;
   const finalColor = color || defaultColor;
 
-  const { beadMinorRadius, beadMajorRadius, hitboxRadius } = KRESTIK_THEME.sizes;
+  const { beadMinorRadius, beadMajorRadius, hitboxRadius } = CROSS_WEAVE_THEME.sizes;
   const rx = orientation === 'vertical' ? beadMinorRadius : beadMajorRadius;
   const ry = orientation === 'vertical' ? beadMajorRadius : beadMinorRadius;
 
@@ -70,4 +70,4 @@ export const KrestikBeadView = memo(({
   );
 });
 
-KrestikBeadView.displayName = 'KrestikBeadView';
+CrossWeaveBeadView.displayName = 'CrossWeaveBeadView';

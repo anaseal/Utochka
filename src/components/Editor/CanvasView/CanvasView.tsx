@@ -416,8 +416,8 @@ export const CanvasView = ({
         className="canvas-theme-toggle"
         onClick={onToggleCanvasTheme}
         onMouseDown={(e) => e.stopPropagation()}
-        title={canvasTheme === 'dark' ? 'Светлый холст' : 'Тёмный холст'}
-        aria-label={canvasTheme === 'dark' ? 'Переключить на светлый холст' : 'Переключить на тёмный холст'}
+        title={canvasTheme === 'dark' ? 'Light canvas' : 'Dark canvas'}
+        aria-label={canvasTheme === 'dark' ? 'Switch to light canvas' : 'Switch to dark canvas'}
       >
         {canvasTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
       </button>
