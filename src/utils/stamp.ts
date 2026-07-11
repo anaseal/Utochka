@@ -37,23 +37,39 @@ const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
 const getInternalCount = (r: number, ctx: StampContext): number =>
   Math.max(0, resolveSpanCount(r, ctx.topSpan, ctx.bottomSpan, ctx.rowSpanOverrides) - 2);
 
-// Переносит id бисерины на (dRow, dCol). Возвращает null, если у бисерины
-// физически нет аналога в целевой позиции — финальная проверка всегда идёт
-// через ctx.beadIds (реальный список id текущей сетки), формулы дают только
-// кандидата.
+const mod2 = (n: number): number => ((n % 2) + 2) % 2;
+
+// Нечётные ряды физически сдвинуты на stepX/2 относительно чётных
+// (generator.ts:61-62). При переносе штампа на нечётное число рядов (dRow
+// меняет чётность) этот полшаг накапливается по-разному для бисерин, чья
+// исходная чётность ряда совпадает с чётностью ряда-якоря узора, и для тех,
+// у кого не совпадает — без компенсации колонка съезжает ровно на 1 шаг у
+// каждой второй строки узора, и рисунок рвётся на несвязанные половины.
+const colParityCorrection = (r: number, dRow: number, anchorRow: number): number => {
+  if (dRow % 2 === 0 || mod2(r) === mod2(anchorRow)) return 0;
+  return mod2(anchorRow) === 0 ? 1 : -1;
+};
+
+// Переносит id бисерины на (dRow, dCol). anchorRow — ряд якоря узора
+// (pattern.anchorRow), нужен только для колоночной коррекции чётности выше.
+// Возвращает null, если у бисерины физически нет аналога в целевой позиции —
+// финальная проверка всегда идёт через ctx.beadIds (реальный список id
+// текущей сетки), формулы дают только кандидата.
 export const translateBeadId = (
   id: string,
   dRow: number,
   dCol: number,
   ctx: StampContext,
+  anchorRow: number,
 ): string | null => {
   const accept = (candidate: string): string | null =>
     ctx.beadIds.has(candidate) ? candidate : null;
 
   const nodeM = id.match(NODE_RE);
   if (nodeM) {
-    const r = Number(nodeM[1]) + dRow;
-    const c = Number(nodeM[2]) + dCol;
+    const srcR = Number(nodeM[1]);
+    const r = srcR + dRow;
+    const c = Number(nodeM[2]) + dCol + colParityCorrection(srcR, dRow, anchorRow);
     return accept(`node-${r}-${c}`);
   }
 
@@ -78,7 +94,7 @@ export const translateBeadId = (
   const vertM = id.match(VERT_EDGE_RE);
   if (vertM) {
     const r = Number(vertM[1]);
-    const c = Number(vertM[2]) + dCol;
+    const c = Number(vertM[2]) + dCol + colParityCorrection(r, dRow, anchorRow);
     const side = vertM[3];
     const i = Number(vertM[4]);
     const r2 = r + dRow;
@@ -93,9 +109,10 @@ export const translateBeadId = (
 
   const decorM = id.match(DECOR_RE);
   if (decorM) {
-    const r = Number(decorM[1]) + dRow;
+    const srcR = Number(decorM[1]);
+    const r = srcR + dRow;
     const k = Number(decorM[2]);
-    const c = Number(decorM[3]) + dCol;
+    const c = Number(decorM[3]) + dCol + colParityCorrection(srcR, dRow, anchorRow);
     if ((ctx.decorBands[r] ?? 0) < k) return null;
     return accept(`decor-${r}-${k}-${c}`);
   }
@@ -157,7 +174,7 @@ export const applyStampPattern = (
 
   const result: Record<string, string> = {};
   for (const entry of pattern.entries) {
-    const targetId = translateBeadId(entry.id, dRow, dCol, ctx);
+    const targetId = translateBeadId(entry.id, dRow, dCol, ctx, pattern.anchorRow);
     if (targetId !== null) result[targetId] = entry.color;
   }
   return result;
