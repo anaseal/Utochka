@@ -403,7 +403,7 @@ export const Header = (props: HeaderProps) => {
             onDelta={silyankaProps ? silyankaProps.onHeightChange : krestikProps!.onHeightChange}
             onSet={silyankaProps ? silyankaProps.onSetHeight : krestikProps!.onSetHeight}
             inputValue={silyankaProps ? silyankaProps.gridHeight : krestikProps!.gridHeight}
-            min={1}
+            min={silyankaProps ? 2 : 1}
           />
         </div>
 
@@ -488,7 +488,7 @@ export const Header = (props: HeaderProps) => {
             {overflowOpen && (
               <div className="header__overflow-panel" role="menu">
                 <Stepper variant="overflow" label="Width" value={silyankaProps.gridWidth} onDelta={silyankaProps.onWidthChange} onSet={silyankaProps.onSetWidth} inputValue={silyankaProps.gridWidth} min={1} />
-                <Stepper variant="overflow" label="Height" value={silyankaProps.gridHeight} onDelta={silyankaProps.onHeightChange} onSet={silyankaProps.onSetHeight} inputValue={silyankaProps.gridHeight} min={1} />
+                <Stepper variant="overflow" label="Height" value={silyankaProps.gridHeight} onDelta={silyankaProps.onHeightChange} onSet={silyankaProps.onSetHeight} inputValue={silyankaProps.gridHeight} min={2} />
                 <Stepper variant="overflow" label="Top Edge" value={silyankaProps.topSpan} onDelta={silyankaProps.onTopSpanChange} onReset={silyankaProps.onTopEdgeReset} onSet={silyankaProps.onSetTopSpan} inputValue={silyankaProps.topSpan} min={3} max={10} />
                 <Stepper variant="overflow" label="Bottom Edge" value={silyankaProps.bottomSpan} onDelta={silyankaProps.onBottomSpanChange} onReset={silyankaProps.onBottomEdgeReset} onSet={silyankaProps.onSetBottomSpan} inputValue={silyankaProps.bottomSpan} min={3} max={10} />
               </div>

@@ -16,8 +16,8 @@ export const BEAD_THEME = {
   gridDefaults: {
     spacing: 65,
     beadsInSpan: 3,
-    initialWidth: 10,
-    initialHeight: 4,
+    initialWidth: 30,
+    initialHeight: 8,
     verticalCompression: 0.2,
     horizontalStepMultiplier: 0.8,
     offsetX: 120,

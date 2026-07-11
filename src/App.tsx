@@ -76,8 +76,12 @@ function App() {
           canUndo={silyanka.drawingControls.canUndo}
           canRedo={silyanka.drawingControls.canRedo}
           silyankaProps={{
-            gridWidth: silyanka.gridSize.width,
-            gridHeight: silyanka.gridSize.height,
+            // Линейка на холсте — источник правды: чётный ряд её колонок на 1 меньше
+            // gridSize.width, а ряд её строк на 1 больше gridSize.height (см. spec.md,
+            // «Ширина/высота в хедере vs. линейка»). Хедер показывает и принимает числа
+            // линейки, поэтому здесь ±1 — единственное место преобразования.
+            gridWidth: silyanka.gridSize.width - 1,
+            gridHeight: silyanka.gridSize.height + 1,
             topSpan: silyanka.gridSize.topSpan,
             bottomSpan: silyanka.gridSize.bottomSpan,
             onWidthChange: (delta) => silyanka.updateDimension('width', delta),
@@ -92,8 +96,8 @@ function App() {
             onSpacingChange: silyanka.updateSpacing,
             sidebarOpen: silyanka.sidebarOpen,
             onToggleSidebar: () => silyanka.setSidebarOpen(o => !o),
-            onSetWidth: silyanka.setWidthAbsolute,
-            onSetHeight: silyanka.setHeightAbsolute,
+            onSetWidth: (v) => silyanka.setWidthAbsolute(v + 1),
+            onSetHeight: (v) => silyanka.setHeightAbsolute(v - 1),
             onSetTopSpan: silyanka.setTopSpanAbsolute,
             onSetBottomSpan: silyanka.setBottomSpanAbsolute,
             onSetSpacing: silyanka.setSpacingAbsolute,
