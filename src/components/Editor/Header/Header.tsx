@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil } from 'lucide-react';
+import {
+  MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil,
+  ArrowUpToLine, ArrowDownToLine,
+} from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import { EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, KrestikIcon } from './icons';
 import { DrawingTool } from '../../../hooks/useDrawing';
+import { StampAnchorEdge } from '../../../utils/stamp';
 import { BEAD_THEME } from '../../../config/theme';
 import { KRESTIK_THEME } from '../../../config/krestikTheme';
 
@@ -51,6 +55,9 @@ interface SilyankaHeaderProps {
   onSetTopSpan?: (v: number) => void;
   onSetBottomSpan?: (v: number) => void;
   onSetSpacing?: (v: number) => void;
+  hasStampPattern: boolean;
+  stampAnchorEdge: StampAnchorEdge;
+  onToggleStampAnchorEdge: () => void;
 }
 
 interface KrestikHeaderProps {
@@ -371,14 +378,31 @@ export const Header = (props: HeaderProps) => {
               <PaintBucket size={14} />
             </button>
 
-            <button
-              onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
-              className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
-              title="Stamp"
-              aria-pressed={activeTool === 'stamp'}
-            >
-              <Stamp size={14} />
-            </button>
+            <div className="tool-btn-group">
+              <button
+                onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
+                className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
+                title="Stamp"
+                aria-pressed={activeTool === 'stamp'}
+              >
+                <Stamp size={14} />
+              </button>
+
+              {activeTool === 'stamp' && silyankaProps.hasStampPattern && (
+                <button
+                  onClick={silyankaProps.onToggleStampAnchorEdge}
+                  className="tool-btn-group__badge"
+                  title={silyankaProps.stampAnchorEdge === 'top'
+                    ? 'Точка привязки штампа: верх (клик или Shift — переключить на низ, Alt — сбросить штамп)'
+                    : 'Точка привязки штампа: низ (клик или Shift — переключить на верх, Alt — сбросить штамп)'}
+                  aria-pressed={silyankaProps.stampAnchorEdge === 'bottom'}
+                >
+                  {silyankaProps.stampAnchorEdge === 'top'
+                    ? <ArrowUpToLine size={9} />
+                    : <ArrowDownToLine size={9} />}
+                </button>
+              )}
+            </div>
 
             <button
               onClick={() => silyankaProps.setMirrorMode(!silyankaProps.mirrorMode)}

@@ -263,6 +263,9 @@ export const CanvasView = ({
       const dx = e.clientX - drag.startClient.x;
       const dy = e.clientY - drag.startClient.y;
       if (drag.dragging || Math.hypot(dx, dy) > STAMP_DRAG_THRESHOLD) {
+        // Момент перехода клика в драг — прячем протухший preview старого
+        // штампа, чтобы он не мешал видеть новую рамку выделения.
+        if (!drag.dragging) onStampHover(null);
         drag.dragging = true;
         const beadPoint = toBeadCoords(e.clientX, e.clientY);
         if (beadPoint) {

@@ -11,7 +11,9 @@ import { clampSpan, resolveSpanCount } from '../utils/spans';
 import { shiftDesignMapColumns } from '../utils/regrid';
 import { mirrorBeadId } from '../utils/mirror';
 import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
-import { StampPattern, StampContext, captureStampPattern, applyStampPattern } from '../utils/stamp';
+import {
+  StampPattern, StampContext, StampAnchorEdge, captureStampPattern, applyStampPattern,
+} from '../utils/stamp';
 
 const isGridConfig = (v: unknown): v is GridConfig => {
   if (typeof v !== 'object' || v === null) return false;
@@ -104,6 +106,13 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [stampPattern, setStampPattern] = useState<StampPattern | null>(null);
   const [stampHoverNodeId, setStampHoverNodeId] = useState<string | null>(null);
+  // Базовая точка привязки штампа: 'top' (по умолчанию) — targetAnchor
+  // совмещается с верхним рядом захваченного мотива, 'bottom' — с нижним
+  // (позволяет, например, поставить низ штампа к верхнему краю полотна).
+  // Переключается кликом по бейджу у кнопки Stamp или клавишей Shift
+  // (тап, не удержание — см. Shift-хендлер в App.tsx) — оба вызывают
+  // toggleStampAnchorEdge и одинаково меняют это состояние насовсем.
+  const [stampAnchorEdge, setStampAnchorEdge] = useState<StampAnchorEdge>('top');
   const canvasSvgRef = useRef<SVGSVGElement>(null);
 
   const rowGaps = useMemo(() => {
@@ -151,9 +160,9 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     const patch = applyStampPattern(stampPattern, {
       row: targetBead.logicalIndex.row,
       col: targetBead.logicalIndex.col,
-    }, stampCtx);
+    }, stampCtx, stampAnchorEdge);
     return new Set(Object.keys(patch));
-  }, [stampPattern, stampHoverNodeId, beads, stampCtx]);
+  }, [stampPattern, stampHoverNodeId, stampAnchorEdge, beads, stampCtx]);
 
   const handleStampSelect = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
@@ -163,6 +172,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setStampHoverNodeId(null);
   }, [beads, drawingControls.designMap]);
 
+  const toggleStampAnchorEdge = useCallback(() => {
+    setStampAnchorEdge(e => (e === 'top' ? 'bottom' : 'top'));
+  }, []);
+
   const handleStampPlace = useCallback((nodeId: string) => {
     if (!stampPattern) return;
     const targetBead = beads.find(b => b.id === nodeId);
@@ -170,7 +183,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     const patch = applyStampPattern(stampPattern, {
       row: targetBead.logicalIndex.row,
       col: targetBead.logicalIndex.col,
-    }, stampCtx);
+    }, stampCtx, stampAnchorEdge);
     if (Object.keys(patch).length === 0) return;
 
     drawingControls.remapDesignMap(prev => {
@@ -183,7 +196,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       }
       return next;
     });
-  }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom]);
+  }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom, stampAnchorEdge]);
 
   const updateDimension = (field: 'width' | 'height', delta: number) => {
     if (field === 'width' && mirrorMode) {
@@ -433,6 +446,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     beads, drawingControls, pendantControls,
     sidebarOpen, setSidebarOpen, hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
     stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewIds,
+    stampAnchorEdge, toggleStampAnchorEdge,
     canvasSvgRef, rowGaps, bottomNodes, internalTop, internalBottom,
     handleStampSelect, handleStampPlace,
     updateDimension, updateTopSpan, updateBottomSpan, updateSpacing,

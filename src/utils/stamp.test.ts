@@ -165,6 +165,8 @@ describe('captureStampPattern', () => {
     );
     expect(p.anchorRow).toBe(1);
     expect(p.anchorCol).toBe(2);
+    expect(p.anchorRowBottom).toBe(3);
+    expect(p.anchorColBottom).toBe(1);
     expect(p.entries).toHaveLength(2);
     expect(p.entries).toEqual(
       expect.arrayContaining([
@@ -185,12 +187,16 @@ describe('captureStampPattern', () => {
     const p = captureStampPattern([span.id], [span], { [span.id]: 'green' });
     expect(p.anchorRow).toBe(2);
     expect(p.anchorCol).toBe(0);
+    expect(p.anchorRowBottom).toBe(2);
+    expect(p.anchorColBottom).toBe(0);
     expect(p.entries).toEqual([{ id: span.id, color: 'green' }]);
   });
 
   it('пустое выделение → anchor (0,0)', () => {
     const p = captureStampPattern([], [], {});
-    expect(p).toEqual({ anchorRow: 0, anchorCol: 0, entries: [] });
+    expect(p).toEqual({
+      anchorRow: 0, anchorCol: 0, anchorRowBottom: 0, anchorColBottom: 0, entries: [],
+    });
   });
 });
 
@@ -199,6 +205,8 @@ describe('applyStampPattern', () => {
     const pattern = {
       anchorRow: 1,
       anchorCol: 2,
+      anchorRowBottom: 3,
+      anchorColBottom: 1,
       entries: [
         { id: 'node-1-2', color: 'red' },
         { id: 'node-3-1', color: 'blue' },
@@ -214,6 +222,8 @@ describe('applyStampPattern', () => {
     const pattern = {
       anchorRow: 1,
       anchorCol: 2,
+      anchorRowBottom: 3,
+      anchorColBottom: 1,
       entries: [
         { id: 'node-1-2', color: 'red' },
         { id: 'node-3-1', color: 'blue' },
@@ -222,5 +232,33 @@ describe('applyStampPattern', () => {
     const c = ctx({ beadIds: new Set(['node-2-2']) }); // node-4-1 нет
     const patch = applyStampPattern(pattern, { row: 2, col: 2 }, c);
     expect(patch).toEqual({ 'node-2-2': 'red' });
+  });
+});
+
+describe('applyStampPattern — edge привязки (top/bottom)', () => {
+  // Мотив на 2 ряда: node-0-1 (верх, red) и node-1-1 (низ, blue).
+  const pattern = {
+    anchorRow: 0,
+    anchorCol: 1,
+    anchorRowBottom: 1,
+    anchorColBottom: 1,
+    entries: [
+      { id: 'node-0-1', color: 'red' },
+      { id: 'node-1-1', color: 'blue' },
+    ],
+  };
+
+  it('edge="top" (по умолчанию): targetAnchor совмещается с верхним рядом мотива', () => {
+    const c = ctx({ beadIds: new Set(['node-0-1', 'node-1-1']) });
+    const patch = applyStampPattern(pattern, { row: 0, col: 1 }, c);
+    expect(patch).toEqual({ 'node-0-1': 'red', 'node-1-1': 'blue' });
+  });
+
+  it('edge="bottom": targetAnchor совмещается с нижним рядом мотива — верхний ряд, уехавший выше сетки, отбрасывается', () => {
+    // Ставим низ штампа (row=1 мотива) в row=0 полотна: dRow = 0 - 1 = -1.
+    // Верхний ряд мотива (row=0) уезжает на row=-1 — такого узла нет.
+    const c = ctx({ beadIds: new Set(['node-0-1']) });
+    const patch = applyStampPattern(pattern, { row: 0, col: 1 }, c, 'bottom');
+    expect(patch).toEqual({ 'node-0-1': 'blue' });
   });
 });

@@ -8,6 +8,7 @@ import { KrestikCanvasView } from './components/Editor/CanvasView/KrestikCanvasV
 import { Header, Technique } from './components/Editor/Header/Header';
 import { PendantsSidebar } from './components/Sidebar/PendantsSidebar';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
+import { DrawingTool } from './hooks/useDrawing';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
@@ -36,11 +37,41 @@ function App() {
   const silyanka = useSilyankaProject(PALETTE);
   const krestik = useKrestikProject(PALETTE);
 
+  // Уход с инструмента «штамп» сбрасывает захваченный узор — иначе при
+  // следующем заходе в штамп сразу показывается старый preview и мешает
+  // заново выделить область (см. Escape-хендлер ниже — тот же сброс).
+  const setSilyankaTool = (tool: DrawingTool) => {
+    if (silyanka.drawingControls.activeTool === 'stamp' && tool !== 'stamp') {
+      silyanka.setStampPattern(null);
+      silyanka.setStampHoverNodeId(null);
+    }
+    silyanka.drawingControls.setActiveTool(tool);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (technique === 'silyanka' && e.key === 'Escape' && silyanka.stampPattern) {
         silyanka.setStampPattern(null);
         silyanka.setStampHoverNodeId(null);
+        return;
+      }
+      // Alt сбрасывает захваченный штамп так же, как Escape, — курсор
+      // сразу возвращается в режим выделения новой зоны драгом.
+      if (technique === 'silyanka' && e.key === 'Alt' && silyanka.stampPattern) {
+        e.preventDefault();
+        silyanka.setStampPattern(null);
+        silyanka.setStampHoverNodeId(null);
+        return;
+      }
+      // Shift — клавиатурный шорткат для того же тоггла, что и бейдж у кнопки
+      // Stamp: один тап насовсем переключает точку привязки, удерживать не
+      // нужно. e.repeat отсекает авто-повтор при удержании клавиши.
+      if (
+        technique === 'silyanka' && e.key === 'Shift' && !e.repeat &&
+        silyanka.drawingControls.activeTool === 'stamp' && silyanka.stampPattern
+      ) {
+        e.preventDefault();
+        silyanka.toggleStampAnchorEdge();
         return;
       }
       if (!e.ctrlKey && !e.metaKey) return;
@@ -64,7 +95,7 @@ function App() {
           activeColor={silyanka.drawingControls.activeColor}
           setActiveColor={silyanka.drawingControls.setActiveColor}
           activeTool={silyanka.drawingControls.activeTool}
-          setActiveTool={silyanka.drawingControls.setActiveTool}
+          setActiveTool={setSilyankaTool}
           recentColors={silyanka.drawingControls.recentColors}
           commitRecentColor={silyanka.drawingControls.commitRecentColor}
           onClearAll={silyanka.drawingControls.clearAll}
@@ -101,6 +132,9 @@ function App() {
             onSetTopSpan: silyanka.setTopSpanAbsolute,
             onSetBottomSpan: silyanka.setBottomSpanAbsolute,
             onSetSpacing: silyanka.setSpacingAbsolute,
+            hasStampPattern: silyanka.stampPattern !== null,
+            stampAnchorEdge: silyanka.stampAnchorEdge,
+            onToggleStampAnchorEdge: silyanka.toggleStampAnchorEdge,
           }}
         />
       ) : (

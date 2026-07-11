@@ -233,6 +233,32 @@
   background-color: rgba(34, 211, 238, 0.15);
 }
 
+/* Тоггл точки привязки штампа: не отдельная кнопка в ряду, а бейдж на углу
+   Stamp — визуально читается как его дочерняя настройка, а не соседний инструмент. */
+.tool-btn-group {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.tool-btn-group__badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #0f172a;
+  background-color: #22d3ee;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.tool-btn-group__badge:hover { transform: scale(1.15); }
+
 /* Переключатель Silyanka / Krestik: сегментированный pill с иконкой + подписью,
    вместо непрозрачной одиночной кнопки-иконки, которая была нечитаема при 15px. */
 .technique-switch {

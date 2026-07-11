@@ -24,8 +24,15 @@ export interface StampPatternEntry {
 export interface StampPattern {
   anchorRow: number;
   anchorCol: number;
+  // Тот же якорь, но от нижнего ряда захваченного выделения — позволяет
+  // разместить штамп «низом» (например, к верхнему краю полотна), не наводя
+  // мышь за пределы сетки. См. edge-параметр applyStampPattern.
+  anchorRowBottom: number;
+  anchorColBottom: number;
   entries: StampPatternEntry[];
 }
+
+export type StampAnchorEdge = 'top' | 'bottom';
 
 const NODE_RE = /^node-(\d+)-(\d+)$/;
 const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
@@ -123,6 +130,7 @@ export const translateBeadId = (
 
 // anchor = минимальный (row, col) среди захваченных NODE-бисерин; если в
 // выделении нет узлов — среди всех logicalIndex захваченных бисерин.
+// anchorBottom — та же логика, но от максимального row (нижний край выделения).
 export const captureStampPattern = (
   ids: string[],
   beads: Bead[],
@@ -147,6 +155,17 @@ export const captureStampPattern = (
     }
   }
 
+  let anchorRowBottom = -Infinity;
+  for (const b of anchorSource) {
+    if (b.logicalIndex.row > anchorRowBottom) anchorRowBottom = b.logicalIndex.row;
+  }
+  let anchorColBottom = Infinity;
+  for (const b of anchorSource) {
+    if (b.logicalIndex.row === anchorRowBottom && b.logicalIndex.col < anchorColBottom) {
+      anchorColBottom = b.logicalIndex.col;
+    }
+  }
+
   // Незакрашенные бисерины в выделении не попадают в узор: штамп переносит
   // только реально нарисованный цвет, не «допечатывает» пустоту поверх
   // того, что уже может быть на месте вставки.
@@ -157,24 +176,31 @@ export const captureStampPattern = (
   return {
     anchorRow: anchorRow === Infinity ? 0 : anchorRow,
     anchorCol: anchorCol === Infinity ? 0 : anchorCol,
+    anchorRowBottom: anchorRowBottom === -Infinity ? 0 : anchorRowBottom,
+    anchorColBottom: anchorColBottom === Infinity ? 0 : anchorColBottom,
     entries,
   };
 };
 
-// Считает dRow/dCol от anchor до targetAnchor, прогоняет каждую запись через
-// translateBeadId. Возвращает готовый патч для designMap (id -> color) —
-// бисерины без аналога в целевой позиции просто отсутствуют в результате.
+// Считает dRow/dCol от anchor (или anchorBottom, если edge='bottom') до
+// targetAnchor, прогоняет каждую запись через translateBeadId. Возвращает
+// готовый патч для designMap (id -> color) — бисерины без аналога в целевой
+// позиции просто отсутствуют в результате (это и даёт эффект «обрезки»
+// штампа краем полотна вместо необходимости заводить курсор за его пределы).
 export const applyStampPattern = (
   pattern: StampPattern,
   targetAnchor: { row: number; col: number },
   ctx: StampContext,
+  edge: StampAnchorEdge = 'top',
 ): Record<string, string> => {
-  const dRow = targetAnchor.row - pattern.anchorRow;
-  const dCol = targetAnchor.col - pattern.anchorCol;
+  const refRow = edge === 'bottom' ? pattern.anchorRowBottom : pattern.anchorRow;
+  const refCol = edge === 'bottom' ? pattern.anchorColBottom : pattern.anchorCol;
+  const dRow = targetAnchor.row - refRow;
+  const dCol = targetAnchor.col - refCol;
 
   const result: Record<string, string> = {};
   for (const entry of pattern.entries) {
-    const targetId = translateBeadId(entry.id, dRow, dCol, ctx, pattern.anchorRow);
+    const targetId = translateBeadId(entry.id, dRow, dCol, ctx, refRow);
     if (targetId !== null) result[targetId] = entry.color;
   }
   return result;
