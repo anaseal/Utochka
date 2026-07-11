@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
-import { EraserIcon, EyedropperIcon, PendantIcon } from './icons';
+import { EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, KrestikIcon } from './icons';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { BEAD_THEME } from '../../../config/theme';
+import { KRESTIK_THEME } from '../../../config/krestikTheme';
 
-interface HeaderProps {
+export type Technique = 'silyanka' | 'krestik';
+
+interface SharedHeaderProps {
   palette: readonly string[];
   activeColor: string;
   setActiveColor: (color: string) => void;
@@ -15,6 +18,18 @@ interface HeaderProps {
   recentColors: string[];
   commitRecentColor: (color: string) => void;
   onClearAll: () => void;
+  zoom: number;
+  onZoomChange: (delta: number) => void;
+  onSetZoom?: (v: number) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  technique: Technique;
+  onTechniqueChange: (technique: Technique) => void;
+}
+
+interface SilyankaHeaderProps {
   gridWidth: number;
   gridHeight: number;
   topSpan: number;
@@ -27,20 +42,33 @@ interface HeaderProps {
   onBottomEdgeReset: () => void;
   mirrorMode: boolean;
   setMirrorMode: (v: boolean) => void;
-  zoom: number;
-  onZoomChange: (delta: number) => void;
-  onUndo: () => void;
-  onRedo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
+  spacing: number;
+  onSpacingChange: (delta: number) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   onSetWidth?: (v: number) => void;
   onSetHeight?: (v: number) => void;
   onSetTopSpan?: (v: number) => void;
   onSetBottomSpan?: (v: number) => void;
-  onSetZoom?: (v: number) => void;
+  onSetSpacing?: (v: number) => void;
 }
+
+interface KrestikHeaderProps {
+  gridWidth: number;
+  gridHeight: number;
+  spacing: number;
+  onWidthChange: (delta: number) => void;
+  onHeightChange: (delta: number) => void;
+  onSpacingChange: (delta: number) => void;
+  onSetWidth?: (v: number) => void;
+  onSetHeight?: (v: number) => void;
+  onSetSpacing?: (v: number) => void;
+}
+
+type HeaderProps = SharedHeaderProps & (
+  | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; krestikProps?: undefined }
+  | { technique: 'krestik'; krestikProps: KrestikHeaderProps; silyankaProps?: undefined }
+);
 
 type StepperVariant = 'bar' | 'overflow';
 
@@ -153,17 +181,14 @@ const Stepper = ({
   );
 };
 
-export const Header = ({
-  palette, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
-  gridWidth, gridHeight, topSpan, bottomSpan,
-  onWidthChange, onHeightChange, onTopSpanChange, onBottomSpanChange,
-  onTopEdgeReset, onBottomEdgeReset,
-  mirrorMode, setMirrorMode,
-  zoom, onZoomChange,
-  onUndo, onRedo, canUndo, canRedo,
-  sidebarOpen, onToggleSidebar,
-  onSetWidth, onSetHeight, onSetTopSpan, onSetBottomSpan, onSetZoom,
-}: HeaderProps) => {
+export const Header = (props: HeaderProps) => {
+  const {
+    palette, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
+    zoom, onZoomChange, onSetZoom,
+    onUndo, onRedo, canUndo, canRedo,
+    technique, onTechniqueChange,
+  } = props;
+
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
   const [pickerOpen, setPickerOpen] = useState(false);
   const customTriggerRef = useRef<HTMLButtonElement>(null);
@@ -214,42 +239,72 @@ export const Header = ({
     setPickerOpen(false);
   };
 
+  const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
+  const krestikProps = props.technique === 'krestik' ? props.krestikProps : undefined;
+
   return (
     <header className="header">
       <nav className="header__nav">
-        <div className="palette">
-          {palette.map((color) => (
-            <button
-              key={color}
-              onClick={() => { setActiveColor(color); setActiveTool('pencil'); }}
-              className={`palette__color ${activeTool === 'pencil' && activeColor === color ? 'palette__color--active' : ''}`}
-              style={{ '--color-value': color } as React.CSSProperties}
-            />
-          ))}
+        <div className="technique-switch" role="group" aria-label="Switch technique / Переключить технику">
+          <button
+            onClick={() => onTechniqueChange('silyanka')}
+            className={`technique-switch__btn ${technique === 'silyanka' ? 'technique-switch__btn--active' : ''}`}
+            title="Бисерная сетка (Silyanka)"
+            aria-pressed={technique === 'silyanka'}
+          >
+            <SilyankaIcon size={13} />
+            <span>sylianka</span>
+          </button>
+          <button
+            onClick={() => onTechniqueChange('krestik')}
+            className={`technique-switch__btn ${technique === 'krestik' ? 'technique-switch__btn--active' : ''}`}
+            title="Вышивка крестиком (Krestik)"
+            aria-pressed={technique === 'krestik'}
+          >
+            <KrestikIcon size={13} />
+            <span>RAW</span>
+          </button>
+        </div>
 
-          <div className="palette__recent" role="group" aria-label="Recent colors">
-            {Array.from({ length: BEAD_THEME.ui.recentColorsLimit }).map((_, i) => {
-              const color = recentColors[i];
-              if (!color) {
-                return (
-                  <div
-                    key={`empty-${i}`}
-                    className="palette__recent-slot palette__recent-slot--empty"
-                    aria-hidden="true"
-                  />
-                );
-              }
-              const isActive = activeTool === 'pencil' && activeColor === color;
-              return (
+        <div className="header__divider" />
+
+        <div className="palette">
+          <div className="palette__grid">
+            <div className="palette__row">
+              {palette.map((color) => (
                 <button
                   key={color}
                   onClick={() => { setActiveColor(color); setActiveTool('pencil'); }}
-                  className={`palette__color ${isActive ? 'palette__color--active' : ''}`}
+                  className={`palette__color ${activeTool === 'pencil' && activeColor === color ? 'palette__color--active' : ''}`}
                   style={{ '--color-value': color } as React.CSSProperties}
-                  title={color}
                 />
-              );
-            })}
+              ))}
+            </div>
+
+            <div className="palette__row" role="group" aria-label="Recent colors">
+              {Array.from({ length: BEAD_THEME.ui.recentColorsLimit }).map((_, i) => {
+                const color = recentColors[i];
+                if (!color) {
+                  return (
+                    <div
+                      key={`empty-${i}`}
+                      className="palette__recent-slot palette__recent-slot--empty"
+                      aria-hidden="true"
+                    />
+                  );
+                }
+                const isActive = activeTool === 'pencil' && activeColor === color;
+                return (
+                  <button
+                    key={color}
+                    onClick={() => { setActiveColor(color); setActiveTool('pencil'); }}
+                    className={`palette__color ${isActive ? 'palette__color--active' : ''}`}
+                    style={{ '--color-value': color } as React.CSSProperties}
+                    title={color}
+                  />
+                );
+              })}
+            </div>
           </div>
 
           <div className="palette__custom">
@@ -300,68 +355,90 @@ export const Header = ({
           <EraserIcon size={14} />
         </button>
 
-        <button
-          onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
-          className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
-          title="Flood Fill"
-          aria-pressed={activeTool === 'flood-fill'}
-        >
-          <PaintBucket size={14} />
-        </button>
+        {silyankaProps && (
+          <>
+            <button
+              onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
+              className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
+              title="Flood Fill"
+              aria-pressed={activeTool === 'flood-fill'}
+            >
+              <PaintBucket size={14} />
+            </button>
 
-        <button
-          onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
-          className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
-          title="Stamp"
-          aria-pressed={activeTool === 'stamp'}
-        >
-          <Stamp size={14} />
-        </button>
+            <button
+              onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
+              className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
+              title="Stamp"
+              aria-pressed={activeTool === 'stamp'}
+            >
+              <Stamp size={14} />
+            </button>
 
-        <button
-          onClick={() => setMirrorMode(!mirrorMode)}
-          className={`tool-btn ${mirrorMode ? 'tool-btn--active' : ''}`}
-          title="Mirror Mode"
-          aria-pressed={mirrorMode}
-        >
-          <FlipHorizontal size={14} />
-        </button>
-
-        <div className="header__divider header__divider--collapsible" />
-
-        <div className="grid-controls grid-controls--collapsible">
-          <Stepper label="Width" value={gridWidth} onDelta={onWidthChange} onSet={onSetWidth} inputValue={gridWidth} min={1} />
-          <Stepper label="Height" value={gridHeight} onDelta={onHeightChange} onSet={onSetHeight} inputValue={gridHeight} min={1} />
-        </div>
+            <button
+              onClick={() => silyankaProps.setMirrorMode(!silyankaProps.mirrorMode)}
+              className={`tool-btn ${silyankaProps.mirrorMode ? 'tool-btn--active' : ''}`}
+              title="Mirror Mode"
+              aria-pressed={silyankaProps.mirrorMode}
+            >
+              <FlipHorizontal size={14} />
+            </button>
+          </>
+        )}
 
         <div className="header__divider header__divider--collapsible" />
 
-        <div className="grid-controls grid-controls--collapsible">
+        <div className="grid-controls grid-controls--collapsible grid-controls--stacked">
           <Stepper
-            label={<span className="grid-controls__label-stacked">Top<br />Edge</span>}
-            value={topSpan}
-            onDelta={onTopSpanChange}
-            onReset={onTopEdgeReset}
-            onSet={onSetTopSpan}
-            inputValue={topSpan}
-            min={3}
-            max={10}
+            label="Width"
+            value={silyankaProps ? silyankaProps.gridWidth : krestikProps!.gridWidth}
+            onDelta={silyankaProps ? silyankaProps.onWidthChange : krestikProps!.onWidthChange}
+            onSet={silyankaProps ? silyankaProps.onSetWidth : krestikProps!.onSetWidth}
+            inputValue={silyankaProps ? silyankaProps.gridWidth : krestikProps!.gridWidth}
+            min={1}
           />
           <Stepper
-            label={<span className="grid-controls__label-stacked">Bottom<br />Edge</span>}
-            value={bottomSpan}
-            onDelta={onBottomSpanChange}
-            onReset={onBottomEdgeReset}
-            onSet={onSetBottomSpan}
-            inputValue={bottomSpan}
-            min={3}
-            max={10}
+            label="Height"
+            value={silyankaProps ? silyankaProps.gridHeight : krestikProps!.gridHeight}
+            onDelta={silyankaProps ? silyankaProps.onHeightChange : krestikProps!.onHeightChange}
+            onSet={silyankaProps ? silyankaProps.onSetHeight : krestikProps!.onSetHeight}
+            inputValue={silyankaProps ? silyankaProps.gridHeight : krestikProps!.gridHeight}
+            min={1}
           />
         </div>
+
+        {silyankaProps && (
+          <>
+            <div className="header__divider header__divider--collapsible" />
+
+            <div className="grid-controls grid-controls--collapsible grid-controls--stacked">
+              <Stepper
+                label={<span className="grid-controls__label-stacked">Top<br />Edge</span>}
+                value={silyankaProps.topSpan}
+                onDelta={silyankaProps.onTopSpanChange}
+                onReset={silyankaProps.onTopEdgeReset}
+                onSet={silyankaProps.onSetTopSpan}
+                inputValue={silyankaProps.topSpan}
+                min={3}
+                max={10}
+              />
+              <Stepper
+                label={<span className="grid-controls__label-stacked">Bottom<br />Edge</span>}
+                value={silyankaProps.bottomSpan}
+                onDelta={silyankaProps.onBottomSpanChange}
+                onReset={silyankaProps.onBottomEdgeReset}
+                onSet={silyankaProps.onSetBottomSpan}
+                inputValue={silyankaProps.bottomSpan}
+                min={3}
+                max={10}
+              />
+            </div>
+          </>
+        )}
 
         <div className="header__divider" />
 
-        <div className="grid-controls">
+        <div className="grid-controls grid-controls--stacked">
           <Stepper
             label="Zoom"
             value={`${Math.round(zoom * 100)}%`}
@@ -371,7 +448,53 @@ export const Header = ({
             min={25}
             max={300}
           />
+          {silyankaProps && (
+            <Stepper
+              label="Spacing"
+              value={silyankaProps.spacing}
+              onDelta={(s) => silyankaProps.onSpacingChange(s * BEAD_THEME.constraints.spacingStep)}
+              onSet={silyankaProps.onSetSpacing}
+              inputValue={silyankaProps.spacing}
+              min={BEAD_THEME.constraints.minSpacing}
+              max={BEAD_THEME.constraints.maxSpacing}
+            />
+          )}
+          {krestikProps && (
+            <Stepper
+              label="Spacing"
+              value={krestikProps.spacing}
+              onDelta={(s) => krestikProps.onSpacingChange(s * KRESTIK_THEME.constraints.spacingStep)}
+              onSet={krestikProps.onSetSpacing}
+              inputValue={krestikProps.spacing}
+              min={KRESTIK_THEME.constraints.minSpacing}
+              max={KRESTIK_THEME.constraints.maxSpacing}
+            />
+          )}
         </div>
+
+        {silyankaProps && (
+          <div className="header__overflow" ref={overflowRef}>
+            <button
+              ref={overflowTriggerRef}
+              type="button"
+              className="header__overflow-trigger"
+              aria-label="Grid settings"
+              aria-haspopup="menu"
+              aria-expanded={overflowOpen}
+              onClick={() => setOverflowOpen(o => !o)}
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {overflowOpen && (
+              <div className="header__overflow-panel" role="menu">
+                <Stepper variant="overflow" label="Width" value={silyankaProps.gridWidth} onDelta={silyankaProps.onWidthChange} onSet={silyankaProps.onSetWidth} inputValue={silyankaProps.gridWidth} min={1} />
+                <Stepper variant="overflow" label="Height" value={silyankaProps.gridHeight} onDelta={silyankaProps.onHeightChange} onSet={silyankaProps.onSetHeight} inputValue={silyankaProps.gridHeight} min={1} />
+                <Stepper variant="overflow" label="Top Edge" value={silyankaProps.topSpan} onDelta={silyankaProps.onTopSpanChange} onReset={silyankaProps.onTopEdgeReset} onSet={silyankaProps.onSetTopSpan} inputValue={silyankaProps.topSpan} min={3} max={10} />
+                <Stepper variant="overflow" label="Bottom Edge" value={silyankaProps.bottomSpan} onDelta={silyankaProps.onBottomSpanChange} onReset={silyankaProps.onBottomEdgeReset} onSet={silyankaProps.onSetBottomSpan} inputValue={silyankaProps.bottomSpan} min={3} max={10} />
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="header__divider" />
 
@@ -383,38 +506,20 @@ export const Header = ({
           </div>
         </div>
 
-        <div className="header__overflow" ref={overflowRef}>
-          <button
-            ref={overflowTriggerRef}
-            type="button"
-            className="header__overflow-trigger"
-            aria-label="Grid settings"
-            aria-haspopup="menu"
-            aria-expanded={overflowOpen}
-            onClick={() => setOverflowOpen(o => !o)}
-          >
-            <MoreHorizontal size={18} />
-          </button>
-          {overflowOpen && (
-            <div className="header__overflow-panel" role="menu">
-              <Stepper variant="overflow" label="Width" value={gridWidth} onDelta={onWidthChange} onSet={onSetWidth} inputValue={gridWidth} min={1} />
-              <Stepper variant="overflow" label="Height" value={gridHeight} onDelta={onHeightChange} onSet={onSetHeight} inputValue={gridHeight} min={1} />
-              <Stepper variant="overflow" label="Top Edge" value={topSpan} onDelta={onTopSpanChange} onReset={onTopEdgeReset} onSet={onSetTopSpan} inputValue={topSpan} min={3} max={10} />
-              <Stepper variant="overflow" label="Bottom Edge" value={bottomSpan} onDelta={onBottomSpanChange} onReset={onBottomEdgeReset} onSet={onSetBottomSpan} inputValue={bottomSpan} min={3} max={10} />
-            </div>
-          )}
-        </div>
+        {silyankaProps && (
+          <>
+            <div className="header__divider" />
 
-        <div className="header__divider" />
-
-        <button
-          onClick={onToggleSidebar}
-          className={`tool-btn ${sidebarOpen ? 'tool-btn--active' : ''}`}
-          title="Библиотека подвесок"
-          aria-pressed={sidebarOpen}
-        >
-          <PendantIcon size={14} />
-        </button>
+            <button
+              onClick={silyankaProps.onToggleSidebar}
+              className={`tool-btn ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
+              title="Библиотека подвесок"
+              aria-pressed={silyankaProps.sidebarOpen}
+            >
+              <PendantIcon size={14} />
+            </button>
+          </>
+        )}
       </nav>
     </header>
   );

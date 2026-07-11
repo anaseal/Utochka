@@ -5,8 +5,6 @@ import { PendantPlacement } from '../types/pendant';
 
 const MAX_HISTORY = 30;
 const RECENT_LIMIT = BEAD_THEME.ui.recentColorsLimit;
-const RECENT_STORAGE_KEY = 'silyanka:recentColors';
-const DESIGN_STORAGE_KEY = 'silyanka:designMap';
 const HEX_RE = /^#[0-9a-f]{6}$/i;
 
 const isDesignMap = (v: unknown): v is Record<string, string> => {
@@ -28,12 +26,16 @@ export const useDrawing = (
   basePalette: readonly string[],
   pendantPlacements: PendantPlacement[],
   setPendantPlacements: Dispatch<SetStateAction<PendantPlacement[]>>,
+  storageNamespace: string,
 ) => {
+  const recentStorageKey = `${storageNamespace}:recentColors`;
+  const designStorageKey = `${storageNamespace}:designMap`;
+
   const [activeColor, setActiveColorState] = useState(initialColor);
   const [activeTool, setActiveTool] = useState<DrawingTool>('pencil');
   const [recentColors, setRecentColors] = useState<string[]>(() => {
     try {
-      const raw = localStorage.getItem(RECENT_STORAGE_KEY);
+      const raw = localStorage.getItem(recentStorageKey);
       if (raw === null) return [];
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
@@ -55,12 +57,12 @@ export const useDrawing = (
     setRecentColors(prev => {
       if (prev[0] === color) return prev;
       const next = [color, ...prev.filter(c => c !== color)].slice(0, RECENT_LIMIT);
-      try { localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(recentStorageKey, JSON.stringify(next)); } catch {}
       return next;
     });
-  }, [basePalette]);
+  }, [basePalette, recentStorageKey]);
   const [designMap, setDesignMap] = usePersistedState<Record<string, string>>(
-    DESIGN_STORAGE_KEY, {}, isDesignMap,
+    designStorageKey, {}, isDesignMap,
   );
   const [isDrawing, setIsDrawing] = useState(false);
   const [past, setPast] = useState<HistorySnapshot[]>([]);
