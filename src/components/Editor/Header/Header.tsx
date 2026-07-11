@@ -220,22 +220,27 @@ export const Header = (props: HeaderProps) => {
 
   const isCustomColor = !palette.includes(activeColor);
 
+  // Ластик не работает с цветом, поэтому выбор цвета выводит из него;
+  // остальные инструменты (заливка, штамп) цвет используют — их выбор не сбрасывает.
+  const selectColor = (color: string) => {
+    setActiveColor(color);
+    if (activeTool === 'eraser') setActiveTool('pencil');
+  };
+
   const handleEyeDropper = async () => {
     try {
       const dropper = new (window as any).EyeDropper();
       const { sRGBHex } = await dropper.open();
-      setActiveColor(sRGBHex);
+      selectColor(sRGBHex);
       commitRecentColor(sRGBHex);
-      setActiveTool('pencil');
     } catch {
       // cancelled
     }
   };
 
   const handlePickerConfirm = (color: string) => {
-    setActiveColor(color);
+    selectColor(color);
     commitRecentColor(color);
-    setActiveTool('pencil');
     setPickerOpen(false);
   };
 
@@ -274,8 +279,8 @@ export const Header = (props: HeaderProps) => {
               {palette.map((color) => (
                 <button
                   key={color}
-                  onClick={() => { setActiveColor(color); setActiveTool('pencil'); }}
-                  className={`palette__color ${activeTool === 'pencil' && activeColor === color ? 'palette__color--active' : ''}`}
+                  onClick={() => selectColor(color)}
+                  className={`palette__color ${activeTool !== 'eraser' && activeColor === color ? 'palette__color--active' : ''}`}
                   style={{ '--color-value': color } as React.CSSProperties}
                 />
               ))}
@@ -293,11 +298,11 @@ export const Header = (props: HeaderProps) => {
                     />
                   );
                 }
-                const isActive = activeTool === 'pencil' && activeColor === color;
+                const isActive = activeTool !== 'eraser' && activeColor === color;
                 return (
                   <button
                     key={color}
-                    onClick={() => { setActiveColor(color); setActiveTool('pencil'); }}
+                    onClick={() => selectColor(color)}
                     className={`palette__color ${isActive ? 'palette__color--active' : ''}`}
                     style={{ '--color-value': color } as React.CSSProperties}
                     title={color}
