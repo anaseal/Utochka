@@ -109,9 +109,14 @@ function App() {
           }
           break;
         case 'g':
-          if (technique !== 'silyanka') break;
           e.preventDefault();
-          setSilyankaTool(silyanka.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill');
+          if (technique === 'silyanka') {
+            setSilyankaTool(silyanka.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill');
+          } else {
+            crossWeave.drawingControls.setActiveTool(
+              crossWeave.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill',
+            );
+          }
           break;
         case 's':
           if (technique !== 'silyanka') break;
@@ -271,6 +276,7 @@ function App() {
           stopDrawing={crossWeave.drawingControls.stopDrawing}
           mirrorMode={crossWeave.mirrorMode}
           rawWidth={crossWeave.rawWidth}
+          onFloodFill={crossWeave.handleFloodFill}
         />
       )}
 

@@ -372,14 +372,25 @@ export const Header = (props: HeaderProps) => {
         </button>
 
         {crossWeaveProps && (
-          <button
-            onClick={() => crossWeaveProps.setMirrorMode(!crossWeaveProps.mirrorMode)}
-            className={`tool-btn ${crossWeaveProps.mirrorMode ? 'tool-btn--active' : ''}`}
-            title="Mirror Mode (M)"
-            aria-pressed={crossWeaveProps.mirrorMode}
-          >
-            <FlipHorizontal size={14} />
-          </button>
+          <>
+            <button
+              onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
+              className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
+              title="Flood Fill (G)"
+              aria-pressed={activeTool === 'flood-fill'}
+            >
+              <PaintBucket size={14} />
+            </button>
+
+            <button
+              onClick={() => crossWeaveProps.setMirrorMode(!crossWeaveProps.mirrorMode)}
+              className={`tool-btn ${crossWeaveProps.mirrorMode ? 'tool-btn--active' : ''}`}
+              title="Mirror Mode (M)"
+              aria-pressed={crossWeaveProps.mirrorMode}
+            >
+              <FlipHorizontal size={14} />
+            </button>
+          </>
         )}
 
         {silyankaProps && (

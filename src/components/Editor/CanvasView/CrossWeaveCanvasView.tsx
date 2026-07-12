@@ -31,9 +31,10 @@ interface CrossWeaveCanvasViewProps {
   onZoomChange: (delta: number) => void;
   mirrorMode: boolean;
   rawWidth: number;
+  onFloodFill: (id: string) => void;
 }
 
-// CrossWeave — MVP-канвас: карандаш/ластик + Mirror Mode, без stamp/flood-fill/подвесок.
+// CrossWeave — MVP-канвас: карандаш/ластик/заливка + Mirror Mode, без stamp/подвесок.
 // Не ветка CanvasView, а отдельный компонент — переиспользует общий CSS-шелл
 // (canvas__svg, editor__viewport, export-btn, canvas-theme-toggle) и CanvasStats.
 export const CrossWeaveCanvasView = ({
@@ -52,6 +53,7 @@ export const CrossWeaveCanvasView = ({
   onZoomChange,
   mirrorMode,
   rawWidth,
+  onFloodFill,
 }: CrossWeaveCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
@@ -118,12 +120,16 @@ export const CrossWeaveCanvasView = ({
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
   const handleMouseEnter = useCallback((id: string) => {
-    if (isDrawing) applyPaint(id);
-  }, [isDrawing, applyPaint]);
+    if (activeTool !== 'flood-fill' && isDrawing) applyPaint(id);
+  }, [activeTool, isDrawing, applyPaint]);
 
   const handleMouseDown = useCallback((id: string) => {
-    applyPaint(id);
-  }, [applyPaint]);
+    if (activeTool === 'flood-fill') {
+      onFloodFill(id);
+    } else {
+      applyPaint(id);
+    }
+  }, [activeTool, applyPaint, onFloodFill]);
 
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
@@ -144,10 +150,10 @@ export const CrossWeaveCanvasView = ({
   return (
     <main
       data-canvas-theme={canvasTheme}
-      className="editor__viewport"
-      onMouseDown={() => startDrawing()}
-      onMouseUp={() => stopDrawing()}
-      onMouseLeave={() => stopDrawing()}
+      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}`}
+      onMouseDown={() => { if (activeTool !== 'flood-fill') startDrawing(); }}
+      onMouseUp={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
+      onMouseLeave={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">

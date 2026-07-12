@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useDrawing } from './useDrawing';
 import { usePersistedState } from './usePersistedState';
-import { CROSS_WEAVE_THEME } from '../config/crossWeaveTheme';
+import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../config/crossWeaveTheme';
 import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
 import { PendantPlacement } from '../types/pendant';
 import { generateCrossWeaveGrid } from '../utils/crossWeaveGenerator';
-import { shiftCrossWeaveDesignMapColumns } from '../utils/crossWeaveMirror';
+import { mirrorCrossWeaveBeadId, shiftCrossWeaveDesignMapColumns } from '../utils/crossWeaveMirror';
+import { computeCrossWeaveFloodFill } from '../utils/crossWeaveFloodFill';
 import { clamp } from '../utils/clamp';
 import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
 
@@ -65,6 +66,34 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
     palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements, 'crossWeave',
   );
 
+  // Заливка: BFS по графу физической смежности бисерин (см.
+  // crossWeaveFloodFill.ts) — своя, отдельная от силяночной
+  // computeUnifiedFloodFill, т.к. тут нет node/span/pendant. В Mirror Mode
+  // заливка выполняется и для зеркальной бисерины, оба результата уходят в
+  // один снимок истории (applyPatch), как и у силянки.
+  const handleFloodFill = useCallback((startId: string) => {
+    const ids = new Set(computeCrossWeaveFloodFill(
+      startId, beads, drawingControls.designMap, drawingControls.activeColor, defaultColorForCrossWeave(),
+    ));
+
+    if (mirrorMode) {
+      const mirrorStartId = mirrorCrossWeaveBeadId(startId, rawWidth);
+      if (mirrorStartId && mirrorStartId !== startId) {
+        for (const id of computeCrossWeaveFloodFill(
+          mirrorStartId, beads, drawingControls.designMap, drawingControls.activeColor, defaultColorForCrossWeave(),
+        )) ids.add(id);
+      }
+    }
+
+    if (ids.size === 0) return;
+    const activeColor = drawingControls.activeColor;
+    drawingControls.applyPatch((prev) => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = activeColor;
+      return next;
+    }, null);
+  }, [beads, drawingControls, mirrorMode, rawWidth]);
+
   // Общий обработчик результата resizeWidthRelative/resizeWidthAbsolute:
   // сдвиг designMap в Mirror Mode (та же схема, что и у силянки — см.
   // useSilyankaProject.applyWidth) и запись gridSize.
@@ -117,6 +146,7 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
     mirrorMode, setMirrorMode,
     updateDimension, setWidthAbsolute, setHeightAbsolute,
     updateSpacing, setSpacingAbsolute,
+    handleFloodFill,
   };
 };
 

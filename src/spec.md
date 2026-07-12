@@ -313,7 +313,14 @@
 
 ## 6. Техника «Крестик» (CrossWeave)
 
-Независимый MVP-режим ([useCrossWeaveProject.ts](hooks/useCrossWeaveProject.ts), [CrossWeaveCanvasView.tsx](components/Editor/CanvasView/CrossWeaveCanvasView.tsx)): простая прямоугольная сетка овальных бисерин (`bead-r-c`), без node/span/decor/pendant-концепций силянки — только карандаш, ластик и Mirror Mode. Этот раздел документирует пока только Mirror Mode; остальная функциональность техники в спеке не описана.
+Независимый MVP-режим ([useCrossWeaveProject.ts](hooks/useCrossWeaveProject.ts), [CrossWeaveCanvasView.tsx](components/Editor/CanvasView/CrossWeaveCanvasView.tsx)): простая прямоугольная сетка овальных бисерин (`bead-r-c`), без node/span/decor/pendant-концепций силянки — карандаш, ластик, заливка и Mirror Mode. Этот раздел документирует Mirror Mode и заливку; остальная функциональность техники в спеке не описана.
+
+### *Заливка (Flood Fill)*
+Активируется кнопкой `PaintBucket` в хедере (между ластиком и Mirror Mode), шорткат `G` (тоггл, работает и в CrossWeave, и в силянке). Поведение UI идентично силяночному — крестик-курсор, один клик красит всю связную область того же эффективного цвета за один шаг истории (см. раздел 3 → *Заливка (Flood Fill)*).
+
+**Алгоритм** ([src/utils/crossWeaveFloodFill.ts](utils/crossWeaveFloodFill.ts)): своя, более простая реализация, чем силяночный `floodFill.ts` — тут один тип бисерины и нет node/span/pendant, поэтому не нужен граф с цепочками, только прямая физическая смежность. Бисерина `bead-r-c` соединена с двумя бисеринами следующего ряда (`r+1`, другой ориентации): вертикальная (`r` чётный) — с горизонтальными `c` и `c+1`; горизонтальная (`r` нечётный) — с вертикальными `c-1` и `c` (та же чётность, что и в `crossWeaveGenerator.ts`/`crossWeaveMirror.ts`). BFS по этому графу, `effectiveColor = designMap[id] ?? defaultColorForCrossWeave()`.
+
+**Mirror Mode:** если включён, заливка выполняется также для зеркальной бисерины (`mirrorCrossWeaveBeadId`); оба результата объединяются в один вызов `drawingControls.applyPatch` (второй аргумент — `null`, подвесок в CrossWeave нет).
 
 ### *Зеркальный режим (Mirror Mode)*
 Включается кнопкой `FlipHorizontal` в хедере (сразу после ластика, аналог силяночной кнопки — см. раздел 3 → *Зеркальный режим*). Состояние персистентно в `localStorage` (ключ `crossWeave:mirrorMode`).
