@@ -12,16 +12,20 @@ import { DrawingTool } from './hooks/useDrawing';
 import { APP_CONSTRAINTS } from './config/theme';
 import { clamp } from './utils/clamp';
 
-const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
+const DEFAULT_PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'];
 
 const isZoom = (v: unknown): v is number =>
   typeof v === 'number' && v >= APP_CONSTRAINTS.minZoom && v <= APP_CONSTRAINTS.maxZoom;
 
 const isTechnique = (v: unknown): v is Technique => v === 'silyanka' || v === 'crossWeave';
 
+const isPalette = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.length > 0 && v.every(c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c));
+
 function App() {
   const [technique, setTechnique] = usePersistedState<Technique>('app:technique', 'silyanka', isTechnique);
   const [zoom, setZoom] = usePersistedState<number>('app:zoom', 1, isZoom);
+  const [palette, setPalette] = usePersistedState<string[]>('app:palette', DEFAULT_PALETTE, isPalette);
   const [canvasTheme, setCanvasTheme] = usePersistedState<'dark' | 'light'>(
     'app:canvasTheme', 'dark', (v): v is 'dark' | 'light' => v === 'dark' || v === 'light',
   );
@@ -36,8 +40,8 @@ function App() {
   // Оба хука вызываются безусловно (Rules of Hooks) — неактивная техника
   // просто не монтируется в разметке, но её состояние живёт и не пропадает
   // при переключении назад.
-  const silyanka = useSilyankaProject(PALETTE);
-  const crossWeave = useCrossWeaveProject(PALETTE);
+  const silyanka = useSilyankaProject(palette);
+  const crossWeave = useCrossWeaveProject(palette);
 
   // Уход с инструмента «штамп» сбрасывает захваченный узор — иначе при
   // следующем заходе в штамп сразу показывается старый preview и мешает
@@ -133,7 +137,8 @@ function App() {
         <Header
           technique="silyanka"
           onTechniqueChange={setTechnique}
-          palette={PALETTE}
+          palette={palette}
+          onPaletteChange={setPalette}
           activeColor={silyanka.drawingControls.activeColor}
           setActiveColor={silyanka.drawingControls.setActiveColor}
           activeTool={silyanka.drawingControls.activeTool}
@@ -183,7 +188,8 @@ function App() {
         <Header
           technique="crossWeave"
           onTechniqueChange={setTechnique}
-          palette={PALETTE}
+          palette={palette}
+          onPaletteChange={setPalette}
           activeColor={crossWeave.drawingControls.activeColor}
           setActiveColor={crossWeave.drawingControls.setActiveColor}
           activeTool={crossWeave.drawingControls.activeTool}

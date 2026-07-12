@@ -14,7 +14,8 @@ import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
 export type Technique = 'silyanka' | 'crossWeave';
 
 interface SharedHeaderProps {
-  palette: readonly string[];
+  palette: string[];
+  onPaletteChange: (palette: string[]) => void;
   activeColor: string;
   setActiveColor: (color: string) => void;
   activeTool: DrawingTool;
@@ -192,7 +193,7 @@ const Stepper = ({
 
 export const Header = (props: HeaderProps) => {
   const {
-    palette, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
+    palette, onPaletteChange, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
     zoom, onZoomChange, onSetZoom,
     onUndo, onRedo, canUndo, canRedo,
     technique, onTechniqueChange,
@@ -336,6 +337,7 @@ export const Header = (props: HeaderProps) => {
                 initialColor={isCustomColor ? activeColor : '#ffffff'}
                 onConfirm={handlePickerConfirm}
                 onClose={() => setPickerOpen(false)}
+                onReplacePalette={onPaletteChange}
                 triggerRef={customTriggerRef}
               />
             )}

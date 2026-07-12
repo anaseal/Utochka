@@ -15,6 +15,40 @@
   gap: 10px;
   user-select: none;
 }
+.color-picker--generate {
+  width: 260px;
+}
+
+.color-picker__tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 3px;
+}
+.color-picker__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.color-picker__tab:hover { color: #cbd5e1; }
+.color-picker__tab--active {
+  color: #21cfe9;
+  background: rgba(34, 211, 238, 0.12);
+}
 .color-picker::before {
   content: '';
   position: absolute;
@@ -130,4 +164,148 @@ border: 1px solid #607086;
 }
 .color-picker__confirm:active {
   transform: translateY(1px);
+}
+.color-picker__confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.color-picker__generate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.color-picker__generate-buttons {
+  display: flex;
+  gap: 6px;
+}
+.color-picker__generate-btn {
+  flex: 1;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(168, 85, 247, 0.12);
+  color: #d8b4fe;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.color-picker__generate-btn:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.22);
+}
+.color-picker__generate-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.color-picker__generate-btn--icon {
+  flex: 0 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d8b4fe;
+}
+
+.color-picker__generate-error {
+  font-size: 11px;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.color-picker__generate-loading {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.color-picker__generate-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  padding-top: 4px;
+}
+.color-picker__generate-swatch-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.color-picker__generate-swatch {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 6px;
+  background-color: var(--color-value);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s, transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.color-picker__generate-swatch:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+.color-picker__generate-swatch--selected {
+  opacity: 1;
+  border-color: white;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.color-picker__generate-swatch--locked {
+  border-color: #21cfe9;
+}
+
+.color-picker__generate-swatch-tools {
+  display: flex;
+  gap: 3px;
+}
+.color-picker__generate-swatch-tool {
+  position: relative;
+  width: 18px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.color-picker__generate-swatch-tool:hover {
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.color-picker__generate-swatch-tool--active {
+  background: #21cfe9;
+  border-color: #21cfe9;
+  color: #0f172a;
+}
+.color-picker__insert-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 130;
+}
+.color-picker__sv--mini {
+  height: 90px;
+}
+.color-picker__hue--mini {
+  height: 10px;
 }
