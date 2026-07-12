@@ -355,7 +355,7 @@ export const Header = (props: HeaderProps) => {
         <button
           onClick={() => setActiveTool('pencil')}
           className={`tool-btn ${activeTool === 'pencil' ? 'tool-btn--active' : ''}`}
-          title="Pencil"
+          title="Pencil (B)"
           aria-pressed={activeTool === 'pencil'}
         >
           <Pencil size={14} />
@@ -364,7 +364,7 @@ export const Header = (props: HeaderProps) => {
         <button
           onClick={() => setActiveTool(activeTool === 'eraser' ? 'pencil' : 'eraser')}
           className={`tool-btn ${activeTool === 'eraser' ? 'tool-btn--active' : ''}`}
-          title="Eraser"
+          title="Eraser (E)"
         >
           <EraserIcon size={14} />
         </button>
@@ -373,7 +373,7 @@ export const Header = (props: HeaderProps) => {
           <button
             onClick={() => crossWeaveProps.setMirrorMode(!crossWeaveProps.mirrorMode)}
             className={`tool-btn ${crossWeaveProps.mirrorMode ? 'tool-btn--active' : ''}`}
-            title="Mirror Mode"
+            title="Mirror Mode (M)"
             aria-pressed={crossWeaveProps.mirrorMode}
           >
             <FlipHorizontal size={14} />
@@ -385,7 +385,7 @@ export const Header = (props: HeaderProps) => {
             <button
               onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
               className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
-              title="Flood Fill"
+              title="Flood Fill (G)"
               aria-pressed={activeTool === 'flood-fill'}
             >
               <PaintBucket size={14} />
@@ -395,7 +395,7 @@ export const Header = (props: HeaderProps) => {
               <button
                 onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
                 className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
-                title="Stamp"
+                title="Stamp (S)"
                 aria-pressed={activeTool === 'stamp'}
               >
                 <Stamp size={14} />
@@ -420,7 +420,7 @@ export const Header = (props: HeaderProps) => {
             <button
               onClick={() => silyankaProps.setMirrorMode(!silyankaProps.mirrorMode)}
               className={`tool-btn ${silyankaProps.mirrorMode ? 'tool-btn--active' : ''}`}
-              title="Mirror Mode"
+              title="Mirror Mode (M)"
               aria-pressed={silyankaProps.mirrorMode}
             >
               <FlipHorizontal size={14} />

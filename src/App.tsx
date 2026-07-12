@@ -76,14 +76,54 @@ function App() {
         silyanka.toggleStampAnchorEdge();
         return;
       }
-      if (!e.ctrlKey && !e.metaKey) return;
-      const active = technique === 'silyanka' ? silyanka.drawingControls : crossWeave.drawingControls;
-      if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); active.undo(); }
-      if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); active.redo(); }
+      if (e.ctrlKey || e.metaKey) {
+        const active = technique === 'silyanka' ? silyanka.drawingControls : crossWeave.drawingControls;
+        if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); active.undo(); }
+        if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); active.redo(); }
+        return;
+      }
+
+      // Однобуквенные шорткаты инструментов (Photoshop-style: B/E/G/S/M) —
+      // не должны срабатывать при вводе в поля хедера (Stepper/ColorPicker) и
+      // при удержании клавиши (e.repeat), чтобы не дёргать setActiveTool на повторе.
+      if (e.altKey || e.repeat) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault();
+          if (technique === 'silyanka') setSilyankaTool('pencil');
+          else crossWeave.drawingControls.setActiveTool('pencil');
+          break;
+        case 'e':
+          e.preventDefault();
+          if (technique === 'silyanka') {
+            setSilyankaTool(silyanka.drawingControls.activeTool === 'eraser' ? 'pencil' : 'eraser');
+          } else {
+            crossWeave.drawingControls.setActiveTool(crossWeave.drawingControls.activeTool === 'eraser' ? 'pencil' : 'eraser');
+          }
+          break;
+        case 'g':
+          if (technique !== 'silyanka') break;
+          e.preventDefault();
+          setSilyankaTool(silyanka.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill');
+          break;
+        case 's':
+          if (technique !== 'silyanka') break;
+          e.preventDefault();
+          setSilyankaTool(silyanka.drawingControls.activeTool === 'stamp' ? 'pencil' : 'stamp');
+          break;
+        case 'm':
+          e.preventDefault();
+          if (technique === 'silyanka') silyanka.setMirrorMode(!silyanka.mirrorMode);
+          else crossWeave.setMirrorMode(!crossWeave.mirrorMode);
+          break;
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [technique, silyanka.drawingControls, crossWeave.drawingControls, silyanka.stampPattern, silyanka]);
+  }, [technique, silyanka, crossWeave]);
 
   const sidebarOpen = technique === 'silyanka' && silyanka.sidebarOpen;
 
