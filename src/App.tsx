@@ -9,11 +9,13 @@ import { Header, Technique } from './components/Editor/Header/Header';
 import { PendantsSidebar } from './components/Sidebar/PendantsSidebar';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
 import { DrawingTool } from './hooks/useDrawing';
+import { APP_CONSTRAINTS } from './config/theme';
+import { clamp } from './utils/clamp';
 
 const PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'] as const;
 
 const isZoom = (v: unknown): v is number =>
-  typeof v === 'number' && v >= 0.25 && v <= 3;
+  typeof v === 'number' && v >= APP_CONSTRAINTS.minZoom && v <= APP_CONSTRAINTS.maxZoom;
 
 const isTechnique = (v: unknown): v is Technique => v === 'silyanka' || v === 'crossWeave';
 
@@ -25,10 +27,10 @@ function App() {
   );
 
   const updateZoom = (delta: number) => {
-    setZoom(prev => Math.min(3, Math.max(0.25, prev + delta)));
+    setZoom(prev => clamp(prev + delta, APP_CONSTRAINTS.minZoom, APP_CONSTRAINTS.maxZoom));
   };
   const setZoomAbsolute = (v: number) => {
-    setZoom(Math.min(3, Math.max(0.25, v)));
+    setZoom(clamp(v, APP_CONSTRAINTS.minZoom, APP_CONSTRAINTS.maxZoom));
   };
 
   // Оба хука вызываются безусловно (Rules of Hooks) — неактивная техника

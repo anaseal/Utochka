@@ -1,14 +1,18 @@
 /* FILE: src\components\Editor\CanvasView\CrossWeaveCanvasView.tsx */
-import { useMemo, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
 import { CrossWeaveBead } from '../../../types/crossWeaveBead';
 import { CrossWeaveBeadView } from '../BeadView/CrossWeaveBeadView';
 import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
+import { CanvasChrome } from './CanvasChrome';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../../../config/crossWeaveTheme';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportScheme';
 import { mirrorCrossWeaveBeadId } from '../../../utils/crossWeaveMirror';
-import { Sun, Moon } from 'lucide-react';
+import { useWheelZoom } from '../../../hooks/useWheelZoom';
+import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
+import { computeCanvasDim } from '../../../utils/canvasDim';
+import { computeColorStats } from '../../../utils/colorStats';
 import './CanvasView.css';
 
 interface CrossWeaveCanvasViewProps {
@@ -56,40 +60,17 @@ export const CrossWeaveCanvasView = ({
   const offsetY = 60;
   const { beadMajorRadius } = CROSS_WEAVE_THEME.sizes;
 
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (!container) return;
+  useWheelZoom(canvasContainerRef, onZoomChange);
 
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        onZoomChange(-e.deltaY * 0.005);
-      }
-    };
+  const dim = useMemo(
+    () => computeCanvasDim(beads, offsetX, offsetY, beadMajorRadius),
+    [beads, beadMajorRadius],
+  );
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, [onZoomChange]);
-
-  const dim = useMemo(() => {
-    if (beads.length === 0) return { w: 100, h: 100 };
-    const maxX = Math.max(...beads.map(b => b.x));
-    const maxY = Math.max(...beads.map(b => b.y));
-    const margin = 30;
-    return {
-      w: maxX + offsetX + beadMajorRadius + margin,
-      h: maxY + offsetY + beadMajorRadius + margin,
-    };
-  }, [beads, beadMajorRadius]);
-
-  const colorStats = useMemo(() => {
-    const stats = new Map<string, number>();
-    beads.forEach(bead => {
-      const color = designMap[bead.id] || defaultColorForCrossWeave();
-      stats.set(color, (stats.get(color) || 0) + 1);
-    });
-    return Array.from(stats.entries());
-  }, [beads, designMap]);
+  const colorStats = useMemo(
+    () => Array.from(computeColorStats(beads, designMap, defaultColorForCrossWeave).entries()),
+    [beads, designMap],
+  );
 
   const totalCount = beads.length;
 
@@ -130,13 +111,11 @@ export const CrossWeaveCanvasView = ({
     };
   }, [mirrorMode, beads]);
 
-  const applyPaint = useCallback((id: string) => {
-    paintBead(id);
-    if (mirrorMode) {
-      const m = mirrorCrossWeaveBeadId(id, rawWidth);
-      if (m !== null && m !== id) paintBead(m);
-    }
-  }, [paintBead, mirrorMode, rawWidth]);
+  const mirrorFn = useCallback(
+    (id: string) => mirrorCrossWeaveBeadId(id, rawWidth),
+    [rawWidth],
+  );
+  const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
   const handleMouseEnter = useCallback((id: string) => {
     if (isDrawing) applyPaint(id);
@@ -218,25 +197,11 @@ export const CrossWeaveCanvasView = ({
 
       <CanvasStats totalCount={totalCount} colorStats={colorStats} />
 
-      <button
-        type="button"
-        className="canvas-theme-toggle"
-        onClick={onToggleCanvasTheme}
-        onMouseDown={(e) => e.stopPropagation()}
-        title={canvasTheme === 'dark' ? 'Light canvas' : 'Dark canvas'}
-        aria-label={canvasTheme === 'dark' ? 'Switch to light canvas' : 'Switch to dark canvas'}
-      >
-        {canvasTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-      </button>
-
-      <button
-        type="button"
-        className="export-btn"
-        onClick={handleExport}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        Download PNG
-      </button>
+      <CanvasChrome
+        canvasTheme={canvasTheme}
+        onToggleCanvasTheme={onToggleCanvasTheme}
+        onExport={handleExport}
+      />
     </main>
   );
 };

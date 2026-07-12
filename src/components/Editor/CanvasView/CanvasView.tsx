@@ -1,5 +1,5 @@
 /* FILE: src\components\Editor\CanvasView\CanvasView.tsx */
-import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
+import { useMemo, useCallback, useRef, useState } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantPlacement, PendantTemplate } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
@@ -7,12 +7,16 @@ import { BeadView } from '../BeadView/BeadView';
 import { CanvasRulers } from '../CanvasRulers/CanvasRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
+import { CanvasChrome } from './CanvasChrome';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
 import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
-import { Sun, Moon } from 'lucide-react';
+import { useWheelZoom } from '../../../hooks/useWheelZoom';
+import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
+import { computeCanvasDim } from '../../../utils/canvasDim';
+import { computeColorStats } from '../../../utils/colorStats';
 import './CanvasView.css';
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
@@ -108,44 +112,25 @@ export const CanvasView = ({
   } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        onZoomChange(-e.deltaY * 0.005);
-      }
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, [onZoomChange]);
+  useWheelZoom(canvasContainerRef, onZoomChange);
 
   const dim = useMemo(() => {
-    if (beads.length === 0) return { w: 100, h: 100 };
-    const maxX = Math.max(...beads.map(b => b.x));
-    const maxY = Math.max(...beads.map(b => b.y));
-
     // Подвески свисают ниже сетки — учитываем их глубину в высоте SVG.
     let pendantMaxY = 0;
     for (const p of pendantPlacements) {
       const t = pendantTemplates[p.templateId];
       const anchor = bottomNodes.find(n => n.logicalIndex.col === p.col);
       if (!t || !anchor) continue;
-      const depth = Math.max(...t.beads.map(b =>
-        b.dy + (b.shape === 'circle' ? (b.r ?? 0) : (b.h ?? 0) / 2),
-      ));
+      let depth = -Infinity;
+      for (const b of t.beads) {
+        const reach = b.dy + (b.shape === 'circle' ? (b.r ?? 0) : (b.h ?? 0) / 2);
+        if (reach > depth) depth = reach;
+      }
       // +26: место под кнопку удаления ниже последней бусины
       pendantMaxY = Math.max(pendantMaxY, anchor.y + depth * PENDANT_SCALE + 26);
     }
 
-    const margin = 30;
-    return {
-      w: maxX + offsetX + nodeRadius + margin,
-      h: Math.max(maxY, pendantMaxY) + offsetY + nodeRadius + margin,
-    };
+    return computeCanvasDim(beads, offsetX, offsetY, nodeRadius, { extraMaxY: pendantMaxY });
   }, [beads, offsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
 
   // Подвеска учитывается в статистике, только если у неё есть и валидный
@@ -159,11 +144,7 @@ export const CanvasView = ({
   }, [pendantPlacements, pendantTemplates, bottomNodes]);
 
   const colorStats = useMemo(() => {
-    const stats = new Map<string, number>();
-    beads.forEach(bead => {
-      const color = designMap[bead.id] || defaultColorFor(bead.type);
-      stats.set(color, (stats.get(color) || 0) + 1);
-    });
+    const stats = computeColorStats(beads, designMap, (bead) => defaultColorFor(bead.type));
     validPendantPlacements.forEach((p) => {
       const template = pendantTemplates[p.templateId];
       template.beads.forEach((bead, index) => {
@@ -193,13 +174,11 @@ export const CanvasView = ({
     return ids;
   }, [hoveredRow, beads]);
 
-  const applyPaint = useCallback((id: string) => {
-    paintBead(id);
-    if (mirrorMode) {
-      const m = mirrorBeadId(id, width, internalTop, internalBottom);
-      if (m !== null && m !== id) paintBead(m);
-    }
-  }, [paintBead, mirrorMode, width, internalTop, internalBottom]);
+  const mirrorFn = useCallback(
+    (id: string) => mirrorBeadId(id, width, internalTop, internalBottom),
+    [width, internalTop, internalBottom],
+  );
+  const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
   const handleMouseEnter = useCallback((id: string) => {
     if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && isDrawing) applyPaint(id);
@@ -411,25 +390,11 @@ export const CanvasView = ({
 
       <CanvasStats totalCount={totalCount} colorStats={colorStats} />
 
-      <button
-        type="button"
-        className="canvas-theme-toggle"
-        onClick={onToggleCanvasTheme}
-        onMouseDown={(e) => e.stopPropagation()}
-        title={canvasTheme === 'dark' ? 'Light canvas' : 'Dark canvas'}
-        aria-label={canvasTheme === 'dark' ? 'Switch to light canvas' : 'Switch to dark canvas'}
-      >
-        {canvasTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-      </button>
-
-      <button
-        type="button"
-        className="export-btn"
-        onClick={handleExport}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        Download PNG
-      </button>
+      <CanvasChrome
+        canvasTheme={canvasTheme}
+        onToggleCanvasTheme={onToggleCanvasTheme}
+        onExport={handleExport}
+      />
     </main>
   );
 };

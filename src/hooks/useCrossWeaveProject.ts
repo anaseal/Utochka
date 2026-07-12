@@ -6,6 +6,8 @@ import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
 import { PendantPlacement } from '../types/pendant';
 import { generateCrossWeaveGrid } from '../utils/crossWeaveGenerator';
 import { shiftCrossWeaveDesignMapColumns } from '../utils/crossWeaveMirror';
+import { clamp } from '../utils/clamp';
+import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
 
 // CrossWeave не поддерживает подвески (MVP) — стабильные пустая ссылка и
 // no-op сеттер, чтобы useDrawing не считал их «изменившимися» на каждый рендер.
@@ -63,18 +65,23 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
     palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements, 'crossWeave',
   );
 
-  // В Mirror Mode ширина меняется по ±2 (по колонке с каждой стороны), чтобы
-  // рисунок остался по центру относительно оси — та же схема, что и у силянки
-  // (см. useSilyankaProject.updateDimension).
+  // Общий обработчик результата resizeWidthRelative/resizeWidthAbsolute:
+  // сдвиг designMap в Mirror Mode (та же схема, что и у силянки — см.
+  // useSilyankaProject.applyWidth) и запись gridSize.
+  const applyWidth = (result: WidthResizeResult | null, wasMirror: boolean) => {
+    if (!result) return;
+    const { newWidth, mirrorDelta } = result;
+    if (wasMirror) {
+      drawingControls.remapDesignMap(map =>
+        shiftCrossWeaveDesignMapColumns(map, mirrorDelta, newWidth + 1),
+      );
+    }
+    setGridSize(prev => ({ ...prev, width: newWidth }));
+  };
+
   const updateDimension = (field: 'width' | 'height', delta: number) => {
-    if (field === 'width' && mirrorMode) {
-      const newW = gridSize.width + delta * 2;
-      if (newW >= 1 && newW !== gridSize.width) {
-        drawingControls.remapDesignMap(map =>
-          shiftCrossWeaveDesignMapColumns(map, delta, newW + 1),
-        );
-        setGridSize(prev => ({ ...prev, width: newW }));
-      }
+    if (field === 'width') {
+      applyWidth(resizeWidthRelative(gridSize.width, delta, mirrorMode), mirrorMode);
       return;
     }
     const newVal = Math.max(1, gridSize[field] + delta);
@@ -82,25 +89,7 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
   };
 
   const setWidthAbsolute = (v: number) => {
-    const rounded = Math.max(1, Math.round(v));
-    if (mirrorMode) {
-      let newW = rounded;
-      let diff = newW - gridSize.width;
-      // Нечётную разницу округляем до чётной, чтобы сохранить центровку рисунка.
-      if (diff % 2 !== 0) {
-        newW += 1;
-        diff += 1;
-      }
-      if (newW === gridSize.width) return;
-      const delta = diff / 2;
-      drawingControls.remapDesignMap(map =>
-        shiftCrossWeaveDesignMapColumns(map, delta, newW + 1),
-      );
-      setGridSize(prev => ({ ...prev, width: newW }));
-      return;
-    }
-    if (rounded === gridSize.width) return;
-    setGridSize(prev => ({ ...prev, width: rounded }));
+    applyWidth(resizeWidthAbsolute(gridSize.width, v, mirrorMode), mirrorMode);
   };
 
   const setHeightAbsolute = (v: number) => {
@@ -110,7 +99,7 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
   const updateSpacing = (delta: number) => {
     const { minSpacing, maxSpacing } = CROSS_WEAVE_THEME.constraints;
     setGridSize(prev => {
-      const next = Math.min(maxSpacing, Math.max(minSpacing, prev.pitchX + delta));
+      const next = clamp(prev.pitchX + delta, minSpacing, maxSpacing);
       return { ...prev, pitchX: next, pitchY: next };
     });
   };
@@ -118,7 +107,7 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
   const setSpacingAbsolute = (v: number) => {
     const { minSpacing, maxSpacing } = CROSS_WEAVE_THEME.constraints;
     setGridSize(prev => {
-      const next = Math.min(maxSpacing, Math.max(minSpacing, Math.round(v)));
+      const next = clamp(Math.round(v), minSpacing, maxSpacing);
       return { ...prev, pitchX: next, pitchY: next };
     });
   };

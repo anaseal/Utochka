@@ -7,6 +7,7 @@
 
 import { Bead } from '../types/bead';
 import { resolveSpanCount } from './spans';
+import { decode, encode } from './beadId';
 
 export interface StampContext {
   topSpan: number;
@@ -33,12 +34,6 @@ export interface StampPattern {
 }
 
 export type StampAnchorEdge = 'top' | 'bottom';
-
-const NODE_RE = /^node-(\d+)-(\d+)$/;
-const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
-const BOTTOM_LINK_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
-const VERT_EDGE_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
-const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
 
 // Та же формула, что и getInternalCount в generator.ts:37-38.
 const getInternalCount = (r: number, ctx: StampContext): number =>
@@ -72,60 +67,44 @@ export const translateBeadId = (
   const accept = (candidate: string): string | null =>
     ctx.beadIds.has(candidate) ? candidate : null;
 
-  const nodeM = id.match(NODE_RE);
-  if (nodeM) {
-    const srcR = Number(nodeM[1]);
-    const r = srcR + dRow;
-    const c = Number(nodeM[2]) + dCol + colParityCorrection(srcR, dRow, anchorRow);
-    return accept(`node-${r}-${c}`);
-  }
+  const ref = decode(id);
+  if (!ref) return null; // pendant:* — отдельная система colorMap, не поддерживается в v1.
 
-  // Верхняя/нижняя кромка жёстко привязана к r=0 / r=2*height — переносится
-  // только по горизонтали. Вертикальный сдвиг штампа роняет эти бисерины.
-  const topM = id.match(TOP_LINK_RE);
-  if (topM) {
-    if (dRow !== 0) return null;
-    const c = Number(topM[1]) + dCol;
-    const i = topM[2];
-    return accept(`span-edge-top-link-${c}-bead-${i}`);
-  }
+  switch (ref.kind) {
+    case 'node': {
+      const r = ref.r + dRow;
+      const c = ref.c + dCol + colParityCorrection(ref.r, dRow, anchorRow);
+      return accept(encode({ ...ref, r, c }));
+    }
 
-  const bottomM = id.match(BOTTOM_LINK_RE);
-  if (bottomM) {
-    if (dRow !== 0) return null;
-    const c = Number(bottomM[1]) + dCol;
-    const i = bottomM[2];
-    return accept(`span-edge-bottom-link-${c}-bead-${i}`);
-  }
+    // Верхняя/нижняя кромка жёстко привязана к r=0 / r=2*height — переносится
+    // только по горизонтали. Вертикальный сдвиг штампа роняет эти бисерины.
+    case 'topLink':
+    case 'bottomLink': {
+      if (dRow !== 0) return null;
+      const c = ref.c + dCol;
+      return accept(encode({ ...ref, c }));
+    }
 
-  const vertM = id.match(VERT_EDGE_RE);
-  if (vertM) {
-    const r = Number(vertM[1]);
-    const c = Number(vertM[2]) + dCol + colParityCorrection(r, dRow, anchorRow);
-    const side = vertM[3];
-    const i = Number(vertM[4]);
-    const r2 = r + dRow;
-    const srcCount = getInternalCount(r, ctx);
-    const dstCount = getInternalCount(r2, ctx);
-    if (srcCount === 0 || dstCount === 0) return null;
-    const t = i / (srcCount + 1);
-    const i2 = Math.round(t * (dstCount + 1));
-    if (i2 < 1 || i2 > dstCount) return null;
-    return accept(`span-edge-${r2}-${c}-${side}-bead-${i2}`);
-  }
+    case 'vertEdge': {
+      const c = ref.c + dCol + colParityCorrection(ref.r, dRow, anchorRow);
+      const r2 = ref.r + dRow;
+      const srcCount = getInternalCount(ref.r, ctx);
+      const dstCount = getInternalCount(r2, ctx);
+      if (srcCount === 0 || dstCount === 0) return null;
+      const t = ref.i / (srcCount + 1);
+      const i2 = Math.round(t * (dstCount + 1));
+      if (i2 < 1 || i2 > dstCount) return null;
+      return accept(encode({ ...ref, r: r2, c, i: i2 }));
+    }
 
-  const decorM = id.match(DECOR_RE);
-  if (decorM) {
-    const srcR = Number(decorM[1]);
-    const r = srcR + dRow;
-    const k = Number(decorM[2]);
-    const c = Number(decorM[3]) + dCol + colParityCorrection(srcR, dRow, anchorRow);
-    if ((ctx.decorBands[r] ?? 0) < k) return null;
-    return accept(`decor-${r}-${k}-${c}`);
+    case 'decor': {
+      const r = ref.r + dRow;
+      const c = ref.c + dCol + colParityCorrection(ref.r, dRow, anchorRow);
+      if ((ctx.decorBands[r] ?? 0) < ref.k) return null;
+      return accept(encode({ ...ref, r, c }));
+    }
   }
-
-  // pendant:* — отдельная система colorMap, не поддерживается в v1.
-  return null;
 };
 
 // anchor = минимальный (row, col) среди захваченных NODE-бисерин; если в

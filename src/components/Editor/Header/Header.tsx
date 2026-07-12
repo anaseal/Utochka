@@ -8,7 +8,7 @@ import './Header.css';
 import { EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, CrossWeaveIcon } from './icons';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { StampAnchorEdge } from '../../../utils/stamp';
-import { BEAD_THEME } from '../../../config/theme';
+import { APP_CONSTRAINTS, BEAD_THEME } from '../../../config/theme';
 import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
 
 export type Technique = 'silyanka' | 'crossWeave';
@@ -484,11 +484,11 @@ export const Header = (props: HeaderProps) => {
           <Stepper
             label="Zoom"
             value={`${Math.round(zoom * 100)}%`}
-            onDelta={(s) => onZoomChange(s * 0.1)}
+            onDelta={(s) => onZoomChange(s * APP_CONSTRAINTS.zoomStep)}
             onSet={onSetZoom ? (v) => onSetZoom(v / 100) : undefined}
             inputValue={Math.round(zoom * 100)}
-            min={25}
-            max={300}
+            min={APP_CONSTRAINTS.minZoom * 100}
+            max={APP_CONSTRAINTS.maxZoom * 100}
           />
           {silyankaProps && (
             <Stepper

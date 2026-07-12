@@ -1,6 +1,7 @@
 import { Bead } from '../types/bead';
 import { BEAD_THEME } from '../config/theme';
 import { resolveSpanCount } from './spans';
+import { encode } from './beadId';
 
 type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
@@ -88,7 +89,7 @@ export const generateSilyankaGrid = (
     start: SpanCoords,
     end: SpanCoords,
     count: number,
-    clusterId: string,
+    makeId: (i: number) => string,
     r: number,
     c: number,
     yOffset = 0
@@ -96,7 +97,7 @@ export const generateSilyankaGrid = (
     for (let i = 1; i <= count; i++) {
       const t = i / (count + 1);
       beads.push({
-        id: `span-${clusterId}-bead-${i}`,
+        id: makeId(i),
         x: start.x + t * (end.x - start.x),
         y: start.y + t * (end.y - start.y) + yOffset,
         type: 'SPAN',
@@ -111,7 +112,7 @@ export const generateSilyankaGrid = (
     start: SpanCoords,
     end: SpanCoords,
     count: number,
-    clusterId: string,
+    makeId: (i: number) => string,
     r: number,
     c: number,
     arcHeight: number,
@@ -120,7 +121,7 @@ export const generateSilyankaGrid = (
     for (let i = 1; i <= count; i++) {
       const t = i / (count + 1);
       beads.push({
-        id: `span-${clusterId}-bead-${i}`,
+        id: makeId(i),
         x: start.x + t * (end.x - start.x),
         y: start.y + t * (end.y - start.y) + direction * arcHeight * Math.sin(Math.PI * t),
         type: 'SPAN',
@@ -139,7 +140,7 @@ export const generateSilyankaGrid = (
       const currentNode = nodeGrid[r][c];
 
       beads.push({
-        id: `node-${r}-${c}`,
+        id: encode({ kind: 'node', r, c }),
         x: currentNode.x,
         y: currentNode.y,
         type: 'NODE',
@@ -147,7 +148,7 @@ export const generateSilyankaGrid = (
       });
 
       if (r === 0 && c < width - 1) {
-        generateArcSpan(currentNode, nodeGrid[0][c + 1], internalTop, `edge-top-link-${c}`, r, c, edgeArcHeight, -1);
+        generateArcSpan(currentNode, nodeGrid[0][c + 1], internalTop, i => encode({ kind: 'topLink', c, i }), r, c, edgeArcHeight, -1);
       }
 
       const nextRow = nodeGrid[r + 1];
@@ -161,7 +162,7 @@ export const generateSilyankaGrid = (
           const nextNode = nextRow[nIdx];
           if (nextNode) {
             const side = sideIdx === 0 ? 'left' : 'right';
-            generateSpan(edgeStartNode, nextNode, currentCount, `edge-${r}-${c}-${side}`, r, c);
+            generateSpan(edgeStartNode, nextNode, currentCount, i => encode({ kind: 'vertEdge', r, c, side, i }), r, c);
           }
         });
       }
@@ -173,7 +174,7 @@ export const generateSilyankaGrid = (
       band.forEach((decorRow, k) => {
         decorRow.forEach((coord, c) => {
           beads.push({
-            id: `decor-${r}-${k + 1}-${c}`,
+            id: encode({ kind: 'decor', r, k: k + 1, c }),
             x: coord.x,
             y: coord.y,
             type: 'SPAN',
@@ -189,7 +190,7 @@ export const generateSilyankaGrid = (
     const lastRow = nodeGrid[lastR];
 
     for (let c = 0; c < lastRow.length - 1; c++) {
-      generateArcSpan(lastRow[c], lastRow[c + 1], internalBottom, `edge-bottom-link-${c}`, lastR, c, edgeArcHeight, 1);
+      generateArcSpan(lastRow[c], lastRow[c + 1], internalBottom, i => encode({ kind: 'bottomLink', c, i }), lastR, c, edgeArcHeight, 1);
     }
   }
 

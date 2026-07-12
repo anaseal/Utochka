@@ -1,4 +1,5 @@
 import { BEAD_THEME } from '../config/theme';
+import { clamp } from './clamp';
 
 export const resolveSpanCount = (
   r: number,
@@ -9,5 +10,5 @@ export const resolveSpanCount = (
 
 export const clampSpan = (n: number): number => {
   const { minSpan, maxSpan } = BEAD_THEME.constraints;
-  return Math.max(minSpan, Math.min(maxSpan, n));
+  return clamp(n, minSpan, maxSpan);
 };

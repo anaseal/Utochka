@@ -46,3 +46,11 @@ export const BEAD_THEME = {
 
 export const defaultColorFor = (type: BeadType): string =>
   type === 'NODE' ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault;
+
+// Zoom — общее понятие для обеих техник (Silyanka и CrossWeave), не силяночное,
+// поэтому вынесен из BEAD_THEME.constraints в отдельный объект.
+export const APP_CONSTRAINTS = {
+  minZoom: 0.25,
+  maxZoom: 3,
+  zoomStep: 0.1,
+};

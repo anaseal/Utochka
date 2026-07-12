@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import './ColorPicker.css';
+import { clamp } from '../../../utils/clamp';
 
 type HSV = { h: number; s: number; v: number };
 
 const HEX_RE = /^#?([a-f0-9]{6})$/i;
-
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
 const hexToRgb = (hex: string) => {
   const m = HEX_RE.exec(hex);

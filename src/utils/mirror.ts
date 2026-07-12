@@ -7,11 +7,7 @@
 //   с обменом сторон left↔right.
 // Возвращает null, когда у бисерины нет зеркальной пары внутри сетки.
 
-const NODE_RE = /^node-(\d+)-(\d+)$/;
-const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
-const BOTTOM_LINK_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
-const VERT_EDGE_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
-const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
+import { decode, encode } from './beadId';
 
 const flipSide = (side: 'left' | 'right'): 'left' | 'right' =>
   side === 'left' ? 'right' : 'left';
@@ -22,62 +18,47 @@ export const mirrorBeadId = (
   internalTop: number,
   internalBottom?: number,
 ): string | null => {
-  const nodeM = id.match(NODE_RE);
-  if (nodeM) {
-    const r = Number(nodeM[1]);
-    const c = Number(nodeM[2]);
-    const isEven = r % 2 === 0;
-    const mc = isEven ? width - 1 - c : width - 2 - c;
-    if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
-    return `node-${r}-${mc}`;
-  }
+  const ref = decode(id);
+  if (!ref) return null;
 
-  const topM = id.match(TOP_LINK_RE);
-  if (topM) {
-    const c = Number(topM[1]);
-    const i = Number(topM[2]);
-    const mc = width - 2 - c;
-    if (mc < 0) return null;
-    const mi = internalTop + 1 - i;
-    return `span-edge-top-link-${mc}-bead-${mi}`;
-  }
+  switch (ref.kind) {
+    case 'node': {
+      const isEven = ref.r % 2 === 0;
+      const mc = isEven ? width - 1 - ref.c : width - 2 - ref.c;
+      if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
+      return encode({ ...ref, c: mc });
+    }
 
-  const bottomM = id.match(BOTTOM_LINK_RE);
-  if (bottomM) {
-    if (internalBottom === undefined) return null;
-    const c = Number(bottomM[1]);
-    const i = Number(bottomM[2]);
-    const mc = width - 2 - c;
-    if (mc < 0) return null;
-    const mi = internalBottom + 1 - i;
-    return `span-edge-bottom-link-${mc}-bead-${mi}`;
-  }
+    case 'topLink': {
+      const mc = width - 2 - ref.c;
+      if (mc < 0) return null;
+      const mi = internalTop + 1 - ref.i;
+      return encode({ ...ref, c: mc, i: mi });
+    }
 
-  const vertM = id.match(VERT_EDGE_RE);
-  if (vertM) {
-    const r = Number(vertM[1]);
-    const c = Number(vertM[2]);
-    const side = vertM[3] as 'left' | 'right';
-    const i = Number(vertM[4]);
-    const isEven = r % 2 === 0;
-    const mc = isEven ? width - 1 - c : width - 2 - c;
-    const ms = flipSide(side);
-    if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
-    if (isEven && ms === 'left' && mc === 0) return null;
-    return `span-edge-${r}-${mc}-${ms}-bead-${i}`;
-  }
+    case 'bottomLink': {
+      if (internalBottom === undefined) return null;
+      const mc = width - 2 - ref.c;
+      if (mc < 0) return null;
+      const mi = internalBottom + 1 - ref.i;
+      return encode({ ...ref, c: mc, i: mi });
+    }
 
-  // Декор-полоса повторяет разметку узлового ряда r → логическое зеркало как у NODE.
-  const decorM = id.match(DECOR_RE);
-  if (decorM) {
-    const r = Number(decorM[1]);
-    const k = Number(decorM[2]);
-    const c = Number(decorM[3]);
-    const isEven = r % 2 === 0;
-    const mc = isEven ? width - 1 - c : width - 2 - c;
-    if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
-    return `decor-${r}-${k}-${mc}`;
-  }
+    case 'vertEdge': {
+      const isEven = ref.r % 2 === 0;
+      const mc = isEven ? width - 1 - ref.c : width - 2 - ref.c;
+      const ms = flipSide(ref.side);
+      if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
+      if (isEven && ms === 'left' && mc === 0) return null;
+      return encode({ ...ref, c: mc, side: ms });
+    }
 
-  return null;
+    // Декор-полоса повторяет разметку узлового ряда r → логическое зеркало как у NODE.
+    case 'decor': {
+      const isEven = ref.r % 2 === 0;
+      const mc = isEven ? width - 1 - ref.c : width - 2 - ref.c;
+      if (mc < 0 || mc >= (isEven ? width : width - 1)) return null;
+      return encode({ ...ref, c: mc });
+    }
+  }
 };

@@ -1,112 +1,100 @@
 import { Bead } from '../types/bead';
 import { defaultColorFor } from '../config/theme';
 import { PendantPlacement, PendantTemplate } from '../types/pendant';
+import { decode, encode } from './beadId';
 
 type AdjMap = Map<string, string[]>;
-
-const TOP_LINK_BEAD_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
-const BOTTOM_LINK_BEAD_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
-const VERT_EDGE_BEAD_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
-const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
 
 const addEdge = (map: AdjMap, a: string, b: string) => {
   map.get(a)?.push(b);
   map.get(b)?.push(a);
 };
 
-function chainEndpoints(clusterId: string): [string, string] | null {
-  const topM = clusterId.match(/^edge-top-link-(\d+)$/);
-  if (topM) {
-    const c = Number(topM[1]);
-    return [`node-0-${c}`, `node-0-${c + 1}`];
+// Узлы-концы цепочки vertEdge-бисерин: чётность ряда определяет, к каким
+// узлам следующего ряда примыкают left/right-грани (см. generator.ts:155-166).
+function vertEdgeEndpoints(r: number, c: number, side: 'left' | 'right'): [string, string] {
+  const even = r % 2 === 0;
+  const start = encode({ kind: 'node', r, c });
+  if (even) {
+    return side === 'left'
+      ? [start, encode({ kind: 'node', r: r + 1, c: c - 1 })]
+      : [start, encode({ kind: 'node', r: r + 1, c })];
   }
-
-  const edgeM = clusterId.match(/^edge-(\d+)-(\d+)-(left|right)$/);
-  if (edgeM) {
-    const r = Number(edgeM[1]);
-    const c = Number(edgeM[2]);
-    const side = edgeM[3];
-    const even = r % 2 === 0;
-    if (even) {
-      return side === 'left'
-        ? [`node-${r}-${c}`, `node-${r + 1}-${c - 1}`]
-        : [`node-${r}-${c}`, `node-${r + 1}-${c}`];
-    } else {
-      return side === 'left'
-        ? [`node-${r}-${c}`, `node-${r + 1}-${c}`]
-        : [`node-${r}-${c}`, `node-${r + 1}-${c + 1}`];
-    }
-  }
-
-  return null;
+  return side === 'left'
+    ? [start, encode({ kind: 'node', r: r + 1, c })]
+    : [start, encode({ kind: 'node', r: r + 1, c: c + 1 })];
 }
 
 function buildAdjacencyMap(beads: Bead[]): AdjMap {
   const map: AdjMap = new Map(beads.map(b => [b.id, []]));
 
-  const chains = new Map<string, [number, string][]>();
-  const bottomChains = new Map<string, { row: number; entries: [number, string][] }>();
-  const decorGroups = new Map<string, Map<number, Map<number, string>>>();
+  const chains = new Map<string, { entries: [number, string][]; endpoints: [string, string] }>();
+  const bottomChains = new Map<string, { row: number; c: number; entries: [number, string][] }>();
+  const decorGroups = new Map<number, Map<number, Map<number, string>>>();
 
   for (const bead of beads) {
-    const topM = bead.id.match(TOP_LINK_BEAD_RE);
-    if (topM) {
-      const key = `edge-top-link-${topM[1]}`;
-      if (!chains.has(key)) chains.set(key, []);
-      chains.get(key)!.push([Number(topM[2]), bead.id]);
-      continue;
-    }
+    const ref = decode(bead.id);
+    if (!ref) continue;
 
-    const botM = bead.id.match(BOTTOM_LINK_BEAD_RE);
-    if (botM) {
-      const c = Number(botM[1]);
-      const key = `edge-bottom-link-${c}`;
-      if (!bottomChains.has(key)) bottomChains.set(key, { row: bead.logicalIndex.row, entries: [] });
-      bottomChains.get(key)!.entries.push([Number(botM[2]), bead.id]);
-      continue;
-    }
+    switch (ref.kind) {
+      case 'topLink': {
+        const key = `topLink-${ref.c}`;
+        if (!chains.has(key)) {
+          chains.set(key, {
+            entries: [],
+            endpoints: [encode({ kind: 'node', r: 0, c: ref.c }), encode({ kind: 'node', r: 0, c: ref.c + 1 })],
+          });
+        }
+        chains.get(key)!.entries.push([ref.i, bead.id]);
+        break;
+      }
 
-    const vertM = bead.id.match(VERT_EDGE_BEAD_RE);
-    if (vertM) {
-      const key = `edge-${vertM[1]}-${vertM[2]}-${vertM[3]}`;
-      if (!chains.has(key)) chains.set(key, []);
-      chains.get(key)!.push([Number(vertM[4]), bead.id]);
-      continue;
-    }
+      case 'bottomLink': {
+        const key = `bottomLink-${ref.c}`;
+        if (!bottomChains.has(key)) {
+          bottomChains.set(key, { row: bead.logicalIndex.row, c: ref.c, entries: [] });
+        }
+        bottomChains.get(key)!.entries.push([ref.i, bead.id]);
+        break;
+      }
 
-    const decorM = bead.id.match(DECOR_RE);
-    if (decorM) {
-      const r = decorM[1];
-      const k = Number(decorM[2]);
-      const c = Number(decorM[3]);
-      if (!decorGroups.has(r)) decorGroups.set(r, new Map());
-      const kMap = decorGroups.get(r)!;
-      if (!kMap.has(k)) kMap.set(k, new Map());
-      kMap.get(k)!.set(c, bead.id);
+      case 'vertEdge': {
+        const key = `vertEdge-${ref.r}-${ref.c}-${ref.side}`;
+        if (!chains.has(key)) {
+          chains.set(key, { entries: [], endpoints: vertEdgeEndpoints(ref.r, ref.c, ref.side) });
+        }
+        chains.get(key)!.entries.push([ref.i, bead.id]);
+        break;
+      }
+
+      case 'decor': {
+        if (!decorGroups.has(ref.r)) decorGroups.set(ref.r, new Map());
+        const kMap = decorGroups.get(ref.r)!;
+        if (!kMap.has(ref.k)) kMap.set(ref.k, new Map());
+        kMap.get(ref.k)!.set(ref.c, bead.id);
+        break;
+      }
+
+      case 'node':
+        break;
     }
   }
 
   // Chain: startNode → bead-1 → ... → bead-N → endNode
-  for (const [clusterId, entries] of chains) {
-    const eps = chainEndpoints(clusterId);
-    if (!eps) continue;
-
+  for (const { entries, endpoints } of chains.values()) {
     entries.sort((a, b) => a[0] - b[0]);
     const ids = entries.map(e => e[1]);
     if (ids.length === 0) continue;
 
-    if (map.has(eps[0])) addEdge(map, eps[0], ids[0]);
+    if (map.has(endpoints[0])) addEdge(map, endpoints[0], ids[0]);
     for (let i = 0; i < ids.length - 1; i++) addEdge(map, ids[i], ids[i + 1]);
-    if (map.has(eps[1])) addEdge(map, eps[1], ids[ids.length - 1]);
+    if (map.has(endpoints[1])) addEdge(map, endpoints[1], ids[ids.length - 1]);
   }
 
-  // Bottom chain: node-{lastR}-c ← bead-1 → ... → bead-N → node-{lastR}-{c+1}
-  for (const [key, { row, entries }] of bottomChains) {
-    const cMatch = key.match(/^edge-bottom-link-(\d+)$/);
-    if (!cMatch) continue;
-    const c = Number(cMatch[1]);
-    const ep0 = `node-${row}-${c}`;
-    const ep1 = `node-${row}-${c + 1}`;
+  // Bottom chain: node-{row}-c ← bead-1 → ... → bead-N → node-{row}-{c+1}
+  for (const { row, c, entries } of bottomChains.values()) {
+    const ep0 = encode({ kind: 'node', r: row, c });
+    const ep1 = encode({ kind: 'node', r: row, c: c + 1 });
 
     entries.sort((a, b) => a[0] - b[0]);
     const ids = entries.map(e => e[1]);

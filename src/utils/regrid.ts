@@ -2,51 +2,39 @@
 // Сдвигает все закрашенные бисерины на заданное число колонок, чтобы рисунок
 // остался по центру относительно новой оси симметрии. Чистая функция.
 
-const NODE_RE = /^node-(\d+)-(\d+)$/;
-const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
-const BOTTOM_LINK_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
-const VERT_EDGE_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
+import { decode, encode } from './beadId';
 
 // Новый ID со сдвигом колонки на shift; null — если бисерина выходит за сетку.
+// Декор-полосы regrid не обрабатывает (сдвиг колонок актуален только для
+// mirror-resize по ширине, которым декор не пользуется) — decode вернёт
+// структуру, но explicit-ветки для неё здесь нет, и она отбрасывается.
 const shiftId = (id: string, shift: number, newW: number): string | null => {
-  const n = id.match(NODE_RE);
-  if (n) {
-    const r = Number(n[1]);
-    const c = Number(n[2]) + shift;
-    const maxC = r % 2 === 0 ? newW - 1 : newW - 2;
-    if (c < 0 || c > maxC) return null;
-    return `node-${r}-${c}`;
-  }
+  const ref = decode(id);
+  if (!ref) return null;
 
-  const t = id.match(TOP_LINK_RE);
-  if (t) {
-    const c = Number(t[1]) + shift;
-    const i = Number(t[2]);
-    if (c < 0 || c > newW - 2) return null;
-    return `span-edge-top-link-${c}-bead-${i}`;
+  switch (ref.kind) {
+    case 'node': {
+      const c = ref.c + shift;
+      const maxC = ref.r % 2 === 0 ? newW - 1 : newW - 2;
+      if (c < 0 || c > maxC) return null;
+      return encode({ ...ref, c });
+    }
+    case 'topLink':
+    case 'bottomLink': {
+      const c = ref.c + shift;
+      if (c < 0 || c > newW - 2) return null;
+      return encode({ ...ref, c });
+    }
+    case 'vertEdge': {
+      const c = ref.c + shift;
+      const maxC = ref.r % 2 === 0 ? newW - 1 : newW - 2;
+      if (c < 0 || c > maxC) return null;
+      if (ref.r % 2 === 0 && ref.side === 'left' && c < 1) return null;
+      return encode({ ...ref, c });
+    }
+    case 'decor':
+      return null;
   }
-
-  const b = id.match(BOTTOM_LINK_RE);
-  if (b) {
-    const c = Number(b[1]) + shift;
-    const i = Number(b[2]);
-    if (c < 0 || c > newW - 2) return null;
-    return `span-edge-bottom-link-${c}-bead-${i}`;
-  }
-
-  const v = id.match(VERT_EDGE_RE);
-  if (v) {
-    const r = Number(v[1]);
-    const c = Number(v[2]) + shift;
-    const side = v[3] as 'left' | 'right';
-    const i = Number(v[4]);
-    const maxC = r % 2 === 0 ? newW - 1 : newW - 2;
-    if (c < 0 || c > maxC) return null;
-    if (r % 2 === 0 && side === 'left' && c < 1) return null;
-    return `span-edge-${r}-${c}-${side}-bead-${i}`;
-  }
-
-  return null;
 };
 
 // Сдвиг всех колонок design map на shift (Mirror Mode: ±1 при изменении ширины на ±2).

@@ -8,6 +8,8 @@ import { BottomEdgeDecor, GridConfig } from '../types/bead';
 import { PendantPlacement } from '../types/pendant';
 import { PENDANT_TEMPLATES_BY_ID } from '../data/pendantTemplates';
 import { clampSpan, resolveSpanCount } from '../utils/spans';
+import { clamp } from '../utils/clamp';
+import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
 import { shiftDesignMapColumns } from '../utils/regrid';
 import { mirrorBeadId } from '../utils/mirror';
 import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
@@ -58,6 +60,19 @@ const pruneRedundantOverrides = (
     next[r] = v;
   }
   return changed ? next : overrides;
+};
+
+// Убирает записи с рядами >= limit — используется при сужении высоты, чтобы
+// снять decor-полосы/overrides с исчезнувших рядов.
+const pruneRowsBelow = (
+  map: Record<number, number>,
+  limit: number,
+): Record<number, number> => {
+  const next: Record<number, number> = {};
+  for (const [k, v] of Object.entries(map)) {
+    if (Number(k) < limit) next[Number(k)] = v;
+  }
+  return next;
 };
 
 const isPendantPlacements = (v: unknown): v is PendantPlacement[] =>
@@ -198,128 +213,93 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     });
   }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom, stampAnchorEdge]);
 
-  const updateDimension = (field: 'width' | 'height', delta: number) => {
-    if (field === 'width' && mirrorMode) {
-      // ±2: добавляем/убираем по колонке с каждой стороны, рисунок остаётся по центру
-      const newW = gridSize.width + delta * 2;
-      if (newW >= 1 && newW !== gridSize.width) {
-        drawingControls.remapDesignMap(map =>
-          shiftDesignMapColumns(map, delta, newW),
-        );
-        // Подвески сдвигаем вместе с рисунком, иначе их col отвяжется от нод.
-        setPendantPlacements(prev => prev
-          .map(p => ({ ...p, col: p.col + delta }))
-          .filter(p => p.col >= 0 && p.col < newW));
-        setGridSize(prev => ({ ...prev, width: newW }));
-      }
-      return;
-    }
-    if (field === 'width') {
-      const newW = Math.max(1, gridSize.width + delta);
+  // Общий обработчик результата resizeWidthRelative/resizeWidthAbsolute:
+  // сдвиг designMap в Mirror Mode, снятие подвесок с исчезнувших/сдвинутых
+  // колонок (только у силянки — у CrossWeave подвесок нет) и запись gridSize.
+  const applyWidth = (result: WidthResizeResult | null, wasMirror: boolean) => {
+    if (!result) return;
+    const { newWidth, mirrorDelta } = result;
+    if (wasMirror) {
+      drawingControls.remapDesignMap(map =>
+        shiftDesignMapColumns(map, mirrorDelta, newWidth),
+      );
+      // Подвески сдвигаем вместе с рисунком, иначе их col отвяжется от нод.
+      setPendantPlacements(prev => prev
+        .map(p => ({ ...p, col: p.col + mirrorDelta }))
+        .filter(p => p.col >= 0 && p.col < newWidth));
+    } else if (newWidth < gridSize.width) {
       // При сужении сетки убираем подвески с исчезнувших колонок.
-      if (newW < gridSize.width) {
-        setPendantPlacements(prev => prev.filter(p => p.col < newW));
-      }
-      setGridSize(prev => ({ ...prev, width: newW }));
-      return;
+      setPendantPlacements(prev => prev.filter(p => p.col < newWidth));
     }
-    const newH = Math.max(1, gridSize.height + delta);
-    // При уменьшении высоты убираем декор-полосы с исчезнувших рядов.
+    setGridSize(prev => ({ ...prev, width: newWidth }));
+  };
+
+  // При уменьшении высоты убираем декор-полосы с исчезнувших рядов.
+  const applyHeight = (newH: number) => {
+    if (newH === gridSize.height) return;
     if (newH < gridSize.height) {
-      setDecorBands(prev => {
-        const next: Record<number, number> = {};
-        for (const [k, v] of Object.entries(prev)) {
-          if (Number(k) < 2 * newH) next[Number(k)] = v;
-        }
-        return next;
-      });
+      setDecorBands(prev => pruneRowsBelow(prev, 2 * newH));
     }
     setGridSize(prev => ({ ...prev, height: newH }));
   };
 
+  // Общий обработчик top/bottom span: пишет gridSize и чистит устаревшие
+  // per-row overrides, совпавшие с новым глобальным дефолтом.
+  const applySpanEdge = (edge: 'topSpan' | 'bottomSpan', newVal: number) => {
+    if (newVal === gridSize[edge]) return;
+    setGridSize(prev => ({ ...prev, [edge]: newVal }));
+    setRowSpanOverrides(prev => pruneRedundantOverrides(
+      prev,
+      edge === 'topSpan' ? newVal : gridSize.topSpan,
+      edge === 'bottomSpan' ? newVal : gridSize.bottomSpan,
+    ));
+  };
+
+  const updateDimension = (field: 'width' | 'height', delta: number) => {
+    if (field === 'width') {
+      applyWidth(resizeWidthRelative(gridSize.width, delta, mirrorMode), mirrorMode);
+      return;
+    }
+    applyHeight(Math.max(1, gridSize.height + delta));
+  };
+
   const updateTopSpan = (delta: number) => {
-    const newTop = clampSpan(gridSize.topSpan + delta);
-    if (newTop === gridSize.topSpan) return;
-    setGridSize(prev => ({ ...prev, topSpan: newTop }));
-    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, newTop, gridSize.bottomSpan));
+    applySpanEdge('topSpan', clampSpan(gridSize.topSpan + delta));
   };
 
   const updateBottomSpan = (delta: number) => {
-    const newBottom = clampSpan(gridSize.bottomSpan + delta);
-    if (newBottom === gridSize.bottomSpan) return;
-    setGridSize(prev => ({ ...prev, bottomSpan: newBottom }));
-    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, gridSize.topSpan, newBottom));
+    applySpanEdge('bottomSpan', clampSpan(gridSize.bottomSpan + delta));
   };
 
   const updateSpacing = (delta: number) => {
     const { minSpacing, maxSpacing } = BEAD_THEME.constraints;
     setGridSize(prev => ({
       ...prev,
-      spacing: Math.min(maxSpacing, Math.max(minSpacing, prev.spacing + delta)),
+      spacing: clamp(prev.spacing + delta, minSpacing, maxSpacing),
     }));
   };
 
   const setWidthAbsolute = (v: number) => {
-    const rounded = Math.max(1, Math.round(v));
-    if (mirrorMode) {
-      let newW = rounded;
-      let diff = newW - gridSize.width;
-      // В Mirror Mode колонки добавляются симметрично парами — нечётную
-      // разницу округляем до чётной, чтобы сохранить центровку рисунка.
-      if (diff % 2 !== 0) {
-        newW += 1;
-        diff += 1;
-      }
-      if (newW === gridSize.width) return;
-      const delta = diff / 2;
-      drawingControls.remapDesignMap(map =>
-        shiftDesignMapColumns(map, delta, newW),
-      );
-      setPendantPlacements(prev => prev
-        .map(p => ({ ...p, col: p.col + delta }))
-        .filter(p => p.col >= 0 && p.col < newW));
-      setGridSize(prev => ({ ...prev, width: newW }));
-      return;
-    }
-    if (rounded === gridSize.width) return;
-    setPendantPlacements(prev => prev.filter(p => p.col < rounded));
-    setGridSize(prev => ({ ...prev, width: rounded }));
+    applyWidth(resizeWidthAbsolute(gridSize.width, v, mirrorMode), mirrorMode);
   };
 
   const setHeightAbsolute = (v: number) => {
-    const newH = Math.max(1, Math.round(v));
-    if (newH === gridSize.height) return;
-    if (newH < gridSize.height) {
-      setDecorBands(prev => {
-        const next: Record<number, number> = {};
-        for (const [k, val] of Object.entries(prev)) {
-          if (Number(k) < 2 * newH) next[Number(k)] = val;
-        }
-        return next;
-      });
-    }
-    setGridSize(prev => ({ ...prev, height: newH }));
+    applyHeight(Math.max(1, Math.round(v)));
   };
 
   const setTopSpanAbsolute = (v: number) => {
-    const newTop = clampSpan(Math.round(v));
-    if (newTop === gridSize.topSpan) return;
-    setGridSize(prev => ({ ...prev, topSpan: newTop }));
-    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, newTop, gridSize.bottomSpan));
+    applySpanEdge('topSpan', clampSpan(Math.round(v)));
   };
 
   const setBottomSpanAbsolute = (v: number) => {
-    const newBottom = clampSpan(Math.round(v));
-    if (newBottom === gridSize.bottomSpan) return;
-    setGridSize(prev => ({ ...prev, bottomSpan: newBottom }));
-    setRowSpanOverrides(prev => pruneRedundantOverrides(prev, gridSize.topSpan, newBottom));
+    applySpanEdge('bottomSpan', clampSpan(Math.round(v)));
   };
 
   const setSpacingAbsolute = (v: number) => {
     const { minSpacing, maxSpacing } = BEAD_THEME.constraints;
     setGridSize(prev => ({
       ...prev,
-      spacing: Math.min(maxSpacing, Math.max(minSpacing, Math.round(v))),
+      spacing: clamp(Math.round(v), minSpacing, maxSpacing),
     }));
   };
 
