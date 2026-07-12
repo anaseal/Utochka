@@ -166,6 +166,8 @@ function App() {
             onSetWidth: crossWeave.setWidthAbsolute,
             onSetHeight: crossWeave.setHeightAbsolute,
             onSetSpacing: crossWeave.setSpacingAbsolute,
+            mirrorMode: crossWeave.mirrorMode,
+            setMirrorMode: crossWeave.setMirrorMode,
           }}
         />
       )}
@@ -219,6 +221,8 @@ function App() {
           paintBead={crossWeave.drawingControls.paintBead}
           startDrawing={crossWeave.drawingControls.startDrawing}
           stopDrawing={crossWeave.drawingControls.stopDrawing}
+          mirrorMode={crossWeave.mirrorMode}
+          rawWidth={crossWeave.rawWidth}
         />
       )}
 

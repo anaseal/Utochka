@@ -260,10 +260,30 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   };
 
   const setWidthAbsolute = (v: number) => {
-    const newW = Math.max(1, Math.round(v));
-    if (newW === gridSize.width) return;
-    setPendantPlacements(prev => prev.filter(p => p.col < newW));
-    setGridSize(prev => ({ ...prev, width: newW }));
+    const rounded = Math.max(1, Math.round(v));
+    if (mirrorMode) {
+      let newW = rounded;
+      let diff = newW - gridSize.width;
+      // В Mirror Mode колонки добавляются симметрично парами — нечётную
+      // разницу округляем до чётной, чтобы сохранить центровку рисунка.
+      if (diff % 2 !== 0) {
+        newW += 1;
+        diff += 1;
+      }
+      if (newW === gridSize.width) return;
+      const delta = diff / 2;
+      drawingControls.remapDesignMap(map =>
+        shiftDesignMapColumns(map, delta, newW),
+      );
+      setPendantPlacements(prev => prev
+        .map(p => ({ ...p, col: p.col + delta }))
+        .filter(p => p.col >= 0 && p.col < newW));
+      setGridSize(prev => ({ ...prev, width: newW }));
+      return;
+    }
+    if (rounded === gridSize.width) return;
+    setPendantPlacements(prev => prev.filter(p => p.col < rounded));
+    setGridSize(prev => ({ ...prev, width: rounded }));
   };
 
   const setHeightAbsolute = (v: number) => {

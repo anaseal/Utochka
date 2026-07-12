@@ -6,7 +6,8 @@ import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../../../config/crossWeaveTheme';
 import { DrawingTool } from '../../../hooks/useDrawing';
-import { exportSchemeToPng } from '../../../utils/exportScheme';
+import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportScheme';
+import { mirrorCrossWeaveBeadId } from '../../../utils/crossWeaveMirror';
 import { Sun, Moon } from 'lucide-react';
 import './CanvasView.css';
 
@@ -24,9 +25,11 @@ interface CrossWeaveCanvasViewProps {
   stopDrawing: () => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
+  mirrorMode: boolean;
+  rawWidth: number;
 }
 
-// CrossWeave — MVP-канвас: только карандаш/ластик, без mirror/stamp/flood-fill/подвесок.
+// CrossWeave — MVP-канвас: карандаш/ластик + Mirror Mode, без stamp/flood-fill/подвесок.
 // Не ветка CanvasView, а отдельный компонент — переиспользует общий CSS-шелл
 // (canvas__svg, editor__viewport, export-btn, canvas-theme-toggle) и CanvasStats.
 export const CrossWeaveCanvasView = ({
@@ -43,6 +46,8 @@ export const CrossWeaveCanvasView = ({
   stopDrawing,
   zoom,
   onZoomChange,
+  mirrorMode,
+  rawWidth,
 }: CrossWeaveCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
@@ -88,21 +93,74 @@ export const CrossWeaveCanvasView = ({
 
   const totalCount = beads.length;
 
+  // Границы для обрезки PNG по узору при экспорте (координаты корневого
+  // <svg>, с учётом translate(offsetX, offsetY)) — впритык к закрашенным
+  // бусинам со всех сторон. getBBox() всего клона тут не годится: линейка
+  // и легенда из экспорта убираются целиком (см. handleExport), но даже без
+  // них считать границы явно надёжнее и дешевле, чем гонять DOM-измерение.
+  const paintedBounds = useMemo<ContentBounds | null>(() => {
+    const painted = beads.filter((b) => !!designMap[b.id]);
+    if (painted.length === 0) return null;
+    const xs = painted.map((b) => b.x);
+    const ys = painted.map((b) => b.y);
+    const minX = offsetX + Math.min(...xs) - beadMajorRadius;
+    const minY = offsetY + Math.min(...ys) - beadMajorRadius;
+    return {
+      x: minX,
+      y: minY,
+      width: offsetX + Math.max(...xs) + beadMajorRadius - minX,
+      height: offsetY + Math.max(...ys) + beadMajorRadius - minY,
+    };
+  }, [beads, designMap, beadMajorRadius]);
+
+  const mirrorAxis = useMemo(() => {
+    if (!mirrorMode || beads.length === 0) return null;
+    let maxX = 0;
+    let found = false;
+    for (const b of beads) {
+      if (b.orientation === 'horizontal' && b.x > maxX) { maxX = b.x; found = true; }
+    }
+    if (!found) return null;
+    const ys = beads.map(b => b.y);
+    const axisMarginY = 30;
+    return {
+      x: maxX / 2,
+      yTop: Math.min(...ys) - axisMarginY,
+      yBottom: Math.max(...ys) + axisMarginY,
+    };
+  }, [mirrorMode, beads]);
+
+  const applyPaint = useCallback((id: string) => {
+    paintBead(id);
+    if (mirrorMode) {
+      const m = mirrorCrossWeaveBeadId(id, rawWidth);
+      if (m !== null && m !== id) paintBead(m);
+    }
+  }, [paintBead, mirrorMode, rawWidth]);
+
   const handleMouseEnter = useCallback((id: string) => {
-    if (isDrawing) paintBead(id);
-  }, [isDrawing, paintBead]);
+    if (isDrawing) applyPaint(id);
+  }, [isDrawing, applyPaint]);
 
   const handleMouseDown = useCallback((id: string) => {
-    paintBead(id);
-  }, [paintBead]);
+    applyPaint(id);
+  }, [applyPaint]);
 
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
     if (!svg) return;
-    exportSchemeToPng(svg, colorStats, totalCount, canvasTheme).catch((err) => {
+    exportSchemeToPng(svg, colorStats, totalCount, canvasTheme, {
+      contentBounds: paintedBounds ?? undefined,
+      // Незакрашенные бусины прячем только когда есть что показать —
+      // на пустом холсте оставляем обычный вид всей сетки.
+      extraStripSelector: paintedBounds
+        ? '.bead--empty, .canvas__ruler-group'
+        : '.canvas__ruler-group',
+      hideLegend: true,
+    }).catch((err) => {
       console.error('Failed to export scheme:', err);
     });
-  }, [colorStats, totalCount, canvasTheme]);
+  }, [colorStats, totalCount, canvasTheme, paintedBounds]);
 
   return (
     <main
@@ -128,6 +186,17 @@ export const CrossWeaveCanvasView = ({
           >
             <g transform={`translate(${offsetX}, ${offsetY})`}>
               <CrossWeaveRulers beads={beads} width={width} height={height} />
+
+              {mirrorAxis && (
+                <line
+                  x1={mirrorAxis.x}
+                  y1={mirrorAxis.yTop}
+                  x2={mirrorAxis.x}
+                  y2={mirrorAxis.yBottom}
+                  className="canvas__mirror-axis"
+                  pointerEvents="none"
+                />
+              )}
 
               {beads.map((bead) => (
                 <CrossWeaveBeadView

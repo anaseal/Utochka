@@ -11,6 +11,14 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export type CanvasTheme = 'dark' | 'light';
 
+/** Явные границы содержимого в координатах viewBox — обходят измерение bbox всего клона. */
+export interface ContentBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /**
  * Палитра экспорта по теме холста — согласована с токенами `.canvas__svg`
  * и `[data-canvas-theme="light"]` в CSS, чтобы PNG совпадал с видом на экране.
@@ -186,6 +194,20 @@ const measureContent = (clone: SVGSVGElement): DOMRect => {
   }
 };
 
+/** Необязательные настройки экспорта поверх дефолтного поведения силянки. */
+export interface ExportSchemeOptions {
+  /**
+   * Используется вместо `measureContent(clone)` (например, чтобы обрезать PNG
+   * по закрашенным бусинам, а не по всему SVG). Координаты — та же система,
+   * что и у `getBBox()` корневого `<svg>`.
+   */
+  contentBounds?: ContentBounds;
+  /** Доп. CSS-селектор элементов, которые нужно удалить из клона перед экспортом (например, незакрашенные бусины). */
+  extraStripSelector?: string;
+  /** Не рисовать блок легенды материалов под сеткой. */
+  hideLegend?: boolean;
+}
+
 /**
  * Экспортирует текущую схему в PNG-файл и запускает его скачивание.
  *
@@ -193,17 +215,23 @@ const measureContent = (clone: SVGSVGElement): DOMRect => {
  * @param colorStats Спецификация материалов: пары `[цвет, количество]`.
  * @param totalCount Общее число бусин.
  * @param theme      Тема холста — задаёт фон и цвета осей/легенды в PNG.
+ * @param options    См. {@link ExportSchemeOptions}.
  */
 export const exportSchemeToPng = (
   svg: SVGSVGElement,
   colorStats: [string, number][],
   totalCount: number,
   theme: CanvasTheme = 'dark',
+  options: ExportSchemeOptions = {},
 ): Promise<void> => {
+  const { contentBounds, extraStripSelector, hideLegend } = options;
   const pal = PALETTES[theme];
   const clone = svg.cloneNode(true) as SVGSVGElement;
 
-  clone.querySelectorAll(STRIP_SELECTORS).forEach((el) => el.remove());
+  const stripSelectors = extraStripSelector
+    ? `${STRIP_SELECTORS}, ${extraStripSelector}`
+    : STRIP_SELECTORS;
+  clone.querySelectorAll(stripSelectors).forEach((el) => el.remove());
 
   const style = document.createElementNS(SVG_NS, 'style');
   style.textContent = buildExportStyle(pal);
@@ -215,22 +243,20 @@ export const exportSchemeToPng = (
   clone.removeAttribute('width');
   clone.removeAttribute('height');
 
-  // Реальные границы содержимого — сетка, линейки и подвески целиком.
-  const bbox = measureContent(clone);
+  // Реальные границы содержимого — сетка, линейки и подвески целиком, либо
+  // явные границы вызывающей стороны (например, кроп по закрашенным бусинам).
+  const bbox = contentBounds ?? measureContent(clone);
   const contentX = bbox.x - CONTENT_PADDING;
   const contentY = bbox.y - CONTENT_PADDING;
   const contentW = bbox.width + CONTENT_PADDING * 2;
   const contentH = bbox.height + CONTENT_PADDING * 2;
 
-  const { group: legend, height: legendHeight } = buildLegend(
-    colorStats,
-    totalCount,
-    contentX,
-    contentY + contentH,
-    contentW,
-    pal,
-  );
-  clone.appendChild(legend);
+  let legendHeight = 0;
+  if (!hideLegend) {
+    const legend = buildLegend(colorStats, totalCount, contentX, contentY + contentH, contentW, pal);
+    clone.appendChild(legend.group);
+    legendHeight = legend.height;
+  }
 
   const fullW = contentW;
   const fullH = contentH + legendHeight;

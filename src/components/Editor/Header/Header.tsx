@@ -70,6 +70,8 @@ interface CrossWeaveHeaderProps {
   onSetWidth?: (v: number) => void;
   onSetHeight?: (v: number) => void;
   onSetSpacing?: (v: number) => void;
+  mirrorMode: boolean;
+  setMirrorMode: (v: boolean) => void;
 }
 
 type HeaderProps = SharedHeaderProps & (
@@ -366,6 +368,17 @@ export const Header = (props: HeaderProps) => {
         >
           <EraserIcon size={14} />
         </button>
+
+        {crossWeaveProps && (
+          <button
+            onClick={() => crossWeaveProps.setMirrorMode(!crossWeaveProps.mirrorMode)}
+            className={`tool-btn ${crossWeaveProps.mirrorMode ? 'tool-btn--active' : ''}`}
+            title="Mirror Mode"
+            aria-pressed={crossWeaveProps.mirrorMode}
+          >
+            <FlipHorizontal size={14} />
+          </button>
+        )}
 
         {silyankaProps && (
           <>
