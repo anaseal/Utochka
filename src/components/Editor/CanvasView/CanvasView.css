@@ -44,9 +44,13 @@
 
   /* Адаптивный размер: до 1200x650, но сжимается чтобы влезать в viewport
      (учитываем padding-left 50px у .canvas + правый отступ ~30px,
-     и сверху var(--palette-height) + padding-top 50px + место под .stats снизу) */
+     и сверху var(--palette-height) + padding-top 50px + место под .stats снизу).
+     --stats-reserve — реально измеренная высота .stats (useStatsReserve,
+     ResizeObserver) вместо захардкоженной константы: при большом числе
+     цветов .stats__list переносится на несколько строк и вырастает выше
+     140px, наезжая на нижние ряды бисера — особенно на мобильном. */
   width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
-  height: min(650px, calc(100vh - var(--palette-height) - 140px));
+  height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 140px)));
 
   overflow: auto;
   position: relative;
@@ -242,7 +246,7 @@
   }
   .canvas__svg {
     width: min(1200px, calc(100vw - 60px));
-    height: min(650px, calc(100vh - var(--palette-height) - 110px));
+    height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px)));
     padding: 20px;
     border-radius: 18px;
   }

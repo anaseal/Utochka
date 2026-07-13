@@ -15,8 +15,24 @@
   border-radius: 8px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   overflow: auto;
-  resize: both;
+  /* Было `resize: both` — нативный resize управляется только мышью и не
+     откликается на тач ни на Android, ни на iOS (окно нельзя было уменьшить
+     с телефона). Заменено на собственный .reference-window__resize-handle
+     поверх Pointer Events (см. ReferenceWindow.tsx), который работает
+     одинаково для мыши, тача и пера. */
+  resize: none;
   z-index: 60;
+}
+
+/* Свёрнутое окно (см. кнопку ChevronDown/Up в шапке) — остаётся только
+   шапка, тело/футер/ресайз-хэндл не рендерятся (React), высота схлопывается
+   до контента шапки вместо застрявшего --ref-h. Ресайз бессмысленен для
+   свёрнутого окна — сам хэндл не рендерится, но на всякий случай глушим
+   и оставшийся overflow/min-height. */
+.reference-window--collapsed {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 
 .reference-window__header {
@@ -164,3 +180,20 @@
   transition: all 0.2s;
 }
 .reference-window__text-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; }
+
+/* Собственный resize-хэндл (заменяет нативный `resize: both`, см. выше) —
+   уголок внизу справа, диагональные полоски нарисованы градиентом (тот же
+   визуальный язык, что и у нативной OS-ручки), touch-action: none — чтобы
+   тачмув не листал страницу вместо ресайза. */
+.reference-window__resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 22px;
+  height: 22px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background:
+    linear-gradient(135deg, transparent 0 45%, rgba(255, 255, 255, 0.35) 45% 55%, transparent 55% 100%),
+    linear-gradient(135deg, transparent 0 65%, rgba(255, 255, 255, 0.35) 65% 75%, transparent 75% 100%);
+}

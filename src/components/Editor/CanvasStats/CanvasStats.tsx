@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { Replace } from 'lucide-react';
 import './CanvasStats.css';
 
@@ -12,11 +13,15 @@ interface CanvasStatsProps {
   onReplaceColor: (oldColor: string) => void;
 }
 
-export const CanvasStats = ({
+// Ref прокидывается наружу — CanvasView меряет реальную высоту панели
+// (ResizeObserver), чтобы резервировать под неё место под холстом и не
+// давать бейджам цветов (переносятся на несколько строк при большом числе
+// цветов) наезжать на нижние ряды бисера на мобильном.
+export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
   totalCount, colorStats, highlightedColor, onToggleHighlight, activeColor, onReplaceColor,
-}: CanvasStatsProps) => {
+}, ref) => {
   return (
-    <aside className="stats">
+    <aside className="stats" ref={ref}>
       <article className="stats__total">
         <h3 className="stats__label">Total Count</h3>
         <p className="stats__value">{totalCount}</p>
@@ -63,4 +68,6 @@ export const CanvasStats = ({
       </ul>
     </aside>
   );
-};
+});
+
+CanvasStats.displayName = 'CanvasStats';

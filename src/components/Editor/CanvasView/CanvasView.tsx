@@ -17,6 +17,7 @@ import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
+import { useStatsReserve } from '../../../hooks/useStatsReserve';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
@@ -147,6 +148,7 @@ export const CanvasView = ({
     setSelectionRect(null);
   }, [stopDrawing]);
   const touchGesture = useTouchPanZoom(canvasContainerRef, zoom, onZoomChange, cancelActiveStroke);
+  const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
   // Шеврон (.span-controls-toggle) «пришвартован» к левому краю карточки
   // холста и осмыслен только там (за ним прячется панель, живущая у левого
@@ -391,6 +393,7 @@ export const CanvasView = ({
     <main
       data-canvas-theme={canvasTheme}
       className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}`}
+      style={{ '--stats-reserve': `${statsReserve}px` } as React.CSSProperties}
       onPointerDownCapture={touchGesture.onPointerDownCapture}
       onPointerMove={touchGesture.onPointerMove}
       onPointerDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') startDrawing(); }}
@@ -514,6 +517,7 @@ export const CanvasView = ({
       </section>
 
       <CanvasStats
+        ref={statsRef}
         totalCount={totalCount}
         colorStats={colorStats}
         highlightedColor={highlightedColor}

@@ -54,7 +54,18 @@ export const useTouchPanZoom = (
 
     const [a, b] = Array.from(pointersRef.current.values());
     const newZoom = gesture.startZoom * (distance(a, b) / gesture.startDist);
-    onZoomChange(newZoom - zoomRef.current);
+    const delta = newZoom - zoomRef.current;
+    if (delta !== 0) {
+      onZoomChange(delta);
+      // Одно физическое движение двух пальцев — это ДВА отдельных pointermove
+      // (по одному на pointerId каждого пальца), которые нередко приходят в
+      // одном тике до того, как React закоммитит zoom из первого onZoomChange.
+      // Без этой строки второе событие считало бы дельту от того же
+      // устаревшего zoomRef.current (обновляется только раз за рендер, см.
+      // строку выше), удваивая изменение — отсюда дёрганье и скачки zoom
+      // при pinch на тач-устройствах.
+      zoomRef.current = newZoom;
+    }
 
     const mid = midpoint(a, b);
     container.scrollLeft -= mid.x - gesture.lastMid.x;

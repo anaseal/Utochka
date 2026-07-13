@@ -69,6 +69,9 @@ export const useReferenceImage = () => {
     isSize,
   );
   const [zoom, setZoom] = usePersistedState<number>('app:referenceWindow:zoom', 1, isZoom);
+  const [collapsed, setCollapsed] = usePersistedState<boolean>(
+    'app:referenceWindow:collapsed', false, (v): v is boolean => typeof v === 'boolean',
+  );
 
   const applyImageUrl = useCallback((url: string | null) => {
     if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current);
@@ -132,5 +135,6 @@ export const useReferenceImage = () => {
     position, setPosition,
     size, setSize,
     zoom, setZoom: setZoomClamped,
+    collapsed, setCollapsed,
   };
 };

@@ -11,6 +11,7 @@ import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportSche
 import { mirrorCrossWeaveBeadId } from '../../../utils/crossWeaveMirror';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
+import { useStatsReserve } from '../../../hooks/useStatsReserve';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
@@ -92,6 +93,7 @@ export const CrossWeaveCanvasView = ({
 
   useWheelZoom(canvasContainerRef, onZoomChange);
   const touchGesture = useTouchPanZoom(canvasContainerRef, zoom, onZoomChange, stopDrawing);
+  const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
   const dim = useMemo(
     () => computeCanvasDim(beads, offsetX, offsetY, beadMajorRadius),
@@ -190,6 +192,7 @@ export const CrossWeaveCanvasView = ({
     <main
       data-canvas-theme={canvasTheme}
       className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}`}
+      style={{ '--stats-reserve': `${statsReserve}px` } as React.CSSProperties}
       onPointerDownCapture={touchGesture.onPointerDownCapture}
       onPointerMove={touchGesture.onPointerMove}
       onPointerDown={() => { if (activeTool !== 'flood-fill') startDrawing(); }}
@@ -245,6 +248,7 @@ export const CrossWeaveCanvasView = ({
       </section>
 
       <CanvasStats
+        ref={statsRef}
         totalCount={totalCount}
         colorStats={colorStats}
         highlightedColor={highlightedColor}

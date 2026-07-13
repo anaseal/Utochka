@@ -309,3 +309,34 @@ border: 1px solid #607086;
 .color-picker__hue--mini {
   height: 10px;
 }
+
+/* ≤767.98px: якорь (.palette__custom, ~24px кружок) на узких экранах может
+   стоять у самого края экрана (особенно внутри мобильного попапа палитры,
+   см. .palette-widget в Header.css) — center-под-триггером (left: 50% /
+   translateX(-50%) выше) выталкивает 220-260px попап за границу viewport.
+   Вместо анкера к кнопке — фиксируем оба попапа (основной пикер и мини-пикер
+   вставки цвета внутри Generate) по центру экрана, тем же приёмом, что
+   .header__overflow-panel уже использует для анкера к viewport вместо кнопки. */
+@media (max-width: 767.98px) {
+  .color-picker {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+  .color-picker::before {
+    display: none;
+  }
+
+  .color-picker__insert-popover {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100vw - 32px);
+    z-index: 140;
+  }
+}
