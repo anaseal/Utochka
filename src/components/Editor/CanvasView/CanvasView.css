@@ -53,6 +53,12 @@
   scrollbar-width: thin;
   scrollbar-color: var(--canvas-scrollbar-thumb) var(--canvas-scrollbar-track);
   padding: 30px;
+
+  /* Рисование пальцем требует ручного управления жестом (Pointer Events) —
+     без этого браузер перехватывает touchmove под скролл/pinch-zoom страницы,
+     и провести линию по бусинам не удаётся. На мобильном холст листается
+     только через zoom-контролы, не тач-скроллом. */
+  touch-action: none;
 }
 
 /* Светлая тема холста (slate-50). Переключается кнопкой в хедере,

@@ -16,6 +16,7 @@ import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
+import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
@@ -138,6 +139,15 @@ export const CanvasView = ({
 
   useWheelZoom(canvasContainerRef, onZoomChange);
 
+  // Второй палец на холсте отменяет любой начатый одним пальцем жест
+  // (мазок карандаша/ластика, драг штампа) — переключение на панораму/zoom.
+  const cancelActiveStroke = useCallback(() => {
+    stopDrawing();
+    stampDragRef.current = null;
+    setSelectionRect(null);
+  }, [stopDrawing]);
+  const touchGesture = useTouchPanZoom(canvasContainerRef, zoom, onZoomChange, cancelActiveStroke);
+
   // Шеврон (.span-controls-toggle) «пришвартован» к левому краю карточки
   // холста и осмыслен только там (за ним прячется панель, живущая у левого
   // края сетки) — как только пользователь скроллит вправо, эта панель уезжает
@@ -252,11 +262,11 @@ export const CanvasView = ({
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
-  const handleMouseEnter = useCallback((id: string) => {
+  const handlePointerEnter = useCallback((id: string) => {
     if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && isDrawing) applyPaint(id);
   }, [activeTool, isDrawing, applyPaint]);
 
-  const handleMouseDown = useCallback((id: string) => {
+  const handlePointerDown = useCallback((id: string) => {
     if (activeTool === 'stamp') return;
     if (activeTool === 'flood-fill') {
       onFloodFill(id);
@@ -296,7 +306,7 @@ export const CanvasView = ({
     return nearest;
   }, [beads]);
 
-  const handleStampContainerMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleStampContainerPointerDown = useCallback((e: React.PointerEvent) => {
     if (activeTool !== 'stamp') return;
     const beadPoint = toBeadCoords(e.clientX, e.clientY);
     if (!beadPoint) return;
@@ -307,8 +317,8 @@ export const CanvasView = ({
     };
   }, [activeTool, toBeadCoords]);
 
-  const handleStampContainerMouseMove = useCallback((e: React.MouseEvent) => {
-    if (activeTool !== 'stamp') return;
+  const handleStampContainerPointerMove = useCallback((e: React.PointerEvent) => {
+    if (activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;
     const drag = stampDragRef.current;
     if (drag) {
       const dx = e.clientX - drag.startClient.x;
@@ -335,10 +345,10 @@ export const CanvasView = ({
       const nearest = beadPoint ? findNearestNode(beadPoint) : null;
       onStampHover(nearest?.id ?? null);
     }
-  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover]);
+  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover, touchGesture.isMultiTouch]);
 
-  const handleStampContainerMouseUp = useCallback((e: React.MouseEvent) => {
-    if (activeTool !== 'stamp') return;
+  const handleStampContainerPointerUp = useCallback((e: React.PointerEvent) => {
+    if (activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;
     const drag = stampDragRef.current;
     stampDragRef.current = null;
     if (!drag) return;
@@ -361,9 +371,9 @@ export const CanvasView = ({
       const nearest = findNearestNode(drag.startBead);
       if (nearest) onStampPlace(nearest.id);
     }
-  }, [activeTool, toBeadCoords, beads, onStampSelect, stampPattern, findNearestNode, onStampPlace]);
+  }, [activeTool, toBeadCoords, beads, onStampSelect, stampPattern, findNearestNode, onStampPlace, touchGesture.isMultiTouch]);
 
-  const handleStampContainerMouseLeave = useCallback(() => {
+  const handleStampContainerPointerLeave = useCallback(() => {
     stampDragRef.current = null;
     setSelectionRect(null);
     onStampHover(null);
@@ -381,9 +391,12 @@ export const CanvasView = ({
     <main
       data-canvas-theme={canvasTheme}
       className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}`}
-      onMouseDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') startDrawing(); }}
-      onMouseUp={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
-      onMouseLeave={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
+      onPointerDownCapture={touchGesture.onPointerDownCapture}
+      onPointerMove={touchGesture.onPointerMove}
+      onPointerDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') startDrawing(); }}
+      onPointerUp={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
+      onPointerCancel={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
+      onPointerLeave={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
@@ -397,10 +410,10 @@ export const CanvasView = ({
             className="canvas__svg"
             data-canvas-theme={canvasTheme}
             ref={canvasContainerRef}
-            onMouseDown={handleStampContainerMouseDown}
-            onMouseMove={handleStampContainerMouseMove}
-            onMouseUp={handleStampContainerMouseUp}
-            onMouseLeave={handleStampContainerMouseLeave}
+            onPointerDown={handleStampContainerPointerDown}
+            onPointerMove={handleStampContainerPointerMove}
+            onPointerUp={handleStampContainerPointerUp}
+            onPointerLeave={handleStampContainerPointerLeave}
           >
             <svg
               ref={canvasSvgRef}
@@ -444,8 +457,8 @@ export const CanvasView = ({
                       (stampPreviewIds?.has(bead.id) ?? false) ||
                       (colorHighlightedBeadIds?.has(bead.id) ?? false)
                     }
-                    onMouseEnter={handleMouseEnter}
-                    onMouseDown={handleMouseDown}
+                    onPointerEnter={handlePointerEnter}
+                    onPointerDown={handlePointerDown}
                   />
                 ))}
 
@@ -491,7 +504,7 @@ export const CanvasView = ({
             type="button"
             className={`span-controls-toggle${isScrolledFromLeft ? ' span-controls-toggle--hidden' : ''}`}
             onClick={() => setSpanControlsExpanded(v => !v)}
-            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             title={spanControlsExpanded ? 'Hide bead count editor' : 'Show bead count editor'}
             aria-pressed={spanControlsExpanded}
           >

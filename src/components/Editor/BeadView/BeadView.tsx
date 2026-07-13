@@ -12,8 +12,8 @@ interface BeadViewProps {
   color?: string;
   defaultColor: string;
   highlighted?: boolean;
-  onMouseDown: (id: string) => void;
-  onMouseEnter: (id: string) => void;
+  onPointerDown: (id: string) => void;
+  onPointerEnter: (id: string) => void;
 }
 
 export const BeadView = memo(({
@@ -24,8 +24,8 @@ export const BeadView = memo(({
   color,
   defaultColor,
   highlighted,
-  onMouseDown,
-  onMouseEnter
+  onPointerDown,
+  onPointerEnter
 }: BeadViewProps) => {
   const isNode = type === 'NODE';
   const isEmpty = !color;
@@ -36,8 +36,15 @@ export const BeadView = memo(({
   return (
     <g
       className={`bead ${isNode ? 'bead--type-node' : 'bead--type-span'}${isEmpty ? ' bead--empty' : ''}`}
-      onMouseEnter={() => onMouseEnter(id)}
-      onMouseDown={() => onMouseDown(id)}
+      onPointerEnter={() => onPointerEnter(id)}
+      onPointerDown={(e) => {
+        // Отключает implicit pointer capture на тач-устройствах: без этого
+        // touchmove продолжает таргетить бусину, на которой было касание,
+        // и onPointerEnter соседних бусин никогда не срабатывает при проводке
+        // пальцем — рисование линией на мобильном не работало бы вовсе.
+        e.currentTarget.releasePointerCapture(e.pointerId);
+        onPointerDown(id);
+      }}
     >
       <circle
         className="bead__hitbox"

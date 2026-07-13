@@ -10,6 +10,7 @@ import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportScheme';
 import { mirrorCrossWeaveBeadId } from '../../../utils/crossWeaveMirror';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
+import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
@@ -90,6 +91,7 @@ export const CrossWeaveCanvasView = ({
   const { beadMajorRadius } = CROSS_WEAVE_THEME.sizes;
 
   useWheelZoom(canvasContainerRef, onZoomChange);
+  const touchGesture = useTouchPanZoom(canvasContainerRef, zoom, onZoomChange, stopDrawing);
 
   const dim = useMemo(
     () => computeCanvasDim(beads, offsetX, offsetY, beadMajorRadius),
@@ -156,11 +158,11 @@ export const CrossWeaveCanvasView = ({
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
-  const handleMouseEnter = useCallback((id: string) => {
+  const handlePointerEnter = useCallback((id: string) => {
     if (activeTool !== 'flood-fill' && isDrawing) applyPaint(id);
   }, [activeTool, isDrawing, applyPaint]);
 
-  const handleMouseDown = useCallback((id: string) => {
+  const handlePointerDown = useCallback((id: string) => {
     if (activeTool === 'flood-fill') {
       onFloodFill(id);
     } else {
@@ -188,9 +190,12 @@ export const CrossWeaveCanvasView = ({
     <main
       data-canvas-theme={canvasTheme}
       className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}`}
-      onMouseDown={() => { if (activeTool !== 'flood-fill') startDrawing(); }}
-      onMouseUp={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
-      onMouseLeave={() => { if (activeTool !== 'flood-fill') stopDrawing(); }}
+      onPointerDownCapture={touchGesture.onPointerDownCapture}
+      onPointerMove={touchGesture.onPointerMove}
+      onPointerDown={() => { if (activeTool !== 'flood-fill') startDrawing(); }}
+      onPointerUp={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill') stopDrawing(); }}
+      onPointerCancel={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill') stopDrawing(); }}
+      onPointerLeave={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill') stopDrawing(); }}
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
@@ -230,8 +235,8 @@ export const CrossWeaveCanvasView = ({
                   color={designMap[bead.id]}
                   defaultColor={defaultColorForCrossWeave()}
                   highlighted={colorHighlightedBeadIds?.has(bead.id) ?? false}
-                  onMouseEnter={handleMouseEnter}
-                  onMouseDown={handleMouseDown}
+                  onPointerEnter={handlePointerEnter}
+                  onPointerDown={handlePointerDown}
                 />
               ))}
             </g>

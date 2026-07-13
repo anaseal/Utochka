@@ -12,8 +12,8 @@ interface CrossWeaveBeadViewProps {
   color?: string;
   defaultColor: string;
   highlighted?: boolean;
-  onMouseDown: (id: string) => void;
-  onMouseEnter: (id: string) => void;
+  onPointerDown: (id: string) => void;
+  onPointerEnter: (id: string) => void;
 }
 
 export const CrossWeaveBeadView = memo(({
@@ -24,8 +24,8 @@ export const CrossWeaveBeadView = memo(({
   color,
   defaultColor,
   highlighted,
-  onMouseDown,
-  onMouseEnter,
+  onPointerDown,
+  onPointerEnter,
 }: CrossWeaveBeadViewProps) => {
   const isEmpty = !color;
   const finalColor = color || defaultColor;
@@ -37,8 +37,11 @@ export const CrossWeaveBeadView = memo(({
   return (
     <g
       className={`bead bead--type-span${isEmpty ? ' bead--empty' : ''}`}
-      onMouseEnter={() => onMouseEnter(id)}
-      onMouseDown={() => onMouseDown(id)}
+      onPointerEnter={() => onPointerEnter(id)}
+      onPointerDown={(e) => {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+        onPointerDown(id);
+      }}
     >
       <ellipse
         className="bead__hitbox"

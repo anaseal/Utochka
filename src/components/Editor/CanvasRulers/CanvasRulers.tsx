@@ -37,7 +37,7 @@ const SpanCtrlButton = ({
 }) => (
   <g
     className={`span-ctrl__btn-group span-ctrl__btn-group--${type}`}
-    onMouseDown={(e) => e.stopPropagation()}
+    onPointerDown={(e) => e.stopPropagation()}
     onClick={(e) => { e.stopPropagation(); onClick(); }}
   >
     <rect

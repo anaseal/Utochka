@@ -48,12 +48,12 @@ export const PendantLayer = ({
       .map((p) => p.col),
   );
 
-  const handleMouseDown = useCallback((id: string) => {
+  const handlePointerDown = useCallback((id: string) => {
     const [placementId, idx] = id.split(ID_SEP);
     onPaintBead(placementId, Number(idx));
   }, [onPaintBead]);
 
-  const handleMouseEnter = useCallback((id: string) => {
+  const handlePointerEnter = useCallback((id: string) => {
     if (!isDrawing) return;
     const [placementId, idx] = id.split(ID_SEP);
     onPaintBead(placementId, Number(idx));
@@ -145,8 +145,11 @@ export const PendantLayer = ({
                 <g
                   key={index}
                   className={groupClassName}
-                  onMouseDown={() => handleMouseDown(id)}
-                  onMouseEnter={() => handleMouseEnter(id)}
+                  onPointerEnter={() => handlePointerEnter(id)}
+                  onPointerDown={(e) => {
+                    e.currentTarget.releasePointerCapture(e.pointerId);
+                    handlePointerDown(id);
+                  }}
                 >
                   {isHighlighted && (
                     <circle
@@ -202,7 +205,7 @@ export const PendantLayer = ({
             <g
               className="pendant-remove-btn"
               transform={`translate(${anchor.x}, ${anchor.y + removeBtnY})`}
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 onRemove(placement.placementId);

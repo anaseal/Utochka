@@ -14,7 +14,7 @@ export const CanvasChrome = ({ canvasTheme, onToggleCanvasTheme, onExport }: Can
       type="button"
       className="canvas-theme-toggle"
       onClick={onToggleCanvasTheme}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       title={canvasTheme === 'dark' ? 'Light canvas' : 'Dark canvas'}
       aria-label={canvasTheme === 'dark' ? 'Switch to light canvas' : 'Switch to dark canvas'}
     >
@@ -25,7 +25,7 @@ export const CanvasChrome = ({ canvasTheme, onToggleCanvasTheme, onExport }: Can
       type="button"
       className="export-btn"
       onClick={onExport}
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       title="Download PNG"
     >
       <Download size={13} />
