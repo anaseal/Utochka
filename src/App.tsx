@@ -13,7 +13,7 @@ import { DrawingTool } from './hooks/useDrawing';
 import { APP_CONSTRAINTS } from './config/theme';
 import { clamp } from './utils/clamp';
 import { exportProject, importProject, applyProjectData } from './utils/projectFile';
-import { buildFragmentUrl, parseShareHash, shortenViaIsGd } from './utils/shareLink';
+import { buildShareUrl, parseShareHash } from './utils/shareLink';
 import { Toast } from './components/Toast/Toast';
 
 const DEFAULT_PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'];
@@ -66,22 +66,20 @@ function App() {
   const handleShareProject = async () => {
     let url: string;
     try {
-      url = await buildFragmentUrl();
+      url = await buildShareUrl();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Не удалось создать ссылку.');
       return;
     }
-    const short = await shortenViaIsGd(url);
-    const finalUrl = short ?? url;
     try {
-      await navigator.clipboard.writeText(finalUrl);
+      await navigator.clipboard.writeText(url);
       showToast('Ссылка скопирована');
     } catch {
       // Клипборд может отказать (например, если между кликом и записью
-      // прошло слишком много времени из-за ожидания is.gd, и браузер
+      // прошло слишком много времени из-за сетевого запроса, и браузер
       // успел снять разрешение) — тогда отдаём ссылку вручную, чтобы
       // шеринг не проваливался молча.
-      window.prompt('Не удалось скопировать автоматически — скопируйте ссылку вручную:', finalUrl);
+      window.prompt('Не удалось скопировать автоматически — скопируйте ссылку вручную:', url);
     }
   };
 

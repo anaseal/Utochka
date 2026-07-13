@@ -1,18 +1,17 @@
 // Ссылка на схему через #-фрагмент URL: тот же JSON, что и в файле проекта
 // (см. projectFile.ts, без картинки референса), сжат gzip'ом через
 // встроенный CompressionStream и закодирован в base64url — новых
-// npm-зависимостей не требуется. #-фрагмент никогда не уходит на сервер, так
-// что для самой ссылки бэкенд не нужен.
-//
-// Для сокращения длинной ссылки используется публичный API is.gd через
-// JSONP (он сам это рекомендует для браузерных вызовов — без CORS и без
-// собственного бэкенда). Если сервис недоступен, вызывающий код откатывается
-// на длинную ссылку — сокращение не является обязательным условием шаринга.
+// npm-зависимостей на клиенте не требуется. #-фрагмент никогда не уходит на
+// сервер сам по себе — но чтобы получить короткую ссылку, сжатые данные всё
+// же отправляются на свой бэкенд (api/share.ts, Vercel Edge Function + Redis)
+// и возвращается только id записи. При недоступности бэкенда — откат на
+// длинную ссылку с данными прямо в hash, без прерывания сценария.
 
 import { buildProjectData, isProjectFile, type ProjectFile } from './projectFile';
 
-const HASH_PREFIX = '#s=';
-const IS_GD_TIMEOUT_MS = 5000;
+const HASH_PREFIX_LOCAL = '#s=';
+const HASH_PREFIX_BACKEND = '#g=';
+const SHARE_API = '/api/share';
 
 const bytesToBase64Url = (bytes: Uint8Array): string => {
   let binary = '';
@@ -42,52 +41,71 @@ const decompress = async (bytes: Uint8Array): Promise<string> => {
   return new Response(stream).text();
 };
 
-export const buildFragmentUrl = async (): Promise<string> => {
+const buildPayload = async (): Promise<string> => {
   if (!isCompressionSupported()) {
     throw new Error('Браузер не поддерживает создание ссылок — обновите браузер.');
   }
   const compressed = await compress(JSON.stringify(buildProjectData()));
-  return `${location.origin}${location.pathname}${HASH_PREFIX}${bytesToBase64Url(compressed)}`;
+  return bytesToBase64Url(compressed);
 };
 
-// Разбирает #-фрагмент текущего адреса. Возвращает null, если это не
-// Share-ссылка или она повреждена — вызывающий код в этом случае просто
-// ничего не предлагает загрузить.
-export const parseShareHash = async (hash: string): Promise<ProjectFile | null> => {
-  if (!hash.startsWith(HASH_PREFIX) || !isCompressionSupported()) return null;
+// Сохраняет схему на бэкенде и возвращает id короткой ссылки. null — при
+// любой сетевой ошибке или ответе не-2xx, вызывающий код в этом случае
+// откатывается на длинную ссылку — сокращение не обязательное условие шаринга.
+const saveToBackend = async (payload: string): Promise<string | null> => {
   try {
-    const json = await decompress(base64UrlToBytes(hash.slice(HASH_PREFIX.length)));
-    const parsed = JSON.parse(json);
-    return isProjectFile(parsed) ? parsed : null;
+    const res = await fetch(SHARE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: payload,
+    });
+    if (!res.ok) return null;
+    const { id } = (await res.json()) as { id?: unknown };
+    return typeof id === 'string' ? id : null;
   } catch {
     return null;
   }
 };
 
-// JSONP-запрос к is.gd. При любой ошибке или таймауте возвращает null —
-// колбэк-параметр создаётся с уникальным именем на каждый вызов, чтобы
-// параллельные попытки (двойной клик по Share) не затирали друг друга.
-export const shortenViaIsGd = (longUrl: string): Promise<string | null> => {
-  return new Promise((resolve) => {
-    const callbackName = `__isGdCallback_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    let settled = false;
-    const globals = window as unknown as Record<string, unknown>;
+const loadFromBackend = async (id: string): Promise<string | null> => {
+  try {
+    const res = await fetch(`${SHARE_API}?id=${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    const { data } = (await res.json()) as { data?: unknown };
+    return typeof data === 'string' ? data : null;
+  } catch {
+    return null;
+  }
+};
 
-    const finish = (result: string | null) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      delete globals[callbackName];
-      script.remove();
-      resolve(result);
-    };
+export const buildShareUrl = async (): Promise<string> => {
+  const payload = await buildPayload();
+  const base = `${location.origin}${location.pathname}`;
+  const id = await saveToBackend(payload);
+  return id ? `${base}${HASH_PREFIX_BACKEND}${id}` : `${base}${HASH_PREFIX_LOCAL}${payload}`;
+};
 
-    const timer = setTimeout(() => finish(null), IS_GD_TIMEOUT_MS);
+// Разбирает #-фрагмент текущего адреса. Возвращает null, если это не
+// Share-ссылка или она повреждена/не найдена — вызывающий код в этом случае
+// просто ничего не предлагает загрузить.
+export const parseShareHash = async (hash: string): Promise<ProjectFile | null> => {
+  if (!isCompressionSupported()) return null;
 
-    globals[callbackName] = (response: { shorturl?: string }) => finish(response?.shorturl ?? null);
-    script.onerror = () => finish(null);
-    script.src = `https://is.gd/create.php?format=json&callback=${callbackName}&url=${encodeURIComponent(longUrl)}`;
-    document.head.appendChild(script);
-  });
+  let payload: string | null;
+  if (hash.startsWith(HASH_PREFIX_BACKEND)) {
+    payload = await loadFromBackend(hash.slice(HASH_PREFIX_BACKEND.length));
+  } else if (hash.startsWith(HASH_PREFIX_LOCAL)) {
+    payload = hash.slice(HASH_PREFIX_LOCAL.length);
+  } else {
+    return null;
+  }
+  if (!payload) return null;
+
+  try {
+    const json = await decompress(base64UrlToBytes(payload));
+    const parsed = JSON.parse(json);
+    return isProjectFile(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 };
