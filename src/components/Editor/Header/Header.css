@@ -251,11 +251,6 @@
    Undo/Redo/Clear/Save/Load/Share (.grid-controls__toolbar), см. блок ниже. */
 .tool-group { display: contents; }
 
-/* Дубль Reference-кнопки внутри tool-group — виден только на ≤767.98px
-   (занимает пустующий 6-й слот 2×3-сетки), на остальных ширинах остаётся
-   только основная копия после toolbar (.tool-btn--reference-standalone). */
-.tool-btn--reference-grid { display: none; }
-
 .tool-btn {
   width: 1.625rem;
   height: 1.625rem;
@@ -271,6 +266,16 @@
   transition: all 0.2s;
   opacity: 0.6;
 }
+
+/* Дубль Reference-кнопки внутри tool-group — виден только на ≤767.98px
+   (занимает пустующий 6-й слот 2×3-сетки), на остальных ширинах остаётся
+   только основная копия после toolbar (.tool-btn--reference-standalone).
+   Это правило должно идти ПОСЛЕ .tool-btn выше: у обоих селекторов
+   одинаковая специфичность (один класс), и при равенстве специфичности
+   побеждает то, что позже в файле — если поставить это правило раньше
+   .tool-btn (как было раньше), его display:none перебивается display:flex
+   из .tool-btn, и дубль виснет видимым на всех ширинах. */
+.tool-btn--reference-grid { display: none; }
 .tool-btn:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.2); }
 .tool-btn--lg { width: 2.25rem; height: 2.25rem; }
 .tool-btn--active {

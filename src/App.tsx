@@ -14,6 +14,7 @@ import { APP_CONSTRAINTS } from './config/theme';
 import { clamp } from './utils/clamp';
 import { exportProject, importProject, applyProjectData } from './utils/projectFile';
 import { buildFragmentUrl, parseShareHash, shortenViaIsGd } from './utils/shareLink';
+import { Toast } from './components/Toast/Toast';
 
 const DEFAULT_PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'];
 
@@ -37,6 +38,13 @@ function App() {
   const [referenceOpen, setReferenceOpen] = usePersistedState<boolean>(
     'app:referenceWindow:open', false, isBoolean,
   );
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  const showToast = (message: string) => setToast({ id: Date.now(), message });
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2200);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const updateZoom = (delta: number) => {
     setZoom(prev => clamp(prev + delta, APP_CONSTRAINTS.minZoom, APP_CONSTRAINTS.maxZoom));
@@ -64,15 +72,16 @@ function App() {
       return;
     }
     const short = await shortenViaIsGd(url);
-    await navigator.clipboard.writeText(short ?? url);
-    if (!short) {
-      const isLocalhost = /^(localhost|127\.|\[::1\]|0\.0\.0\.0)/.test(location.hostname);
-      const reason = isLocalhost
-        ? 'сервис сокращения не работает с localhost — на реальном домене сократит'
-        : 'сервис сокращения сейчас недоступен';
-      const truncationNote = url.length > 8000
-        ? ' Ссылка длинная — некоторые мессенджеры могут её обрезать.' : '';
-      alert(`Скопирована полная ссылка, не короткая (${reason}).${truncationNote}`);
+    const finalUrl = short ?? url;
+    try {
+      await navigator.clipboard.writeText(finalUrl);
+      showToast('Ссылка скопирована');
+    } catch {
+      // Клипборд может отказать (например, если между кликом и записью
+      // прошло слишком много времени из-за ожидания is.gd, и браузер
+      // успел снять разрешение) — тогда отдаём ссылку вручную, чтобы
+      // шеринг не проваливался молча.
+      window.prompt('Не удалось скопировать автоматически — скопируйте ссылку вручную:', finalUrl);
     }
   };
 
@@ -370,6 +379,8 @@ function App() {
       )}
 
       <ReferenceWindow open={referenceOpen} setOpen={setReferenceOpen} />
+
+      {toast && <Toast key={toast.id} message={toast.message} />}
     </main>
   );
 }
