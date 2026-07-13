@@ -7,10 +7,13 @@ import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { CrossWeaveCanvasView } from './components/Editor/CanvasView/CrossWeaveCanvasView';
 import { Header, Technique } from './components/Editor/Header/Header';
 import { PendantsSidebar } from './components/Sidebar/PendantsSidebar';
+import { ReferenceWindow } from './components/Editor/ReferenceWindow/ReferenceWindow';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
 import { DrawingTool } from './hooks/useDrawing';
 import { APP_CONSTRAINTS } from './config/theme';
 import { clamp } from './utils/clamp';
+import { exportProject, importProject, applyProjectData } from './utils/projectFile';
+import { buildFragmentUrl, parseShareHash, shortenViaIsGd } from './utils/shareLink';
 
 const DEFAULT_PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'];
 
@@ -22,12 +25,17 @@ const isTechnique = (v: unknown): v is Technique => v === 'silyanka' || v === 'c
 const isPalette = (v: unknown): v is string[] =>
   Array.isArray(v) && v.length > 0 && v.every(c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c));
 
+const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
+
 function App() {
   const [technique, setTechnique] = usePersistedState<Technique>('app:technique', 'silyanka', isTechnique);
   const [zoom, setZoom] = usePersistedState<number>('app:zoom', 1, isZoom);
   const [palette, setPalette] = usePersistedState<string[]>('app:palette', DEFAULT_PALETTE, isPalette);
   const [canvasTheme, setCanvasTheme] = usePersistedState<'dark' | 'light'>(
     'app:canvasTheme', 'dark', (v): v is 'dark' | 'light' => v === 'dark' || v === 'light',
+  );
+  const [referenceOpen, setReferenceOpen] = usePersistedState<boolean>(
+    'app:referenceWindow:open', false, isBoolean,
   );
 
   const updateZoom = (delta: number) => {
@@ -36,6 +44,53 @@ function App() {
   const setZoomAbsolute = (v: number) => {
     setZoom(clamp(v, APP_CONSTRAINTS.minZoom, APP_CONSTRAINTS.maxZoom));
   };
+
+  const handleLoadProject = async (file: File) => {
+    if (!window.confirm('Текущая работа будет заменена, продолжить?')) return;
+    try {
+      await importProject(file);
+      window.location.reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Не удалось загрузить проект.');
+    }
+  };
+
+  const handleShareProject = async () => {
+    let url: string;
+    try {
+      url = await buildFragmentUrl();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Не удалось создать ссылку.');
+      return;
+    }
+    const short = await shortenViaIsGd(url);
+    await navigator.clipboard.writeText(short ?? url);
+    if (!short) {
+      const isLocalhost = /^(localhost|127\.|\[::1\]|0\.0\.0\.0)/.test(location.hostname);
+      const reason = isLocalhost
+        ? 'сервис сокращения не работает с localhost — на реальном домене сократит'
+        : 'сервис сокращения сейчас недоступен';
+      const truncationNote = url.length > 8000
+        ? ' Ссылка длинная — некоторые мессенджеры могут её обрезать.' : '';
+      alert(`Скопирована полная ссылка, не короткая (${reason}).${truncationNote}`);
+    }
+  };
+
+  // Ссылку-Share (см. src/utils/shareLink.ts) можно открыть только один раз
+  // за загрузку страницы — сразу после обработки хэш чистится через
+  // history.replaceState, иначе confirm() всплывал бы повторно на каждом
+  // F5/навигации назад.
+  useEffect(() => {
+    (async () => {
+      const data = await parseShareHash(window.location.hash);
+      if (!data) return;
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (!window.confirm('Загрузить схему из ссылки? Текущая работа будет заменена.')) return;
+      applyProjectData(data);
+      window.location.reload();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Оба хука вызываются безусловно (Rules of Hooks) — неактивная техника
   // просто не монтируется в разметке, но её состояние живёт и не пропадает
@@ -151,6 +206,9 @@ function App() {
           recentColors={silyanka.drawingControls.recentColors}
           commitRecentColor={silyanka.drawingControls.commitRecentColor}
           onClearAll={silyanka.drawingControls.clearAll}
+          onSaveProject={exportProject}
+          onLoadProject={handleLoadProject}
+          onShareProject={handleShareProject}
           zoom={zoom}
           onZoomChange={updateZoom}
           onSetZoom={setZoomAbsolute}
@@ -158,6 +216,8 @@ function App() {
           onRedo={silyanka.drawingControls.redo}
           canUndo={silyanka.drawingControls.canUndo}
           canRedo={silyanka.drawingControls.canRedo}
+          referenceWindowOpen={referenceOpen}
+          onToggleReferenceWindow={() => setReferenceOpen(o => !o)}
           silyankaProps={{
             // Линейка на холсте — источник правды: чётный ряд её колонок на 1 меньше
             // gridSize.width, а ряд её строк на 1 больше gridSize.height (см. spec.md,
@@ -202,6 +262,9 @@ function App() {
           recentColors={crossWeave.drawingControls.recentColors}
           commitRecentColor={crossWeave.drawingControls.commitRecentColor}
           onClearAll={crossWeave.drawingControls.clearAll}
+          onSaveProject={exportProject}
+          onLoadProject={handleLoadProject}
+          onShareProject={handleShareProject}
           zoom={zoom}
           onZoomChange={updateZoom}
           onSetZoom={setZoomAbsolute}
@@ -209,6 +272,8 @@ function App() {
           onRedo={crossWeave.drawingControls.redo}
           canUndo={crossWeave.drawingControls.canUndo}
           canRedo={crossWeave.drawingControls.canRedo}
+          referenceWindowOpen={referenceOpen}
+          onToggleReferenceWindow={() => setReferenceOpen(o => !o)}
           crossWeaveProps={{
             gridWidth: crossWeave.gridSize.width,
             gridHeight: crossWeave.gridSize.height,
@@ -270,6 +335,7 @@ function App() {
           onZoomChange={updateZoom}
           designMap={crossWeave.drawingControls.designMap}
           activeTool={crossWeave.drawingControls.activeTool}
+          activeColor={crossWeave.drawingControls.activeColor}
           isDrawing={crossWeave.drawingControls.isDrawing}
           paintBead={crossWeave.drawingControls.paintBead}
           startDrawing={crossWeave.drawingControls.startDrawing}
@@ -277,6 +343,7 @@ function App() {
           mirrorMode={crossWeave.mirrorMode}
           rawWidth={crossWeave.rawWidth}
           onFloodFill={crossWeave.handleFloodFill}
+          applyPatch={crossWeave.drawingControls.applyPatch}
         />
       )}
 
@@ -301,6 +368,8 @@ function App() {
           onBottomEdgeToggle={silyanka.toggleBottomEdgeEnabled}
         />
       )}
+
+      <ReferenceWindow open={referenceOpen} setOpen={setReferenceOpen} />
     </main>
   );
 }

@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001/api/generate-palette';
+const API_URL = '/api/generate-palette';
 
 const hexToRgbTuple = (hex: string): [number, number, number] => {
   const n = parseInt(hex.replace('#', ''), 16);

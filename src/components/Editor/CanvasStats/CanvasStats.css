@@ -64,11 +64,31 @@
 .stats__color-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: 6px;
+  padding: 4px 6px 4px 4px;
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stats__color-badge--active {
+  border-color: #22d3ee;
+  background-color: rgba(34, 211, 238, 0.12);
+}
+
+.stats__indicator-btn {
+  display: flex;
+  padding: 2px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.stats__indicator-btn:hover .stats__indicator {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 1px;
 }
 
 .stats__indicator {
@@ -83,6 +103,30 @@
   font-family: monospace;
   font-size: 13px;
   line-height: 1;
+}
+
+.stats__replace-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.stats__replace-btn:hover {
+  color: #e2e8f0;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.stats__replace-btn:disabled {
+  color: #475569;
+  cursor: default;
+  background: none;
 }
 
 /* Tablet: compact spacing, allow color badges to wrap into multiple rows */

@@ -1,5 +1,5 @@
 /* FILE: src\components\Editor\CanvasView\CrossWeaveCanvasView.tsx */
-import { useMemo, useCallback, useRef } from 'react';
+import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { CrossWeaveBead } from '../../../types/crossWeaveBead';
 import { CrossWeaveBeadView } from '../BeadView/CrossWeaveBeadView';
 import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
@@ -13,6 +13,7 @@ import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
+import { swapColorInMap } from '../../../utils/colorSwap';
 import './CanvasView.css';
 
 interface CrossWeaveCanvasViewProps {
@@ -23,6 +24,7 @@ interface CrossWeaveCanvasViewProps {
   onToggleCanvasTheme: () => void;
   designMap: Record<string, string>;
   activeTool: DrawingTool;
+  activeColor: string;
   isDrawing: boolean;
   paintBead: (id: string) => void;
   startDrawing: () => void;
@@ -32,6 +34,10 @@ interface CrossWeaveCanvasViewProps {
   mirrorMode: boolean;
   rawWidth: number;
   onFloodFill: (id: string) => void;
+  applyPatch: (
+    designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
+    pendantsFn: null,
+  ) => void;
 }
 
 // CrossWeave — MVP-канвас: карандаш/ластик/заливка + Mirror Mode, без stamp/подвесок.
@@ -45,6 +51,7 @@ export const CrossWeaveCanvasView = ({
   onToggleCanvasTheme,
   designMap,
   activeTool,
+  activeColor,
   isDrawing,
   paintBead,
   startDrawing,
@@ -54,9 +61,29 @@ export const CrossWeaveCanvasView = ({
   mirrorMode,
   rawWidth,
   onFloodFill,
+  applyPatch,
 }: CrossWeaveCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
+  const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!highlightedColor) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHighlightedColor(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [highlightedColor]);
+
+  const handleToggleHighlight = useCallback((color: string) => {
+    setHighlightedColor((c) => (c === color ? null : color));
+  }, []);
+
+  const handleReplaceColor = useCallback((oldColor: string) => {
+    applyPatch((m) => swapColorInMap(m, oldColor, activeColor), null);
+    setHighlightedColor((c) => (c === oldColor ? null : c));
+  }, [applyPatch, activeColor]);
 
   const offsetX = 60;
   const offsetY = 60;
@@ -75,6 +102,16 @@ export const CrossWeaveCanvasView = ({
   );
 
   const totalCount = beads.length;
+
+  const colorHighlightedBeadIds = useMemo(() => {
+    if (!highlightedColor) return null;
+    const ids = new Set<string>();
+    beads.forEach((b) => {
+      const effective = designMap[b.id] || defaultColorForCrossWeave();
+      if (effective === highlightedColor) ids.add(b.id);
+    });
+    return ids;
+  }, [highlightedColor, beads, designMap]);
 
   // Границы для обрезки PNG по узору при экспорте (координаты корневого
   // <svg>, с учётом translate(offsetX, offsetY)) — впритык к закрашенным
@@ -192,6 +229,7 @@ export const CrossWeaveCanvasView = ({
                   orientation={bead.orientation}
                   color={designMap[bead.id]}
                   defaultColor={defaultColorForCrossWeave()}
+                  highlighted={colorHighlightedBeadIds?.has(bead.id) ?? false}
                   onMouseEnter={handleMouseEnter}
                   onMouseDown={handleMouseDown}
                 />
@@ -201,7 +239,14 @@ export const CrossWeaveCanvasView = ({
         </div>
       </section>
 
-      <CanvasStats totalCount={totalCount} colorStats={colorStats} />
+      <CanvasStats
+        totalCount={totalCount}
+        colorStats={colorStats}
+        highlightedColor={highlightedColor}
+        onToggleHighlight={handleToggleHighlight}
+        activeColor={activeColor}
+        onReplaceColor={handleReplaceColor}
+      />
 
       <CanvasChrome
         canvasTheme={canvasTheme}

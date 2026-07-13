@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil,
-  ArrowUpToLine, ArrowDownToLine,
+  ArrowUpToLine, ArrowDownToLine, Image, Download, Upload, Share2,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
@@ -23,6 +23,9 @@ interface SharedHeaderProps {
   recentColors: string[];
   commitRecentColor: (color: string) => void;
   onClearAll: () => void;
+  onSaveProject: () => void;
+  onLoadProject: (file: File) => void;
+  onShareProject: () => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
   onSetZoom?: (v: number) => void;
@@ -32,6 +35,8 @@ interface SharedHeaderProps {
   canRedo: boolean;
   technique: Technique;
   onTechniqueChange: (technique: Technique) => void;
+  referenceWindowOpen: boolean;
+  onToggleReferenceWindow: () => void;
 }
 
 interface SilyankaHeaderProps {
@@ -194,9 +199,11 @@ const Stepper = ({
 export const Header = (props: HeaderProps) => {
   const {
     palette, onPaletteChange, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
+    onSaveProject, onLoadProject, onShareProject,
     zoom, onZoomChange, onSetZoom,
     onUndo, onRedo, canUndo, canRedo,
     technique, onTechniqueChange,
+    referenceWindowOpen, onToggleReferenceWindow,
   } = props;
 
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
@@ -206,6 +213,13 @@ export const Header = (props: HeaderProps) => {
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
   const overflowTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const loadInputRef = useRef<HTMLInputElement>(null);
+  const handleLoadInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) onLoadProject(file);
+  };
 
   useEffect(() => {
     if (!overflowOpen) return;
@@ -558,22 +572,45 @@ export const Header = (props: HeaderProps) => {
             <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
             <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
             <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">CLEAR</button>
+            <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
+              <Download size={14} />
+            </button>
+            <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
+              <Upload size={14} />
+            </button>
+            <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
+              <Share2 size={14} />
+            </button>
+            <input
+              ref={loadInputRef}
+              type="file"
+              accept="application/json"
+              className="header__file-input"
+              onChange={handleLoadInputChange}
+            />
           </div>
         </div>
 
-        {silyankaProps && (
-          <>
-            <div className="header__divider" />
+        <div className="header__divider" />
 
-            <button
-              onClick={silyankaProps.onToggleSidebar}
-              className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
-              title="Pendant library"
-              aria-pressed={silyankaProps.sidebarOpen}
-            >
-              <PendantIcon size={22} />
-            </button>
-          </>
+        <button
+          onClick={onToggleReferenceWindow}
+          className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
+          title="Reference image"
+          aria-pressed={referenceWindowOpen}
+        >
+          <Image size={14} />
+        </button>
+
+        {silyankaProps && (
+          <button
+            onClick={silyankaProps.onToggleSidebar}
+            className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
+            title="Pendant library"
+            aria-pressed={silyankaProps.sidebarOpen}
+          >
+            <PendantIcon size={22} />
+          </button>
         )}
       </nav>
     </header>

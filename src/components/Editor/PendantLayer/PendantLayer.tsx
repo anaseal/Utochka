@@ -15,6 +15,7 @@ interface PendantLayerProps {
   hoveredCol: number | null;
   mirrorMode: boolean;
   width: number;
+  highlightedColor?: string | null;
 }
 
 const ID_SEP = '::';
@@ -34,6 +35,7 @@ export const PendantLayer = ({
   hoveredCol,
   mirrorMode,
   width,
+  highlightedColor,
 }: PendantLayerProps) => {
   const nodeByCol = new Map<number, Bead>();
   bottomNodes.forEach((n) => nodeByCol.set(n.logicalIndex.col, n));
@@ -132,6 +134,12 @@ export const PendantLayer = ({
               const beadTypeClass = bead.type === 'NODE' ? 'bead--type-node' : 'bead--type-span';
               const groupClassName = `pendant-bead bead ${beadTypeClass}${!hasColor ? ' bead--empty' : ''}`;
               const bodyStyle = { '--bead-color': color } as React.CSSProperties;
+              const isHighlighted = highlightedColor === color;
+              // Радиус подсветки — как для тела бисерины (circle: r, rect: половина
+              // большей стороны), + тот же отступ 3.5, что у BeadView.
+              const highlightRadius = (bead.shape === 'circle'
+                ? (bead.r ?? 0)
+                : Math.max(bead.w ?? 0, bead.h ?? 0) / 2) * PENDANT_SCALE + 3.5;
 
               return (
                 <g
@@ -140,6 +148,15 @@ export const PendantLayer = ({
                   onMouseDown={() => handleMouseDown(id)}
                   onMouseEnter={() => handleMouseEnter(id)}
                 >
+                  {isHighlighted && (
+                    <circle
+                      className="bead__highlight"
+                      cx={cx}
+                      cy={cy}
+                      r={highlightRadius}
+                      pointerEvents="none"
+                    />
+                  )}
                   {bead.shape === 'circle' ? (
                     <>
                       <circle

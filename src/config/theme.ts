@@ -54,3 +54,16 @@ export const APP_CONSTRAINTS = {
   maxZoom: 3,
   zoomStep: 0.1,
 };
+
+// Reference Window — плавающее окно с картинкой-образцом, общее для обеих техник.
+export const REFERENCE_WINDOW = {
+  defaultWidth: 320,
+  defaultHeight: 380,
+  minWidth: 220,
+  minHeight: 200,
+  minZoom: 0.25,
+  maxZoom: 4,
+  zoomStep: 0.1,
+  downscaleMaxSide: 2000,
+  jpegQuality: 0.85,
+};

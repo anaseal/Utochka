@@ -1,5 +1,5 @@
 /* FILE: src\components\Editor\CanvasView\CanvasView.tsx */
-import { useMemo, useCallback, useRef, useState } from 'react';
+import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantPlacement, PendantTemplate } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
@@ -17,6 +17,7 @@ import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
+import { swapColorInMap, swapColorInPendants } from '../../../utils/colorSwap';
 import './CanvasView.css';
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
@@ -29,6 +30,7 @@ interface CanvasViewProps {
   onToggleCanvasTheme: () => void;
   designMap: Record<string, string>;
   activeTool: DrawingTool;
+  activeColor: string;
   isDrawing: boolean;
   paintBead: (id: string) => void;
   startDrawing: () => void;
@@ -60,6 +62,10 @@ interface CanvasViewProps {
   onStampSelect: (ids: string[]) => void;
   onStampHover: (nodeId: string | null) => void;
   onStampPlace: (nodeId: string) => void;
+  applyPatch: (
+    designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
+    pendantsFn: ((p: PendantPlacement[]) => PendantPlacement[]) | null,
+  ) => void;
 }
 
 export const CanvasView = ({
@@ -68,6 +74,7 @@ export const CanvasView = ({
   onToggleCanvasTheme,
   designMap,
   activeTool,
+  activeColor,
   isDrawing,
   paintBead,
   startDrawing,
@@ -99,6 +106,7 @@ export const CanvasView = ({
   onStampSelect,
   onStampHover,
   onStampPlace,
+  applyPatch,
 }: CanvasViewProps) => {
 
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
@@ -111,8 +119,30 @@ export const CanvasView = ({
     dragging: boolean;
   } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
 
   useWheelZoom(canvasContainerRef, onZoomChange);
+
+  useEffect(() => {
+    if (!highlightedColor) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHighlightedColor(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [highlightedColor]);
+
+  const handleToggleHighlight = useCallback((color: string) => {
+    setHighlightedColor((c) => (c === color ? null : color));
+  }, []);
+
+  const handleReplaceColor = useCallback((oldColor: string) => {
+    applyPatch(
+      (m) => swapColorInMap(m, oldColor, activeColor),
+      (p) => swapColorInPendants(p, oldColor, activeColor),
+    );
+    setHighlightedColor((c) => (c === oldColor ? null : c));
+  }, [applyPatch, activeColor]);
 
   const dim = useMemo(() => {
     // Подвески свисают ниже сетки — учитываем их глубину в высоте SVG.
@@ -162,6 +192,16 @@ export const CanvasView = ({
     );
     return beads.length + pendantBeadCount;
   }, [beads.length, validPendantPlacements, pendantTemplates]);
+
+  const colorHighlightedBeadIds = useMemo(() => {
+    if (!highlightedColor) return null;
+    const ids = new Set<string>();
+    beads.forEach((b) => {
+      const effective = designMap[b.id] || defaultColorFor(b.type);
+      if (effective === highlightedColor) ids.add(b.id);
+    });
+    return ids;
+  }, [highlightedColor, beads, designMap]);
 
   const highlightedNodeIds = useMemo(() => {
     if (hoveredRow === null) return null;
@@ -356,7 +396,11 @@ export const CanvasView = ({
                   type={bead.type}
                   color={designMap[bead.id]}
                   defaultColor={defaultColorFor(bead.type)}
-                  highlighted={(highlightedNodeIds?.has(bead.id) ?? false) || (stampPreviewIds?.has(bead.id) ?? false)}
+                  highlighted={
+                    (highlightedNodeIds?.has(bead.id) ?? false) ||
+                    (stampPreviewIds?.has(bead.id) ?? false) ||
+                    (colorHighlightedBeadIds?.has(bead.id) ?? false)
+                  }
                   onMouseEnter={handleMouseEnter}
                   onMouseDown={handleMouseDown}
                 />
@@ -382,13 +426,21 @@ export const CanvasView = ({
                 hoveredCol={hoveredCol}
                 mirrorMode={mirrorMode}
                 width={width}
+                highlightedColor={highlightedColor}
               />
             </g>
           </svg>
         </div>
       </section>
 
-      <CanvasStats totalCount={totalCount} colorStats={colorStats} />
+      <CanvasStats
+        totalCount={totalCount}
+        colorStats={colorStats}
+        highlightedColor={highlightedColor}
+        onToggleHighlight={handleToggleHighlight}
+        activeColor={activeColor}
+        onReplaceColor={handleReplaceColor}
+      />
 
       <CanvasChrome
         canvasTheme={canvasTheme}
