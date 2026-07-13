@@ -399,13 +399,21 @@ export const Header = (props: HeaderProps) => {
                   style={{ background: 'conic-gradient(from 0deg, #ff4757, #ff9f43, #ffd32a, #2ed573, #22d3ee, #1e90ff, #e879f9, #ff4757)' }}
                 />
                 {pickerOpen && (
-                  <ColorPicker
-                    initialColor={isCustomColor ? activeColor : '#ffffff'}
-                    onConfirm={handlePickerConfirm}
-                    onClose={() => setPickerOpen(false)}
-                    onReplacePalette={onPaletteChange}
-                    triggerRef={customTriggerRef}
-                  />
+                  <>
+                    {/* На ≤767.98px ColorPicker центрируется по viewport (см.
+                        ColorPicker.css), а не анкерится к этой маленькой кнопке —
+                        без затемнения фона попап выглядел как случайно "уехавший"
+                        в середину экрана прямоугольник, не читался как модалка.
+                        На десктопе/планшете подложка невидима (см. CSS). */}
+                    <div className="color-picker-backdrop" onClick={() => setPickerOpen(false)} />
+                    <ColorPicker
+                      initialColor={isCustomColor ? activeColor : '#ffffff'}
+                      onConfirm={handlePickerConfirm}
+                      onClose={() => setPickerOpen(false)}
+                      onReplacePalette={onPaletteChange}
+                      triggerRef={customTriggerRef}
+                    />
+                  </>
                 )}
               </div>
 

@@ -51,6 +51,12 @@
      140px, наезжая на нижние ряды бисера — особенно на мобильном. */
   width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
   height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 140px)));
+  /* dvh вместо vh — см. index.css: на мобильном 100vh игнорирует
+     показ/скрытие адресной строки, а .stats (position:fixed) считается от
+     реального видимого viewport, отсюда наезд total count на холст, даже
+     когда --stats-reserve уже верно посчитан. Вторая строка переопределяет
+     первую там, где dvh поддерживается, иначе браузер её просто отбрасывает. */
+  height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px)));
 
   overflow: auto;
   position: relative;
@@ -247,6 +253,7 @@
   .canvas__svg {
     width: min(1200px, calc(100vw - 60px));
     height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px)));
+    height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px)));
     padding: 20px;
     border-radius: 18px;
   }
