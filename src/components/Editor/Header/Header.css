@@ -136,6 +136,25 @@
   padding: 2px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* Undo/Redo/Clear/Save/Load/Share — визуально та же "таблетка", что и
+   .grid-controls__actions, но под отдельным именем: .grid-controls__actions
+   переиспользуется Stepper-ом (−/значение/+ у Width/Height/Zoom/...), и
+   правки только для этой группы задевали все степперы в хедере. */
+.grid-controls__toolbar {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+/* На десктопе оба ряда — просто разметочная обёртка, не влияющая на layout
+   (display: contents "растворяет" её, кнопки — прямые flex-дети .grid-controls__toolbar,
+   как раньше). Компактный двухэтажный вид (Undo/Redo/Clear сверху,
+   Save/Load/Share снизу) включается только в брейкпоинте ≤1024px ниже —
+   тот же приём, что уже используют .grid-controls--stacked для Width/Height. */
+.grid-controls__actions-row { display: contents; }
 .grid-controls__btn {
   width: 24px;
   height: 24px;
@@ -373,15 +392,41 @@
   text-transform: uppercase;
 }
 
-/* Tablet horizontal (768–1024px): чуть плотнее + крупнее тач-зоны кнопок */
-@media (min-width: 768px) and (max-width: 1023.98px) {
+/* Tablet horizontal (768–1024px): чуть плотнее + крупнее тач-зоны кнопок.
+   На самой границе 1024px хедер (в отличие от canvas/sidebar/stats) уже
+   свернул Width/Height/Top-Bottom Edge в overflow-меню (см. брейкпоинт
+   1279.98px выше), но одной этой экономии не хватает — оставшийся ряд
+   (technique-switch с подписями + двухрядная палитра + инструменты +
+   Zoom/Spacing + undo/redo/save/share) шире 1024px, поэтому здесь же
+   убираем текстовые подписи переключателя техники (иконка остаётся,
+   title сохраняет доступность) и уплотняем отступы дальше. */
+@media (min-width: 768px) and (max-width: 1024px) {
   .header__nav {
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
   }
   .palette__divider { margin: 0 0.05rem; }
 
+  .technique-switch__btn { padding: 0 0.5rem; gap: 0; }
+  .technique-switch__btn span { display: none; }
+
   .grid-controls__btn { width: 28px; height: 28px; font-size: 14px; }
   .grid-controls__btn--reset { width: auto; padding: 0 10px; font-size: 8px; }
   .grid-controls__label { font-size: 8px; }
+
+  /* Undo/Redo/Clear/Save/Load/Share: тот же приём, что уже даёт компактность
+     Width/Height (grid-controls--stacked) — два ряда по три кнопки вместо
+     одного длинного, ширина группы падает почти вдвое. */
+  .grid-controls__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1px;
+  }
+  .grid-controls__actions-row {
+    display: flex;
+    align-items: center;
+  }
+  .grid-controls__actions-row + .grid-controls__actions-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
 }

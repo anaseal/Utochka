@@ -568,19 +568,23 @@ export const Header = (props: HeaderProps) => {
         <div className="header__divider" />
 
         <div className="grid-controls">
-          <div className="grid-controls__actions">
-            <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
-            <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
-            <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">CLEAR</button>
-            <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
-              <Download size={14} />
-            </button>
-            <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
-              <Upload size={14} />
-            </button>
-            <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
-              <Share2 size={14} />
-            </button>
+          <div className="grid-controls__toolbar">
+            <div className="grid-controls__actions-row">
+              <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
+              <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
+              <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">CLEAR</button>
+            </div>
+            <div className="grid-controls__actions-row">
+              <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
+                <Download size={14} />
+              </button>
+              <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
+                <Upload size={14} />
+              </button>
+              <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
+                <Share2 size={14} />
+              </button>
+            </div>
             <input
               ref={loadInputRef}
               type="file"

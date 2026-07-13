@@ -241,7 +241,7 @@
   color: #64748b;
 }
 
-@media (max-width: 1023.98px) {
+@media (max-width: 1024px) {
   .pendants-sidebar {
     width: 220px;
   }

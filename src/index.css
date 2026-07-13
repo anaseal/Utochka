@@ -13,7 +13,7 @@
   --sidebar-width: 260px;
 }
 
-@media (max-width: 1023.98px) {
+@media (max-width: 1024px) {
   .editor--sidebar-open {
     --sidebar-width: 220px;
   }

@@ -29,6 +29,29 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
 
   useWheelZoom(viewportRef, (delta) => setZoom((z) => z + delta));
 
+  // Позиция — абсолютные px, персистятся в localStorage и не пересчитываются
+  // сами при ресайзе (в отличие от size, которую держит в рамках vw/vh CSS
+  // max-width/max-height). Если окно утащили к правому краю на широком
+  // мониторе, а потом открыли страницу на 1024px — оно окажется полностью
+  // за пределами экрана и станет недостижимо (хватать нечем, шапка тоже
+  // за краем). Клэмпим в те же границы, что и drag (60/40 — минимум
+  // столько шапки остаётся на экране, чтобы было за что ухватить).
+  useEffect(() => {
+    if (!open) return;
+    const clampToViewport = () => {
+      setPosition((prev) => {
+        const maxX = Math.max(0, window.innerWidth - 60);
+        const maxY = Math.max(0, window.innerHeight - 40);
+        const x = Math.min(Math.max(0, prev.x), maxX);
+        const y = Math.min(Math.max(0, prev.y), maxY);
+        return x === prev.x && y === prev.y ? prev : { x, y };
+      });
+    };
+    clampToViewport();
+    window.addEventListener('resize', clampToViewport);
+    return () => window.removeEventListener('resize', clampToViewport);
+  }, [open, setPosition]);
+
   useEffect(() => {
     const root = rootRef.current;
     if (!root || !open) return;

@@ -1,0 +1,246 @@
+- generic [ref=f8e2]:
+  - main:
+    - navigation [ref=f8e4]:
+      - group "Switch technique" [ref=f8e5]:
+        - button "Traditional Ukrainian beadwork" [pressed] [ref=f8e6] [cursor=pointer]
+        - button "Right-Angle Weave" [ref=f8e47] [cursor=pointer]
+      - generic [ref=f8e58]:
+        - generic [ref=f8e59]:
+          - generic [ref=f8e60]:
+            - button [ref=f8e61] [cursor=pointer]
+            - button [ref=f8e62] [cursor=pointer]
+            - button [ref=f8e63] [cursor=pointer]
+            - button [ref=f8e64] [cursor=pointer]
+            - button [ref=f8e65] [cursor=pointer]
+          - group "Recent colors" [ref=f8e66]
+        - button "Custom color" [ref=f8e68] [cursor=pointer]
+        - button "Pick color from screen" [ref=f8e69] [cursor=pointer]
+      - button "Pencil (B)" [pressed] [ref=f8e75] [cursor=pointer]
+      - button "Eraser (E)" [ref=f8e79] [cursor=pointer]
+      - button "Flood Fill (G)" [ref=f8e82] [cursor=pointer]
+      - button "Stamp (S)" [ref=f8e88] [cursor=pointer]
+      - button "Mirror Mode (M)" [ref=f8e92] [cursor=pointer]
+      - generic [ref=f8e97]:
+        - generic [ref=f8e98]:
+          - generic [ref=f8e99]: Zoom
+          - generic [ref=f8e100]:
+            - button "−" [ref=f8e101] [cursor=pointer]
+            - generic "Click to edit" [ref=f8e102]: 100%
+            - button "+" [ref=f8e103] [cursor=pointer]
+        - generic [ref=f8e104]:
+          - generic [ref=f8e105]: Spacing
+          - generic [ref=f8e106]:
+            - button "−" [ref=f8e107] [cursor=pointer]
+            - generic "Click to edit" [ref=f8e108]: "65"
+            - button "+" [ref=f8e109] [cursor=pointer]
+      - button "Grid settings" [ref=f8e111] [cursor=pointer]
+      - generic [ref=f8e118]:
+        - generic [ref=f8e119]:
+          - button "↩" [disabled] [ref=f8e120]
+          - button "↪" [disabled] [ref=f8e121]
+          - button "CLEAR" [ref=f8e122] [cursor=pointer]
+        - generic [ref=f8e123]:
+          - button "Save project to file" [ref=f8e124] [cursor=pointer]
+          - button "Load project from file" [ref=f8e128] [cursor=pointer]
+          - button "Copy share link" [ref=f8e132] [cursor=pointer]
+      - button "Reference image" [pressed] [ref=f8e140] [cursor=pointer]
+      - button "Pendant library" [ref=f8e145] [cursor=pointer]
+    - main [ref=f8e149]:
+      - img [ref=f8e152]:
+        - generic [ref=f8e154]:
+          - generic: "1"
+          - generic: "2"
+          - generic: "3"
+          - generic: "4"
+          - generic: "5"
+          - generic: "6"
+          - generic: "7"
+          - generic: "8"
+          - generic: "9"
+          - generic: "1"
+          - generic: "2"
+          - generic: "3"
+          - generic: "4"
+          - generic: "5"
+          - generic: "6"
+          - generic: "7"
+          - generic: "8"
+          - generic: "9"
+          - generic: "10"
+          - generic: "11"
+          - generic: "12"
+          - generic: "13"
+          - generic: "14"
+          - generic: "15"
+          - generic: "16"
+          - generic: "17"
+          - generic: "18"
+          - generic: "19"
+          - generic: "20"
+          - generic: "21"
+          - generic: "22"
+          - generic: "23"
+          - generic: "24"
+          - generic: "25"
+          - generic: "26"
+          - generic: "27"
+          - generic: "28"
+          - generic: "29"
+          - generic: "30"
+          - generic: "31"
+          - generic: "32"
+          - generic: "33"
+          - generic: "34"
+          - generic: "35"
+          - generic: "36"
+          - generic: "37"
+          - generic: "38"
+          - generic: "39"
+          - generic: "40"
+          - generic: "41"
+          - generic: "42"
+          - generic: "43"
+          - generic: "44"
+          - generic: "45"
+          - generic: "46"
+          - generic: "47"
+          - generic: "48"
+          - generic: "49"
+          - generic: "50"
+          - generic: "51"
+          - generic: "52"
+          - generic: "53"
+          - generic: "54"
+          - generic: "55"
+          - generic: "56"
+          - generic: "57"
+          - generic: "58"
+          - generic: "59"
+          - generic: "60"
+          - generic: "61"
+          - generic: "62"
+          - generic: "63"
+          - generic: "64"
+          - generic: "65"
+          - generic: "66"
+          - generic: "67"
+          - generic: "68"
+          - generic: "69"
+          - generic [ref=f8e155]:
+            - generic [ref=f8e156]: −
+            - generic: "3"
+            - generic [ref=f8e158]: +
+          - generic [ref=f8e160]:
+            - generic [ref=f8e161]: −
+            - generic: "3"
+            - generic [ref=f8e163]: +
+          - generic [ref=f8e165]:
+            - generic [ref=f8e166]: −
+            - generic: "3"
+            - generic [ref=f8e168]: +
+          - generic [ref=f8e170]:
+            - generic [ref=f8e171]: −
+            - generic: "3"
+            - generic [ref=f8e173]: +
+          - generic [ref=f8e175]:
+            - generic [ref=f8e176]: −
+            - generic: "3"
+            - generic [ref=f8e178]: +
+          - generic [ref=f8e180]:
+            - generic [ref=f8e181]: −
+            - generic: "3"
+            - generic [ref=f8e183]: +
+          - generic [ref=f8e185]:
+            - generic [ref=f8e186]: −
+            - generic: "3"
+            - generic [ref=f8e188]: +
+          - generic [ref=f8e190]:
+            - generic [ref=f8e191]: −
+            - generic: "3"
+            - generic [ref=f8e193]: +
+          - generic [ref=f8e195]:
+            - generic [ref=f8e196]: −
+            - generic: "3"
+            - generic [ref=f8e198]: +
+          - generic [ref=f8e200]:
+            - generic [ref=f8e201]: −
+            - generic: "3"
+            - generic [ref=f8e203]: +
+          - generic [ref=f8e205]:
+            - generic [ref=f8e206]: −
+            - generic: "3"
+            - generic [ref=f8e208]: +
+          - generic [ref=f8e210]:
+            - generic [ref=f8e211]: −
+            - generic: "3"
+            - generic [ref=f8e213]: +
+          - generic [ref=f8e215]:
+            - generic [ref=f8e216]: −
+            - generic: "3"
+            - generic [ref=f8e218]: +
+          - generic [ref=f8e220]:
+            - generic [ref=f8e221]: −
+            - generic: "3"
+            - generic [ref=f8e223]: +
+          - generic [ref=f8e225]:
+            - generic [ref=f8e226]: −
+            - generic: "3"
+            - generic [ref=f8e228]: +
+          - generic [ref=f8e230]:
+            - generic [ref=f8e231]: −
+            - generic: "3"
+            - generic [ref=f8e233]: +
+          - generic [ref=f8e235]:
+            - generic [ref=f8e236]: −
+            - generic: "3"
+            - generic [ref=f8e238]: +
+      - complementary [ref=f8e7158]:
+        - article [ref=f8e7159]:
+          - heading "Total Count" [level=3] [ref=f8e7160]
+          - paragraph [ref=f8e7161]: "3459"
+        - list [ref=f8e7163]:
+          - listitem [ref=f8e7164]:
+            - button "Подсветить бисерины цвета transparent" [ref=f8e7165] [cursor=pointer]
+            - generic [ref=f8e7167]: "3459"
+      - button "Switch to light canvas" [ref=f8e7168] [cursor=pointer]
+      - button "Download PNG" [ref=f8e7175] [cursor=pointer]
+    - complementary [ref=f8e7176]:
+      - heading "Pendants & Decor" [level=2] [ref=f8e7178]
+      - generic [ref=f8e7179]:
+        - generic [ref=f8e7180]:
+          - generic [ref=f8e7181]:
+            - generic [ref=f8e7182]:
+              - heading "Bottom Chain" [level=3] [ref=f8e7183]
+              - button "Clear Bottom Chain" [disabled] [ref=f8e7184]: ×
+            - paragraph [ref=f8e7185]: Decorative edge added below the last row
+          - button "Toggle Bottom Chain" [ref=f8e7187] [cursor=pointer]
+        - generic [ref=f8e7188]:
+          - generic [ref=f8e7189]:
+            - generic [ref=f8e7190]:
+              - heading "Pendants" [level=3] [ref=f8e7191]
+              - button "Clear Pendants" [disabled] [ref=f8e7192]: ×
+            - paragraph [ref=f8e7193]: Drag a template onto a bottom-row node
+          - generic [ref=f8e7194]:
+            - button "Drop" [ref=f8e7195]
+            - button "Rhombus" [ref=f8e7198]
+            - button "Cluster" [ref=f8e7201]
+            - button "Fringe" [ref=f8e7204]
+            - button "Net" [ref=f8e7207]
+            - button "Net with cluster" [ref=f8e7210]
+            - button "Drop with cluster" [ref=f8e7213]
+            - button "Bugle bead" [ref=f8e7216]
+        - generic [ref=f8e7219]:
+          - generic [ref=f8e7220]:
+            - generic [ref=f8e7221]:
+              - heading "Decor" [level=3] [ref=f8e7222]
+              - button "Clear Decor" [disabled] [ref=f8e7223]: ×
+            - paragraph [ref=f8e7224]: Drag a band onto a gap between rows
+          - button "Band" [ref=f8e7226]
+      - generic [ref=f8e7229]:
+        - button "Reset all" [disabled] [ref=f8e7230]
+        - paragraph [ref=f8e7231]: Drag a pendant onto a bottom-row node, or a band onto a row gap
+    - generic [ref=f8e7232]:
+      - generic [ref=f8e7233]:
+        - generic [ref=f8e7234]: Reference
+        - button "Close reference window" [ref=f8e7235] [cursor=pointer]
+      - generic [ref=f8e7239]: Загрузка…
