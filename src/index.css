@@ -19,6 +19,12 @@
   }
 }
 
+@media (max-width: 767.98px) {
+  .editor--sidebar-open {
+    --sidebar-width: 170px;
+  }
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;

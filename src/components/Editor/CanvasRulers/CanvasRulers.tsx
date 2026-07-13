@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Bead } from '../../../types/bead';
 import { resolveSpanCount } from '../../../utils/spans';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import './CanvasRulers.css';
 
 interface CanvasRulersProps {
@@ -15,6 +16,10 @@ interface CanvasRulersProps {
   bottomEdgeEnabled: boolean;
   bottomEdgeSpan: number;
   onBottomEdgeSpanChange: (delta: number) => void;
+  // На ≤767.98px ряд ±/счётчик на каждый span-ряд занимает весь холст по
+  // вертикали (см. CanvasView.tsx) — сворачивается по умолчанию, раскрывается
+  // тогглом. На более широких экранах класс ничего не меняет (см. CanvasRulers.css).
+  spanControlsExpanded: boolean;
 }
 
 const SpanCtrlButton = ({
@@ -55,9 +60,15 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange }: CanvasRulersProps) => {
-  const axisMarginX = 30;
-  const axisMarginY = 40;
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded }: CanvasRulersProps) => {
+  // На ≤767.98px шрифт подписей мельче (CanvasRulers.css), а margin чуть
+  // больше — левее для номеров рядов (baselineX=-axisMarginX, text-anchor
+  // end — больше margin = левее), выше для номеров колонн (baselineY=
+  // -axisMarginY). Это числовые SVG-координаты, а не CSS-свойства — тот же
+  // case, что offsetX в CanvasView.tsx, поэтому здесь тоже useMediaQuery.
+  const isNarrowViewport = useMediaQuery('(max-width: 767.98px)');
+  const axisMarginX = isNarrowViewport ? 36 : 30;
+  const axisMarginY = isNarrowViewport ? 46 : 40;
 
   const nodes = useMemo(() => beads.filter(b => b.type === 'NODE'), [beads]);
 
@@ -195,38 +206,39 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
         </text>
       ))}
 
-      {spanRowControls.map(({ r, midY, count, isOverridden, isBottom, onDelta }) => {
-        const type = isBottom ? 'bottom' : 'top';
-        const changeBy = onDelta ?? ((delta: number) => onRowSpanChange(r, delta));
-        return (
-          <g key={`span-ctrl-${r}`}>
-            <SpanCtrlButton
-              cx={ctrlCenterX - 19}
-              midY={midY}
-              type={type}
-              glyph="−"
-              onClick={() => changeBy(-1)}
-            />
-            <text
-              x={ctrlCenterX - 3}
-              y={midY}
-              dominantBaseline="middle"
-              textAnchor="middle"
-              className={`span-ctrl__count span-ctrl__count--${type}${isOverridden ? ' span-ctrl__count--overridden' : ''}`}
-            >
-              {count}
-            </text>
-            <SpanCtrlButton
-              cx={ctrlCenterX + 18}
-              midY={midY}
-              type={type}
-              glyph="+"
-              onClick={() => changeBy(1)}
-            />
-          </g>
-        );
-      })}
-
+      <g className={`span-ctrl-layer${spanControlsExpanded ? '' : ' span-ctrl-layer--collapsed'}`}>
+        {spanRowControls.map(({ r, midY, count, isOverridden, isBottom, onDelta }) => {
+          const type = isBottom ? 'bottom' : 'top';
+          const changeBy = onDelta ?? ((delta: number) => onRowSpanChange(r, delta));
+          return (
+            <g key={`span-ctrl-${r}`}>
+              <SpanCtrlButton
+                cx={ctrlCenterX - 19}
+                midY={midY}
+                type={type}
+                glyph="−"
+                onClick={() => changeBy(-1)}
+              />
+              <text
+                x={ctrlCenterX - 3}
+                y={midY}
+                dominantBaseline="middle"
+                textAnchor="middle"
+                className={`span-ctrl__count span-ctrl__count--${type}${isOverridden ? ' span-ctrl__count--overridden' : ''}`}
+              >
+                {count}
+              </text>
+              <SpanCtrlButton
+                cx={ctrlCenterX + 18}
+                midY={midY}
+                type={type}
+                glyph="+"
+                onClick={() => changeBy(1)}
+              />
+            </g>
+          );
+        })}
+      </g>
     </g>
   );
 };

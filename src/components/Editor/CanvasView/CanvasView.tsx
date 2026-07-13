@@ -1,6 +1,8 @@
 /* FILE: src\components\Editor\CanvasView\CanvasView.tsx */
 import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { PendantPlacement, PendantTemplate } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BeadView } from '../BeadView/BeadView';
@@ -120,6 +122,19 @@ export const CanvasView = ({
   } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
+  // Сворачиваемый редактор количества бисерин (per-row span controls,
+  // CanvasRulers) — видимость даёт CSS (CanvasRulers.css, эффект только на
+  // ≤767.98px), поэтому дефолт "свёрнуто" безопасен для десктопа. Но сам
+  // отступ слева под эти контролы (offsetX) — числовой SVG-параметр, а не
+  // CSS-свойство, и CSS-медиа-запрос его не тронет — поэтому здесь единственное
+  // место в проекте, где брейкпоинт проверяется в JS (useMediaQuery), чтобы
+  // не сузить offsetX на десктопе, где контролы всегда видны независимо
+  // от spanControlsExpanded.
+  const [spanControlsExpanded, setSpanControlsExpanded] = useState(false);
+  const isNarrowViewport = useMediaQuery('(max-width: 767.98px)');
+  const effectiveOffsetX = isNarrowViewport && !spanControlsExpanded
+    ? BEAD_THEME.gridDefaults.offsetXCollapsed
+    : offsetX;
 
   useWheelZoom(canvasContainerRef, onZoomChange);
 
@@ -160,8 +175,8 @@ export const CanvasView = ({
       pendantMaxY = Math.max(pendantMaxY, anchor.y + depth * PENDANT_SCALE + 26);
     }
 
-    return computeCanvasDim(beads, offsetX, offsetY, nodeRadius, { extraMaxY: pendantMaxY });
-  }, [beads, offsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
+    return computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, { extraMaxY: pendantMaxY });
+  }, [beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
 
   // Подвеска учитывается в статистике, только если у неё есть и валидный
   // шаблон, и живая нода-якорь на нижнем ряду (та же проверка, что и в
@@ -355,81 +370,116 @@ export const CanvasView = ({
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
-        <div
-          className="canvas__svg"
-          data-canvas-theme={canvasTheme}
-          ref={canvasContainerRef}
-          onMouseDown={handleStampContainerMouseDown}
-          onMouseMove={handleStampContainerMouseMove}
-          onMouseUp={handleStampContainerMouseUp}
-          onMouseLeave={handleStampContainerMouseLeave}
-        >
-          <svg
-            ref={canvasSvgRef}
-            width={dim.w * zoom}
-            height={dim.h * zoom}
-            viewBox={`0 0 ${dim.w} ${dim.h}`}
-            className="canvas__svg-content"
+        {/* Обёртка нужна только затем, чтобы дать ручке (.span-controls-toggle)
+            позиционирующий контекст, совпадающий с рамкой карточки холста
+            (canvas__svg), но НЕ являющийся самой прокручиваемой областью —
+            иначе ручка, лежащая внутри overflow:auto контейнера, уезжала бы
+            при скролле сетки бисерин вместе с содержимым. */}
+        <div className="canvas__svg-frame">
+          <div
+            className="canvas__svg"
+            data-canvas-theme={canvasTheme}
+            ref={canvasContainerRef}
+            onMouseDown={handleStampContainerMouseDown}
+            onMouseMove={handleStampContainerMouseMove}
+            onMouseUp={handleStampContainerMouseUp}
+            onMouseLeave={handleStampContainerMouseLeave}
           >
-            {/* Группа трансформации: отделяем визуальный отступ от логики координат */}
-            <g ref={stampGroupRef} transform={`translate(${offsetX}, ${offsetY})`}>
-              <CanvasRulers
-                beads={beads}
-                topSpan={topSpan}
-                bottomSpan={bottomSpan}
-                rowSpanOverrides={rowSpanOverrides}
-                onRowSpanChange={onRowSpanChange}
-                hoveredRow={hoveredRow}
-                mirrorMode={mirrorMode}
-                width={width}
-                bottomEdgeEnabled={bottomEdgeEnabled}
-                bottomEdgeSpan={bottomEdgeSpan}
-                onBottomEdgeSpanChange={onBottomEdgeSpanChange}
-              />
-
-              {beads.map((bead) => (
-                <BeadView
-                  key={bead.id}
-                  id={bead.id}
-                  x={bead.x}
-                  y={bead.y}
-                  type={bead.type}
-                  color={designMap[bead.id]}
-                  defaultColor={defaultColorFor(bead.type)}
-                  highlighted={
-                    (highlightedNodeIds?.has(bead.id) ?? false) ||
-                    (stampPreviewIds?.has(bead.id) ?? false) ||
-                    (colorHighlightedBeadIds?.has(bead.id) ?? false)
-                  }
-                  onMouseEnter={handleMouseEnter}
-                  onMouseDown={handleMouseDown}
+            <svg
+              ref={canvasSvgRef}
+              width={dim.w * zoom}
+              height={dim.h * zoom}
+              viewBox={`0 0 ${dim.w} ${dim.h}`}
+              className="canvas__svg-content"
+            >
+              {/* Группа трансформации: отделяем визуальный отступ от логики координат.
+                  effectiveOffsetX уже (offsetX) на десктопе/при развёрнутых
+                  span-контролах, уже (offsetXCollapsed) на ≤767.98px, когда они
+                  свёрнуты — освобождает место, которое иначе пустовало бы под
+                  скрытыми ±/счётчиками. */}
+              <g ref={stampGroupRef} transform={`translate(${effectiveOffsetX}, ${offsetY})`}>
+                <CanvasRulers
+                  beads={beads}
+                  topSpan={topSpan}
+                  bottomSpan={bottomSpan}
+                  rowSpanOverrides={rowSpanOverrides}
+                  onRowSpanChange={onRowSpanChange}
+                  hoveredRow={hoveredRow}
+                  mirrorMode={mirrorMode}
+                  width={width}
+                  bottomEdgeEnabled={bottomEdgeEnabled}
+                  bottomEdgeSpan={bottomEdgeSpan}
+                  onBottomEdgeSpanChange={onBottomEdgeSpanChange}
+                  spanControlsExpanded={spanControlsExpanded}
                 />
-              ))}
 
-              {selectionRect && (
-                <rect
-                  className="canvas__stamp-rect"
-                  x={selectionRect.x}
-                  y={selectionRect.y}
-                  width={selectionRect.w}
-                  height={selectionRect.h}
+                {beads.map((bead) => (
+                  <BeadView
+                    key={bead.id}
+                    id={bead.id}
+                    x={bead.x}
+                    y={bead.y}
+                    type={bead.type}
+                    color={designMap[bead.id]}
+                    defaultColor={defaultColorFor(bead.type)}
+                    highlighted={
+                      (highlightedNodeIds?.has(bead.id) ?? false) ||
+                      (stampPreviewIds?.has(bead.id) ?? false) ||
+                      (colorHighlightedBeadIds?.has(bead.id) ?? false)
+                    }
+                    onMouseEnter={handleMouseEnter}
+                    onMouseDown={handleMouseDown}
+                  />
+                ))}
+
+                {selectionRect && (
+                  <rect
+                    className="canvas__stamp-rect"
+                    x={selectionRect.x}
+                    y={selectionRect.y}
+                    width={selectionRect.w}
+                    height={selectionRect.h}
+                  />
+                )}
+
+                <PendantLayer
+                  placements={pendantPlacements}
+                  templates={pendantTemplates}
+                  bottomNodes={bottomNodes}
+                  isDrawing={isDrawing}
+                  onPaintBead={onPaintPendantBead}
+                  onRemove={onRemovePlacement}
+                  hoveredCol={hoveredCol}
+                  mirrorMode={mirrorMode}
+                  width={width}
+                  highlightedColor={highlightedColor}
                 />
-              )}
+              </g>
+            </svg>
+          </div>
 
-              <PendantLayer
-                placements={pendantPlacements}
-                templates={pendantTemplates}
-                bottomNodes={bottomNodes}
-                isDrawing={isDrawing}
-                onPaintBead={onPaintPendantBead}
-                onRemove={onRemovePlacement}
-                hoveredCol={hoveredCol}
-                mirrorMode={mirrorMode}
-                width={width}
-                highlightedColor={highlightedColor}
-              />
-            </g>
-          </svg>
+          {/* Ручка выдвижной панели редактора количества бисерин (per-row span
+              controls в CanvasRulers) — видна только на ≤767.98px, где эти
+              контролы по умолчанию свёрнуты (см. CanvasRulers.css).
+              position:absolute относительно .canvas__svg-frame (которая
+              размером точно совпадает с самой карточкой .canvas__svg, но не
+              скроллится) — лежит поверх карточки, не уезжая при скролле
+              сетки бисерин. Шеврон вместо абстрактной иконки — однозначно
+              читаемый знак "тут скрыта панель, нажми, чтобы раскрыть",
+              направление меняется на противоположное при раскрытии (›
+              свёрнуто → ‹ открыто). Не в CanvasChrome — та шарится
+              байт-в-байт с CrossWeaveCanvasView, а у CrossWeave этой фичи
+              нет вовсе (CrossWeaveRulers). */}
+          <button
+            type="button"
+            className="span-controls-toggle"
+            onClick={() => setSpanControlsExpanded(v => !v)}
+            onMouseDown={(e) => e.stopPropagation()}
+            title={spanControlsExpanded ? 'Hide bead count editor' : 'Show bead count editor'}
+            aria-pressed={spanControlsExpanded}
+          >
+            {spanControlsExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+          </button>
         </div>
       </section>
 

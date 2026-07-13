@@ -9,6 +9,17 @@
   -webkit-user-select: none;
 }
 
+/* Шрифт мельче на ≤767.98px — само позиционирование (насколько левее/выше
+   от сетки) считается в CanvasRulers.tsx через axisMarginX/axisMarginY:
+   font-size — CSS-свойство, но x/y текста — числовые SVG-атрибуты, а не
+   стилизуемые CSS-свойства, media-запрос их не тронет (тот же case, что и
+   с offsetX в CanvasView.tsx — см. useMediaQuery). */
+@media (max-width: 767.98px) {
+  .canvas__axis-text {
+    font-size: 14px;
+  }
+}
+
 /* Кнопки изменения бисеринок в рядах */
 .span-ctrl__btn {
   cursor: pointer;
@@ -70,6 +81,16 @@
 /* Ряд с индивидуальным значением — ярче */
 .span-ctrl__count--overridden {
   fill: #f59e0b;
+}
+
+/* На ≤767.98px весь столбик per-row ±/счётчиков (по одному на каждый зазор
+   между рядами) сворачивается по умолчанию — тоггл в CanvasView.tsx.
+   На более широких экранах класс не действует (см. Header.css — тот же
+   приём: состояние есть всегда, но видимый эффект даёт только медиа-запрос). */
+@media (max-width: 767.98px) {
+  .span-ctrl-layer--collapsed {
+    display: none;
+  }
 }
 
 

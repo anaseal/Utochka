@@ -44,18 +44,25 @@ export const EraserIcon = ({ size = 14 }: IconProps) => (
   </svg>
 );
 
-// Подвеска (кулон): ушко-колечко + каплевидная подвеска. Заменяет прежний
-// значок «стопка слоёв» (lucide Layers) у кнопки библиотеки подвесок.
-export const PendantIcon = ({ size = 30, strokeWidth = 1.8 }: RingIconProps) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="3.4" r="1.9" stroke="currentColor" strokeWidth={strokeWidth} vectorEffect="non-scaling-stroke" />
-    <path
-      d="M12 5.3 C 7.6 10, 7.6 15, 12 20.7 C 16.4 15, 16.4 10, 12 5.3 Z"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinejoin="round"
-      vectorEffect="non-scaling-stroke"
-    />
+// Подвеска (кулон): цепочка из колец + петля-бейл, геометрия центров/радиусов
+// извлечена из предоставленного Union (2).svg (пары внешний+внутренний контур
+// на кольцо → одна окружность на средний радиус, fill="black" → stroke="currentColor").
+const PENDANT_RINGS: [number, number, number][] = [
+  [32.5, 19.5, 18], // верхнее кольцо
+  [32.5, 58.5, 18], // второе кольцо
+  [15, 147, 14], // левое кольцо
+  [50, 147, 14], // правое кольцо
+  [33, 172, 14], // нижняя подвеска
+];
+
+export const PendantIcon = ({ size = 26, strokeWidth = 1}: RingIconProps) => (
+  <svg width={size} height={size} viewBox="0 0 65 187" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
+      <rect x="25" y="78" width="15" height="60" rx="7.5" vectorEffect="non-scaling-stroke" />
+      {PENDANT_RINGS.map(([cx, cy, r], i) => (
+        <circle key={i} cx={cx} cy={cy} r={r} vectorEffect="non-scaling-stroke" />
+      ))}
+    </g>
   </svg>
 );
 
@@ -73,7 +80,7 @@ export const EyedropperIcon = ({ size = 14 }: IconProps) => (
 // пользователем Union.svg (sylianka) и Union (1).svg (RAW), fill="black" → "currentColor".
 export const SilyankaIcon = ({ size = 14, strokeWidth = 0.5 }: RingIconProps) => (
   <svg width={size} height={size} viewBox="0 0 226 250" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <g fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
+    <g className="silyanka-icon__rings" fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
       {SYLIANKA_RINGS.map(([cx, cy, rx, ry], i) => (
         <ellipse key={i} cx={cx} cy={cy} rx={rx} ry={ry} vectorEffect="non-scaling-stroke" />
       ))}
@@ -81,9 +88,9 @@ export const SilyankaIcon = ({ size = 14, strokeWidth = 0.5 }: RingIconProps) =>
   </svg>
 );
 
-export const CrossWeaveIcon = ({ size = 14, strokeWidth = 1.4 }: RingIconProps) => (
+export const CrossWeaveIcon = ({ size = 14, strokeWidth = 1.2}: RingIconProps) => (
   <svg width={size} height={size} viewBox="0 0 253 156" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <g fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
+    <g className="cross-weave-icon__rings" fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
       {CROSS_WEAVE_RINGS.map(([cx, cy, rx, ry], i) => (
         <ellipse key={i} cx={cx} cy={cy} rx={rx} ry={ry} vectorEffect="non-scaling-stroke" />
       ))}

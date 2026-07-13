@@ -252,6 +252,21 @@
   }
 }
 
+/* 480–768px: 220px отъедает почти половину узкого экрана — сужаем дальше
+   и переводим каталог на 2 колонки вместо 3, иначе pendant-card становится
+   уже ~50px и превью подвески неразличимо. */
+@media (max-width: 767.98px) {
+  .pendants-sidebar {
+    width: 170px;
+  }
+
+  .pendants-sidebar__catalog {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 6px 8px 8px;
+    gap: 6px;
+  }
+}
+
 .decor-catalog {
   grid-template-columns: 1fr;
 }

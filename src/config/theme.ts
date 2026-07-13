@@ -21,6 +21,10 @@ export const BEAD_THEME = {
     verticalCompression: 0.2,
     horizontalStepMultiplier: 0.8,
     offsetX: 120,
+    // Отступ слева, когда per-row span-контролы (CanvasRulers) свёрнуты на
+    // ≤767.98px (CanvasView.tsx) — рассчитан под номера рядов (baselineX=-30,
+    // text-anchor=end, ширина цифр ~20-24px), без места под ±/счётчик.
+    offsetXCollapsed: 60,
     offsetY: 50,
     edgeArcHeight: 13, // ≈ spacing(65) * verticalCompression(0.2) — высота дуги верхней/нижней кромки
   },

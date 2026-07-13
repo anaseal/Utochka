@@ -69,6 +69,21 @@
   overflow: visible;
 }
 
+/* Оболочка карточки холста только для позиционирующего контекста ручки
+   (.span-controls-toggle) — размер в точности повторяет .canvas__svg
+   (inline-block, никаких собственных width/height), но, в отличие от неё,
+   не имеет overflow:auto — ручка внутри неё лежит поверх карточки и не
+   уезжает при скролле сетки бисерин. align-self: flex-start обязателен —
+   .canvas это display:flex, и без него рамка растягивается на всю высоту
+   флекс-контейнера (а тот — на всю высоту .editor__viewport), из-за чего
+   top:50% у ручки считался от невидимой растянутой рамки, а не от видимой
+   карточки, и ручка съезжала вниз от реального центра холста. */
+.canvas__svg-frame {
+  position: relative;
+  display: inline-block;
+  align-self: flex-start;
+}
+
 .editor__viewport--flood-fill .canvas__svg,
 .editor__viewport--stamp .canvas__svg {
   cursor: crosshair;
@@ -141,6 +156,48 @@
   transform: translateY(1px);
 }
 
+/* Ручка выдвижной панели редактора количества бисерин (per-row span controls
+   в CanvasRulers) — виден только на ≤767.98px, где эти контролы по умолчанию
+   свёрнуты (см. CanvasRulers.css). Лежит ПОВЕРХ карточки холста, а не рядом
+   с ней — position:absolute относительно .canvas__svg-frame (обёртка точно
+   по размеру .canvas__svg, но без overflow:auto, поэтому ручка не уезжает
+   при скролле сетки бисерин). Две предыдущие попытки фикса (position:fixed
+   относительно viewport, затем flex-элемент рядом с карточкой) сажали ручку
+   СНАРУЖИ карточки — то не совпадало с задумкой "ручка на холсте", отсюда
+   и растущий из этого баг. Прижата к левому краю карточки вплотную (left:0,
+   без левого борде́ра и без скругления слева) — читается как докованная
+   вкладка, а не отдельный плавающий чип. */
+.span-controls-toggle {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .span-controls-toggle {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 48px;
+    background: #111727;
+    color: #607086;
+    border: 1px solid #607086;
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+}
+
+.span-controls-toggle:hover {
+  color: #21cfe9;
+  border-color: #21cfe9;
+}
+
 /* Webkit Scrollbar */
 .canvas__svg::-webkit-scrollbar {
   width: 8px;
@@ -157,8 +214,10 @@
   border-radius: 10px;
 }
 
-/* Tablet horizontal (768–1024px): сжатые отступы, edge-swipe safe */
-@media (min-width: 768px) and (max-width: 1024px) {
+/* ≤1024px: сжатые отступы, edge-swipe safe. Без нижней границы —
+   иначе на 767px и уже отступы резко возвращались к десктопным
+   (см. аналогичный фикс в Header.css). */
+@media (max-width: 1024px) {
   .canvas {
     padding-top: 24px;
     padding-left: 36px;
@@ -168,5 +227,21 @@
     height: min(650px, calc(100vh - var(--palette-height) - 110px));
     padding: 20px;
     border-radius: 18px;
+  }
+}
+
+/* ≤767.98px: ещё компактнее — рамка вокруг карточки холста и внутренний
+   padding самой карточки меньше, отдаёт больше места сетке бисерин. Высоту
+   (formula c "110px" запаса под .stats снизу) не трогаем — это не padding
+   карточки, а зазор под другой элемент, сжатие тут дало бы наложение. */
+@media (max-width: 767.98px) {
+  .canvas {
+    padding-top: 14px;
+    padding-left: 24px;
+  }
+  .canvas__svg {
+    width: min(1200px, calc(100vw - 40px));
+    padding: 14px;
+    border-radius: 14px;
   }
 }

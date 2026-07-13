@@ -336,124 +336,150 @@ export const Header = (props: HeaderProps) => {
             </div>
           </div>
 
-          <div className="palette__custom">
-            <button
-              ref={customTriggerRef}
-              className="palette__color palette__color--custom-trigger"
-              onClick={() => setPickerOpen(o => !o)}
-              title="Custom color"
-              aria-haspopup="dialog"
-              aria-expanded={pickerOpen}
-              style={{ background: 'conic-gradient(from 0deg, #ff4757, #ff9f43, #ffd32a, #2ed573, #22d3ee, #1e90ff, #e879f9, #ff4757)' }}
-            />
-            {pickerOpen && (
-              <ColorPicker
-                initialColor={isCustomColor ? activeColor : '#ffffff'}
-                onConfirm={handlePickerConfirm}
-                onClose={() => setPickerOpen(false)}
-                onReplacePalette={onPaletteChange}
-                triggerRef={customTriggerRef}
-              />
-            )}
-          </div>
-
-          {hasEyeDropper && (
-            <button
-              className="palette__eyedropper"
-              onClick={handleEyeDropper}
-              title="Pick color from screen"
-            >
-              <EyedropperIcon size={14} />
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={() => setActiveTool('pencil')}
-          className={`tool-btn ${activeTool === 'pencil' ? 'tool-btn--active' : ''}`}
-          title="Pencil (B)"
-          aria-pressed={activeTool === 'pencil'}
-        >
-          <Pencil size={14} />
-        </button>
-
-        <button
-          onClick={() => setActiveTool(activeTool === 'eraser' ? 'pencil' : 'eraser')}
-          className={`tool-btn ${activeTool === 'eraser' ? 'tool-btn--active' : ''}`}
-          title="Eraser (E)"
-        >
-          <EraserIcon size={14} />
-        </button>
-
-        {crossWeaveProps && (
-          <>
-            <button
-              onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
-              className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
-              title="Flood Fill (G)"
-              aria-pressed={activeTool === 'flood-fill'}
-            >
-              <PaintBucket size={14} />
-            </button>
-
-            <button
-              onClick={() => crossWeaveProps.setMirrorMode(!crossWeaveProps.mirrorMode)}
-              className={`tool-btn ${crossWeaveProps.mirrorMode ? 'tool-btn--active' : ''}`}
-              title="Mirror Mode (M)"
-              aria-pressed={crossWeaveProps.mirrorMode}
-            >
-              <FlipHorizontal size={14} />
-            </button>
-          </>
-        )}
-
-        {silyankaProps && (
-          <>
-            <button
-              onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
-              className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
-              title="Flood Fill (G)"
-              aria-pressed={activeTool === 'flood-fill'}
-            >
-              <PaintBucket size={14} />
-            </button>
-
-            <div className="tool-btn-group">
+          {/* Кастомный пикер + пипетка: на ≤767.98px становятся вертикальной
+              парой (см. .palette__extra в Header.css) вместо бок о бок —
+              экономит горизонтальное место тем же приёмом, что палитра уже
+              применяет к base/recent рядам. display:contents на более широких
+              экранах "растворяет" обёртку — оба элемента остаются прямыми
+              flex-детьми .palette, как раньше. */}
+          <div className="palette__extra">
+            <div className="palette__custom">
               <button
-                onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
-                className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
-                title="Stamp (S)"
-                aria-pressed={activeTool === 'stamp'}
-              >
-                <Stamp size={14} />
-              </button>
-
-              {activeTool === 'stamp' && silyankaProps.hasStampPattern && (
-                <button
-                  onClick={silyankaProps.onToggleStampAnchorEdge}
-                  className="tool-btn-group__badge"
-                  title={silyankaProps.stampAnchorEdge === 'top'
-                    ? 'Stamp anchor point: top (click or Shift to switch to bottom, Alt to reset stamp)'
-                    : 'Stamp anchor point: bottom (click or Shift to switch to top, Alt to reset stamp)'}
-                  aria-pressed={silyankaProps.stampAnchorEdge === 'bottom'}
-                >
-                  {silyankaProps.stampAnchorEdge === 'top'
-                    ? <ArrowUpToLine size={9} />
-                    : <ArrowDownToLine size={9} />}
-                </button>
+                ref={customTriggerRef}
+                className="palette__color palette__color--custom-trigger"
+                onClick={() => setPickerOpen(o => !o)}
+                title="Custom color"
+                aria-haspopup="dialog"
+                aria-expanded={pickerOpen}
+                style={{ background: 'conic-gradient(from 0deg, #ff4757, #ff9f43, #ffd32a, #2ed573, #22d3ee, #1e90ff, #e879f9, #ff4757)' }}
+              />
+              {pickerOpen && (
+                <ColorPicker
+                  initialColor={isCustomColor ? activeColor : '#ffffff'}
+                  onConfirm={handlePickerConfirm}
+                  onClose={() => setPickerOpen(false)}
+                  onReplacePalette={onPaletteChange}
+                  triggerRef={customTriggerRef}
+                />
               )}
             </div>
 
-            <button
-              onClick={() => silyankaProps.setMirrorMode(!silyankaProps.mirrorMode)}
-              className={`tool-btn ${silyankaProps.mirrorMode ? 'tool-btn--active' : ''}`}
-              title="Mirror Mode (M)"
-              aria-pressed={silyankaProps.mirrorMode}
-            >
-              <FlipHorizontal size={14} />
-            </button>
-          </>
-        )}
+            {hasEyeDropper && (
+              <button
+                className="palette__eyedropper"
+                onClick={handleEyeDropper}
+                title="Pick color from screen"
+              >
+                <EyedropperIcon size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="header__divider header__divider--palette-tools" />
+
+        <div className="tool-group">
+          <button
+            onClick={() => setActiveTool('pencil')}
+            className={`tool-btn ${activeTool === 'pencil' ? 'tool-btn--active' : ''}`}
+            title="Pencil (B)"
+            aria-pressed={activeTool === 'pencil'}
+          >
+            <Pencil size={14} />
+          </button>
+
+          <button
+            onClick={() => setActiveTool(activeTool === 'eraser' ? 'pencil' : 'eraser')}
+            className={`tool-btn ${activeTool === 'eraser' ? 'tool-btn--active' : ''}`}
+            title="Eraser (E)"
+          >
+            <EraserIcon size={14} />
+          </button>
+
+          {crossWeaveProps && (
+            <>
+              <button
+                onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
+                className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
+                title="Flood Fill (G)"
+                aria-pressed={activeTool === 'flood-fill'}
+              >
+                <PaintBucket size={14} />
+              </button>
+
+              <button
+                onClick={() => crossWeaveProps.setMirrorMode(!crossWeaveProps.mirrorMode)}
+                className={`tool-btn ${crossWeaveProps.mirrorMode ? 'tool-btn--active' : ''}`}
+                title="Mirror Mode (M)"
+                aria-pressed={crossWeaveProps.mirrorMode}
+              >
+                <FlipHorizontal size={14} />
+              </button>
+            </>
+          )}
+
+          {silyankaProps && (
+            <>
+              <button
+                onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
+                className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
+                title="Flood Fill (G)"
+                aria-pressed={activeTool === 'flood-fill'}
+              >
+                <PaintBucket size={14} />
+              </button>
+
+              <div className="tool-btn-group">
+                <button
+                  onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
+                  className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
+                  title="Stamp (S)"
+                  aria-pressed={activeTool === 'stamp'}
+                >
+                  <Stamp size={14} />
+                </button>
+
+                {activeTool === 'stamp' && silyankaProps.hasStampPattern && (
+                  <button
+                    onClick={silyankaProps.onToggleStampAnchorEdge}
+                    className="tool-btn-group__badge"
+                    title={silyankaProps.stampAnchorEdge === 'top'
+                      ? 'Stamp anchor point: top (click or Shift to switch to bottom, Alt to reset stamp)'
+                      : 'Stamp anchor point: bottom (click or Shift to switch to top, Alt to reset stamp)'}
+                    aria-pressed={silyankaProps.stampAnchorEdge === 'bottom'}
+                  >
+                    {silyankaProps.stampAnchorEdge === 'top'
+                      ? <ArrowUpToLine size={9} />
+                      : <ArrowDownToLine size={9} />}
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => silyankaProps.setMirrorMode(!silyankaProps.mirrorMode)}
+                className={`tool-btn ${silyankaProps.mirrorMode ? 'tool-btn--active' : ''}`}
+                title="Mirror Mode (M)"
+                aria-pressed={silyankaProps.mirrorMode}
+              >
+                <FlipHorizontal size={14} />
+              </button>
+            </>
+          )}
+
+          {/* Дубль Reference-кнопки — видна только на ≤767.98px, занимает
+              пустующий 6-й слот сетки 2×3 (у tool-group 5 иконок = 3+2).
+              На остальных ширинах скрыта, там остаётся только "жёсткая" копия
+              ниже (после toolbar) — тот же приём дублирования, что уже
+              используется для Width/Height в overflow-панели. */}
+          <button
+            onClick={onToggleReferenceWindow}
+            className={`tool-btn tool-btn--reference-grid ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
+            title="Reference image"
+            aria-pressed={referenceWindowOpen}
+          >
+            <Image size={14} />
+          </button>
+        </div>
 
         <div className="header__divider header__divider--collapsible" />
 
@@ -505,9 +531,9 @@ export const Header = (props: HeaderProps) => {
           </>
         )}
 
-        <div className="header__divider" />
+        <div className="header__divider header__divider--zoom-adjacent" />
 
-        <div className="grid-controls grid-controls--stacked">
+        <div className="grid-controls grid-controls--stacked grid-controls--collapsible-mobile">
           <Stepper
             label="Zoom"
             value={`${Math.round(zoom * 100)}%`}
@@ -541,29 +567,95 @@ export const Header = (props: HeaderProps) => {
           )}
         </div>
 
-        {silyankaProps && (
-          <div className="header__overflow" ref={overflowRef}>
-            <button
-              ref={overflowTriggerRef}
-              type="button"
-              className="header__overflow-trigger"
-              aria-label="Grid settings"
-              aria-haspopup="menu"
-              aria-expanded={overflowOpen}
-              onClick={() => setOverflowOpen(o => !o)}
-            >
-              <MoreHorizontal size={18} />
-            </button>
-            {overflowOpen && (
-              <div className="header__overflow-panel" role="menu">
-                <Stepper variant="overflow" label="Width" value={silyankaProps.gridWidth} onDelta={silyankaProps.onWidthChange} onSet={silyankaProps.onSetWidth} inputValue={silyankaProps.gridWidth} min={1} />
-                <Stepper variant="overflow" label="Height" value={silyankaProps.gridHeight} onDelta={silyankaProps.onHeightChange} onSet={silyankaProps.onSetHeight} inputValue={silyankaProps.gridHeight} min={2} />
-                <Stepper variant="overflow" label="Top Edge" value={silyankaProps.topSpan} onDelta={silyankaProps.onTopSpanChange} onReset={silyankaProps.onTopEdgeReset} onSet={silyankaProps.onSetTopSpan} inputValue={silyankaProps.topSpan} min={3} max={10} />
-                <Stepper variant="overflow" label="Bottom Edge" value={silyankaProps.bottomSpan} onDelta={silyankaProps.onBottomSpanChange} onReset={silyankaProps.onBottomEdgeReset} onSet={silyankaProps.onSetBottomSpan} inputValue={silyankaProps.bottomSpan} min={3} max={10} />
+        {/* Раньше рендерился только для silyankaProps — на ≤767.98px сюда
+            переезжают Zoom/Spacing/Save-Load-Share (см. .header__overflow-mobile-extra
+            в Header.css), которые нужны в обеих техниках, поэтому триггер и панель
+            теперь общие, а не silyanka-only. */}
+        <div className="header__overflow" ref={overflowRef}>
+          <button
+            ref={overflowTriggerRef}
+            type="button"
+            className="header__overflow-trigger"
+            aria-label="Grid settings"
+            aria-haspopup="menu"
+            aria-expanded={overflowOpen}
+            onClick={() => setOverflowOpen(o => !o)}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+          {overflowOpen && (
+            <div className="header__overflow-panel" role="menu">
+              {silyankaProps && (
+                <>
+                  <Stepper variant="overflow" label="Width" value={silyankaProps.gridWidth} onDelta={silyankaProps.onWidthChange} onSet={silyankaProps.onSetWidth} inputValue={silyankaProps.gridWidth} min={1} />
+                  <Stepper variant="overflow" label="Height" value={silyankaProps.gridHeight} onDelta={silyankaProps.onHeightChange} onSet={silyankaProps.onSetHeight} inputValue={silyankaProps.gridHeight} min={2} />
+                  <Stepper variant="overflow" label="Top Edge" value={silyankaProps.topSpan} onDelta={silyankaProps.onTopSpanChange} onReset={silyankaProps.onTopEdgeReset} onSet={silyankaProps.onSetTopSpan} inputValue={silyankaProps.topSpan} min={3} max={10} />
+                  <Stepper variant="overflow" label="Bottom Edge" value={silyankaProps.bottomSpan} onDelta={silyankaProps.onBottomSpanChange} onReset={silyankaProps.onBottomEdgeReset} onSet={silyankaProps.onSetBottomSpan} inputValue={silyankaProps.bottomSpan} min={3} max={10} />
+                </>
+              )}
+              {crossWeaveProps && (
+                <>
+                  <Stepper variant="overflow" label="Width" value={crossWeaveProps.gridWidth} onDelta={crossWeaveProps.onWidthChange} onSet={crossWeaveProps.onSetWidth} inputValue={crossWeaveProps.gridWidth} min={1} />
+                  <Stepper variant="overflow" label="Height" value={crossWeaveProps.gridHeight} onDelta={crossWeaveProps.onHeightChange} onSet={crossWeaveProps.onSetHeight} inputValue={crossWeaveProps.gridHeight} min={1} />
+                </>
+              )}
+
+              {/* ≤767.98px: дубли Zoom/Spacing/Save-Load-Share, скрытых из основной
+                  строки хедера на этом брейкпоинте (см. Header.css). На более широких
+                  экранах эти оригиналы и так видны в строке — блок скрыт. */}
+              <div className="header__overflow-mobile-extra">
+                <Stepper
+                  variant="overflow"
+                  label="Zoom"
+                  value={`${Math.round(zoom * 100)}%`}
+                  onDelta={(s) => onZoomChange(s * APP_CONSTRAINTS.zoomStep)}
+                  onSet={onSetZoom ? (v) => onSetZoom(v / 100) : undefined}
+                  inputValue={Math.round(zoom * 100)}
+                  min={APP_CONSTRAINTS.minZoom * 100}
+                  max={APP_CONSTRAINTS.maxZoom * 100}
+                />
+                {silyankaProps && (
+                  <Stepper
+                    variant="overflow"
+                    label="Spacing"
+                    value={silyankaProps.spacing}
+                    onDelta={(s) => silyankaProps.onSpacingChange(s * BEAD_THEME.constraints.spacingStep)}
+                    onSet={silyankaProps.onSetSpacing}
+                    inputValue={silyankaProps.spacing}
+                    min={BEAD_THEME.constraints.minSpacing}
+                    max={BEAD_THEME.constraints.maxSpacing}
+                  />
+                )}
+                {crossWeaveProps && (
+                  <Stepper
+                    variant="overflow"
+                    label="Spacing"
+                    value={crossWeaveProps.spacing}
+                    onDelta={(s) => crossWeaveProps.onSpacingChange(s * CROSS_WEAVE_THEME.constraints.spacingStep)}
+                    onSet={crossWeaveProps.onSetSpacing}
+                    inputValue={crossWeaveProps.spacing}
+                    min={CROSS_WEAVE_THEME.constraints.minSpacing}
+                    max={CROSS_WEAVE_THEME.constraints.maxSpacing}
+                  />
+                )}
+                <div className="header__overflow-row">
+                  <span className="header__overflow-label">Save / Load / Share</span>
+                  <div className="grid-controls__actions">
+                    <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
+                      <Download size={14} />
+                    </button>
+                    <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
+                      <Upload size={14} />
+                    </button>
+                    <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
+                      <Share2 size={14} />
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
         <div className="header__divider" />
 
@@ -574,7 +666,7 @@ export const Header = (props: HeaderProps) => {
               <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
               <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">CLEAR</button>
             </div>
-            <div className="grid-controls__actions-row">
+            <div className="grid-controls__actions-row grid-controls__actions-row--files">
               <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
                 <Download size={14} />
               </button>
@@ -599,7 +691,7 @@ export const Header = (props: HeaderProps) => {
 
         <button
           onClick={onToggleReferenceWindow}
-          className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
+          className={`tool-btn tool-btn--reference-standalone ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
           title="Reference image"
           aria-pressed={referenceWindowOpen}
         >
