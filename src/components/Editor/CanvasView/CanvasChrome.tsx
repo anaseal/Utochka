@@ -1,4 +1,4 @@
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Download } from 'lucide-react';
 
 interface CanvasChromeProps {
   canvasTheme: 'dark' | 'light';
@@ -26,8 +26,12 @@ export const CanvasChrome = ({ canvasTheme, onToggleCanvasTheme, onExport }: Can
       className="export-btn"
       onClick={onExport}
       onMouseDown={(e) => e.stopPropagation()}
+      title="Download PNG"
     >
-      Download PNG
+      <Download size={13} />
+      {/* Скрывается на ≤767.98px (см. CanvasView.css) — кнопка сжимается
+          до иконки, чтобы не наезжать на .stats внизу узких экранов. */}
+      <span className="export-btn__label">Download PNG</span>
     </button>
   </>
 );

@@ -44,6 +44,40 @@
   display: none;
 }
 
+/* Обёртка триггера + самой палитры. На десктопе/планшете — просто
+   позиционирующий контекст (position: relative), без визуального эффекта:
+   триггер скрыт (.palette-widget__trigger), палитра ведёт себя как раньше.
+   На ≤479.98px триггер становится видимой круглой кнопкой, а .palette —
+   абсолютно спозиционированным попапом под ней (см. брейкпоинт внизу файла). */
+.palette-widget { position: relative; display: flex; align-items: center; }
+
+.palette-widget__trigger {
+  display: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background-color: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.palette-widget__trigger:hover { color: #e2e8f0; background-color: rgba(255, 255, 255, 0.15); }
+
+.palette-widget__trigger-swatch {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-value);
+  border: 1.5px solid #0f172a;
+}
+
 .palette { display: flex; align-items: center; gap: 0.5rem; }
 
 /* Двухэтажная палитра: базовые цвета сверху, недавние снизу — ровно 2 строки,
@@ -539,6 +573,21 @@
     gap: 6px;
   }
 
+  /* Панель "⋯" была position:absolute с якорем right:0 относительно
+     .header__overflow (тонкая кнопка где-то в середине узкой шапки) — на
+     маленьких экранах при таком якоре панель (min-width 220px) вылезала
+     за левый край экрана и была не видна (html/body имеют overflow:hidden,
+     скроллить некуда). Фиксируем панель напрямую к viewport, а не к кнопке —
+     положение больше не зависит от того, где именно в сжатой шапке
+     оказалась сама кнопка. */
+  .header__overflow-panel {
+    position: fixed;
+    top: calc(var(--palette-height) + 8px);
+    right: 8px;
+    left: auto;
+    max-width: calc(100vw - 16px);
+  }
+
   /* Точечная ручная 2-ярусность там, где раньше элементы стояли в один ряд
      бок о бок — экономит ширину без переноса всего nav целиком (см. выше,
      почему это плохая идея). */
@@ -575,18 +624,27 @@
      по НЕразбитой строке Undo+Redo+CLEAR, и не сжимается при переносе —
      CLEAR растягивался на всю эту ширину, а Undo/Redo повисали слева с
      пустотой справа. Grid с auto-колонками считает размер по реальному
-     наименьшему контенту и центрируется сам. */
+     наименьшему контенту и центрируется сам.
+     Колонки — minmax(0,1fr), а не auto: с auto-колонками сама grid-дорожка
+     была узкой (по ширине Undo+Redo) и justify-content:center центрировал
+     именно её, а не CLEAR — CLEAR (grid-column:1/-1, width:auto → stretch)
+     мог тянуться только в пределах этой узкой дорожки и либо обрезался, либо
+     вылезал за её границы текстом. С 1fr-колонками дорожка растягивается на
+     всю ширину тулбара, CLEAR (width:100%) заполняет и центрируется в ней
+     сам по себе, а Undo/Redo центрируются в своих половинах через
+     justify-items вместо justify-content. */
   .grid-controls__toolbar {
     padding: 4px;
   }
   .grid-controls__actions-row:not(.grid-controls__actions-row--files) {
     display: grid;
-    grid-template-columns: repeat(2, auto);
-    justify-content: center;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-items: center;
     gap: 4px;
   }
   .grid-controls__btn--reset {
     grid-column: 1 / -1;
+    width: 100%;
     /* На отдельной строке рамка слева (унаследованная от однорядной раскладки,
        где она отделяла CLEAR от Undo/Redo) висит без пары — заменяем на
        верхнюю, отделяющую CLEAR от ряда Undo/Redo над ним. */
@@ -604,4 +662,77 @@
   .tool-btn--reference-grid {
     display: flex;
   }
+}
+
+/* Small mobile (320–480px): всё, что уже сжато на ≤767.98px, всё ещё шире
+   доступных ~320–360px по факту (palette в развёрнутом виде — самый тяжёлый
+   блок, ~150–180px из-за двух рядов кружков). Вместо дальнейшего уменьшения
+   кружков до нечитаемого размера — палитра прячется под иконку-триггер
+   (.palette-widget__trigger) и раскрывается попапом, тем же паттерном, что
+   .header__overflow уже использует для Width/Height/Zoom/Spacing. Остальные
+   правила здесь — точечное дожатие оставшихся в строке блоков (tool-group,
+   toolbar, sidebar-кнопка), чтобы уложиться в бюджет 320px. */
+@media (max-width: 479.98px) {
+  .header__nav {
+    gap: 0.3rem;
+    padding: 0.3rem 0.35rem;
+  }
+
+  /* Палитра сворачивается в иконку; сама палитра становится попапом,
+     который перекрывает соседние элементы хедера, а не толкает их. */
+  .palette-widget__trigger { display: flex; }
+
+  .palette {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 110;
+    flex-direction: column;
+    align-items: flex-start;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  }
+  .palette-widget--open .palette { display: flex; }
+
+  /* Внутри попапа кастомный пикер и пипетка возвращаются в один ряд —
+     колоночная раскладка (.palette__extra на ≤767.98px) имела смысл, когда
+     эта пара делила строку хедера с остальной палитрой; в попапе места
+     достаточно, а в столбик они только зря растягивали его по вертикали. */
+  .palette__extra {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .tool-group {
+    width: 68px;
+    gap: 3px;
+  }
+  .tool-btn { width: 1.25rem; height: 1.25rem; }
+
+  .grid-controls__toolbar { padding: 2px; }
+  .grid-controls__btn { width: 22px; height: 22px; }
+
+  /* CLEAR (2-й ряд грида Undo/Redo/Clear, см. ≤767.98px выше) с меньшими
+     22px-кнопками визуально повис слишком далеко от Undo/Redo — тот же
+     отступ (row-gap 4px + border-top/margin-top/padding-top у reset)
+     рассчитывался под более крупные 26px-кнопки. Здесь плотнее. */
+  .grid-controls__actions-row:not(.grid-controls__actions-row--files) {
+    gap: 2px;
+  }
+  .grid-controls__btn--reset {
+    /* Повторяем width:100% из ≤767.98px — иначе .grid-controls__btn{width:22px}
+       чуть выше в этом же блоке (та же специфичность, но позже по каскаду)
+       перебивает его и CLEAR снова сжимается до узкой недоцентрированной кнопки. */
+    width: 100%;
+    margin-top: 0;
+    padding-top: 2px;
+  }
+
+  .header__overflow-trigger { width: 24px; height: 24px; }
+
+  .tool-btn--lg { width: 1.75rem; height: 1.75rem; }
 }

@@ -102,6 +102,10 @@
   bottom: 16px;
   right: calc(var(--sidebar-width) + 16px);
   z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 16px;
   height: 32px;
   background: #111727;
@@ -189,13 +193,21 @@
     border-left: none;
     border-radius: 0 10px 10px 0;
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s;
   }
 }
 
 .span-controls-toggle:hover {
   color: #21cfe9;
   border-color: #21cfe9;
+}
+
+/* Скрыт, пока .canvas__svg проскроллен вправо от левого края (см.
+   CanvasView.tsx) — сама панель, которую открывает эта ручка, живёт у левого
+   края сетки, поэтому вне этого края ручка вводит в заблуждение. */
+.span-controls-toggle--hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Webkit Scrollbar */
@@ -243,5 +255,24 @@
     width: min(1200px, calc(100vw - 40px));
     padding: 14px;
     border-radius: 14px;
+  }
+
+  /* На узких экранах .stats (центрирован, ширина растёт от переноса
+     цветных бейджей) и .export-btn (текстовая кнопка "Download PNG",
+     прижата к bottom-right) занимали почти одну и ту же нижнюю полосу и
+     накладывались друг на друга (особенно при открытой .pendants-sidebar,
+     которая на этой ширине отъедает большую часть экрана). Позиция кнопок
+     остаётся прежней (bottom-right, как на десктопе) — вместо переноса
+     сжимаем .export-btn до иконки (текстовый label скрыт), как у соседней
+     .canvas-theme-toggle: это убирает основной источник наложения без
+     изменения расположения. */
+  .export-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+  }
+  .export-btn__label {
+    display: none;
   }
 }

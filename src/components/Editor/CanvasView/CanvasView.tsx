@@ -138,6 +138,23 @@ export const CanvasView = ({
 
   useWheelZoom(canvasContainerRef, onZoomChange);
 
+  // Шеврон (.span-controls-toggle) «пришвартован» к левому краю карточки
+  // холста и осмыслен только там (за ним прячется панель, живущая у левого
+  // края сетки) — как только пользователь скроллит вправо, эта панель уезжает
+  // за пределы видимой области, и шеврон поверх чужих колонок вводит в
+  // заблуждение. Поэтому он скрыт всё время, пока scrollLeft > 0, и
+  // появляется обратно не по таймеру, а только когда пользователь докрутит
+  // холст обратно до левого края.
+  const [isScrolledFromLeft, setIsScrolledFromLeft] = useState(false);
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    const handleScroll = () => setIsScrolledFromLeft(el.scrollLeft > 0);
+    handleScroll();
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
   useEffect(() => {
     if (!highlightedColor) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -472,7 +489,7 @@ export const CanvasView = ({
               нет вовсе (CrossWeaveRulers). */}
           <button
             type="button"
-            className="span-controls-toggle"
+            className={`span-controls-toggle${isScrolledFromLeft ? ' span-controls-toggle--hidden' : ''}`}
             onClick={() => setSpanControlsExpanded(v => !v)}
             onMouseDown={(e) => e.stopPropagation()}
             title={spanControlsExpanded ? 'Hide bead count editor' : 'Show bead count editor'}
