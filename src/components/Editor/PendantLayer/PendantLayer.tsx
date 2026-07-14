@@ -147,7 +147,11 @@ export const PendantLayer = ({
                   className={groupClassName}
                   onPointerEnter={() => handlePointerEnter(id)}
                   onPointerDown={(e) => {
-                    e.currentTarget.releasePointerCapture(e.pointerId);
+                    // См. BeadView.tsx: снимаем implicit pointer capture с
+                    // e.target (реально захваченный элемент), а не
+                    // e.currentTarget (<g>) — иначе release молча не
+                    // срабатывает и рисование по подвеске пальцем ломается.
+                    if (e.target instanceof Element) e.target.releasePointerCapture(e.pointerId);
                     handlePointerDown(id);
                   }}
                 >

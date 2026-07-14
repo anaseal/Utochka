@@ -39,7 +39,11 @@ export const CrossWeaveBeadView = memo(({
       className={`bead bead--type-span${isEmpty ? ' bead--empty' : ''}`}
       onPointerEnter={() => onPointerEnter(id)}
       onPointerDown={(e) => {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+        // См. BeadView.tsx: снимаем implicit pointer capture с e.target
+        // (реально захваченный <ellipse>), а не e.currentTarget (<g>) —
+        // иначе release молча не срабатывает и рисование линией пальцем
+        // на мобильном ломается.
+        if (e.target instanceof Element) e.target.releasePointerCapture(e.pointerId);
         onPointerDown(id);
       }}
     >

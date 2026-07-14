@@ -168,15 +168,17 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     beadIds: new Set(beads.map(b => b.id)),
   }), [gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides, decorBands, beads]);
 
-  const stampPreviewIds = useMemo<Set<string> | null>(() => {
+  // Полный патч (id -> цвет), а не просто набор id — превью должно показывать
+  // готовый рисунок штампа на целевой позиции, а не только подсвеченный
+  // контур (см. spec.md, «Штамп»).
+  const stampPreviewPatch = useMemo<Record<string, string> | null>(() => {
     if (!stampPattern || !stampHoverNodeId) return null;
     const targetBead = beads.find(b => b.id === stampHoverNodeId);
     if (!targetBead) return null;
-    const patch = applyStampPattern(stampPattern, {
+    return applyStampPattern(stampPattern, {
       row: targetBead.logicalIndex.row,
       col: targetBead.logicalIndex.col,
     }, stampCtx, stampAnchorEdge);
-    return new Set(Object.keys(patch));
   }, [stampPattern, stampHoverNodeId, stampAnchorEdge, beads, stampCtx]);
 
   const handleStampSelect = useCallback((ids: string[]) => {
@@ -445,7 +447,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     pendantPlacements, setPendantPlacements,
     beads, drawingControls, pendantControls,
     sidebarOpen, setSidebarOpen, hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
-    stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewIds,
+    stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewPatch,
     stampAnchorEdge, toggleStampAnchorEdge,
     canvasSvgRef, rowGaps, bottomNodes, internalTop, internalBottom,
     handleStampSelect, handleStampPlace,

@@ -26,10 +26,11 @@ import './CanvasView.css';
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
 // (выделение рамкой) — независим от zoom, т.к. сравнивается в client-координатах.
-// Для тач-указателя порог выше: палец толще и дрожит сильнее курсора мыши,
-// а превышение порога при загруженном узоре трактуется как «новый драг —
-// заменить узор» (см. spec.md) — на 4px это срабатывало бы почти при каждом
-// тапе, случайно стирая только что загруженный штамп.
+// Используется только когда узор ещё не загружен (рисование новой рамки
+// выделения) — пока узор загружен, тач вообще не завязан на этот порог: там
+// касание сразу входит в режим «таскать превью» (см. handleStampContainerPointerDown,
+// mode: 'movePreview'). Отдельное touch-значение выше десктопного — палец
+// толще и дрожит сильнее курсора, случайный микро-сдвиг не должен рвать рамку.
 const STAMP_DRAG_THRESHOLD = 4;
 const STAMP_DRAG_THRESHOLD_TOUCH = 10;
 
@@ -67,7 +68,7 @@ interface CanvasViewProps {
   bottomEdgeSpan: number;
   onBottomEdgeSpanChange: (delta: number) => void;
   stampPattern: StampPattern | null;
-  stampPreviewIds: Set<string> | null;
+  stampPreviewPatch: Record<string, string> | null;
   onStampSelect: (ids: string[]) => void;
   onStampHover: (nodeId: string | null) => void;
   onStampPlace: (nodeId: string) => void;
@@ -111,7 +112,7 @@ export const CanvasView = ({
   bottomEdgeSpan,
   onBottomEdgeSpanChange,
   stampPattern,
-  stampPreviewIds,
+  stampPreviewPatch,
   onStampSelect,
   onStampHover,
   onStampPlace,
@@ -126,6 +127,12 @@ export const CanvasView = ({
     startClient: { x: number; y: number };
     startBead: { x: number; y: number };
     dragging: boolean;
+    // 'select' — обычная логика клик/драг (десктоп: клик ставит копию,
+    // драг рисует новую рамку). 'movePreview' — тач-режим с уже загруженным
+    // узором: палец сразу таскает живое превью (см. handleStampContainerPointerMove),
+    // отпускание коммитит; чтобы нарисовать новую рамку в этом состоянии,
+    // узор сначала сбрасывают крестиком (см. spec.md, «Штамп»).
+    mode: 'select' | 'movePreview';
   } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
@@ -317,17 +324,33 @@ export const CanvasView = ({
     if (activeTool !== 'stamp') return;
     const beadPoint = toBeadCoords(e.clientX, e.clientY);
     if (!beadPoint) return;
+    // На тач с уже загруженным узором нет наведения без контакта — поэтому
+    // касание сразу входит в режим «таскать превью», а не ждёт превышения
+    // порога драга (см. STAMP_DRAG_THRESHOLD_TOUCH — там он больше не нужен
+    // для этого случая, только для рисования новой рамки без узора).
+    const movePreview = e.pointerType === 'touch' && stampPattern !== null;
     stampDragRef.current = {
       startClient: { x: e.clientX, y: e.clientY },
       startBead: beadPoint,
       dragging: false,
+      mode: movePreview ? 'movePreview' : 'select',
     };
-  }, [activeTool, toBeadCoords]);
+    if (movePreview) {
+      const nearest = findNearestNode(beadPoint);
+      onStampHover(nearest?.id ?? null);
+    }
+  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover]);
 
   const handleStampContainerPointerMove = useCallback((e: React.PointerEvent) => {
     if (activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;
     const drag = stampDragRef.current;
     if (drag) {
+      if (drag.mode === 'movePreview') {
+        const beadPoint = toBeadCoords(e.clientX, e.clientY);
+        const nearest = beadPoint ? findNearestNode(beadPoint) : null;
+        onStampHover(nearest?.id ?? null);
+        return;
+      }
       const dx = e.clientX - drag.startClient.x;
       const dy = e.clientY - drag.startClient.y;
       const threshold = e.pointerType === 'touch' ? STAMP_DRAG_THRESHOLD_TOUCH : STAMP_DRAG_THRESHOLD;
@@ -360,6 +383,13 @@ export const CanvasView = ({
     const drag = stampDragRef.current;
     stampDragRef.current = null;
     if (!drag) return;
+
+    if (drag.mode === 'movePreview') {
+      const beadPoint = toBeadCoords(e.clientX, e.clientY) ?? drag.startBead;
+      const nearest = findNearestNode(beadPoint);
+      if (nearest) onStampPlace(nearest.id);
+      return;
+    }
 
     if (drag.dragging) {
       const beadPoint = toBeadCoords(e.clientX, e.clientY) ?? drag.startBead;
@@ -463,9 +493,9 @@ export const CanvasView = ({
                     defaultColor={defaultColorFor(bead.type)}
                     highlighted={
                       (highlightedNodeIds?.has(bead.id) ?? false) ||
-                      (stampPreviewIds?.has(bead.id) ?? false) ||
                       (colorHighlightedBeadIds?.has(bead.id) ?? false)
                     }
+                    previewColor={stampPreviewPatch?.[bead.id]}
                     onPointerEnter={handlePointerEnter}
                     onPointerDown={handlePointerDown}
                   />

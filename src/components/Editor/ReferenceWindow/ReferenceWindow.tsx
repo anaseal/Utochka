@@ -230,7 +230,7 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
         <>
           {hasPersistError && (
             <div className="reference-window__warning">
-              Картинка не сохранена — пропадёт при перезагрузке страницы
+              Image not saved — it will be lost on page reload
             </div>
           )}
 
@@ -243,7 +243,7 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
           />
 
           {isLoading ? (
-            <div className="reference-window__empty">Загрузка…</div>
+            <div className="reference-window__empty">Loading…</div>
           ) : imageUrl ? (
             <>
               <div ref={viewportRef} className="reference-window__viewport">
@@ -257,10 +257,10 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
               </div>
               <div className="reference-window__footer">
                 <button type="button" className="reference-window__text-btn" onClick={() => fileInputRef.current?.click()}>
-                  <Upload size={12} /> Заменить
+                  <Upload size={12} /> Replace
                 </button>
                 <button type="button" className="reference-window__text-btn" onClick={removeImage}>
-                  <Trash2 size={12} /> Убрать
+                  <Trash2 size={12} /> Remove
                 </button>
               </div>
             </>
@@ -271,9 +271,9 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
               onDragLeave={() => setIsDropTarget(false)}
               onDrop={handleDrop}
             >
-              <p>Перетащите картинку сюда</p>
+              <p>Drop an image here</p>
               <button type="button" className="reference-window__text-btn" onClick={() => fileInputRef.current?.click()}>
-                <Upload size={12} /> Выбрать файл
+                <Upload size={12} /> Choose file
               </button>
             </div>
           )}

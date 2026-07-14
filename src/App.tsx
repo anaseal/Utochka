@@ -54,12 +54,12 @@ function App() {
   };
 
   const handleLoadProject = async (file: File) => {
-    if (!window.confirm('Текущая работа будет заменена, продолжить?')) return;
+    if (!window.confirm('Current work will be replaced, continue?')) return;
     try {
       await importProject(file);
       window.location.reload();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Не удалось загрузить проект.');
+      alert(e instanceof Error ? e.message : 'Failed to load project.');
     }
   };
 
@@ -68,18 +68,18 @@ function App() {
     try {
       url = await buildShareUrl();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Не удалось создать ссылку.');
+      alert(e instanceof Error ? e.message : 'Failed to create link.');
       return;
     }
     try {
       await navigator.clipboard.writeText(url);
-      showToast('Ссылка скопирована');
+      showToast('Link copied');
     } catch {
       // Клипборд может отказать (например, если между кликом и записью
       // прошло слишком много времени из-за сетевого запроса, и браузер
       // успел снять разрешение) — тогда отдаём ссылку вручную, чтобы
       // шеринг не проваливался молча.
-      window.prompt('Не удалось скопировать автоматически — скопируйте ссылку вручную:', url);
+      window.prompt('Could not copy automatically — copy the link manually:', url);
     }
   };
 
@@ -92,7 +92,7 @@ function App() {
       const data = await parseShareHash(window.location.hash);
       if (!data) return;
       history.replaceState(null, '', window.location.pathname + window.location.search);
-      if (!window.confirm('Загрузить схему из ссылки? Текущая работа будет заменена.')) return;
+      if (!window.confirm('Load pattern from link? Current work will be replaced.')) return;
       applyProjectData(data);
       window.location.reload();
     })();
@@ -332,7 +332,7 @@ function App() {
           bottomEdgeSpan={silyanka.bottomEdgeDecor.span}
           onBottomEdgeSpanChange={silyanka.updateBottomEdgeSpan}
           stampPattern={silyanka.stampPattern}
-          stampPreviewIds={silyanka.stampPreviewIds}
+          stampPreviewPatch={silyanka.stampPreviewPatch}
           onStampSelect={silyanka.handleStampSelect}
           onStampHover={silyanka.setStampHoverNodeId}
           onStampPlace={silyanka.handleStampPlace}

@@ -12,6 +12,10 @@ interface BeadViewProps {
   color?: string;
   defaultColor: string;
   highlighted?: boolean;
+  // Цвет-«призрак» превью штампа в текущей наведённой позиции — рисуется
+  // поверх реального цвета полупрозрачным пунктиром, чтобы был виден готовый
+  // рисунок, а не просто подсвеченный контур (см. spec.md, «Штамп»).
+  previewColor?: string;
   onPointerDown: (id: string) => void;
   onPointerEnter: (id: string) => void;
 }
@@ -24,6 +28,7 @@ export const BeadView = memo(({
   color,
   defaultColor,
   highlighted,
+  previewColor,
   onPointerDown,
   onPointerEnter
 }: BeadViewProps) => {
@@ -42,7 +47,11 @@ export const BeadView = memo(({
         // touchmove продолжает таргетить бусину, на которой было касание,
         // и onPointerEnter соседних бусин никогда не срабатывает при проводке
         // пальцем — рисование линией на мобильном не работало бы вовсе.
-        e.currentTarget.releasePointerCapture(e.pointerId);
+        // Важно снимать capture именно с e.target (реально захваченный
+        // элемент — вложенный <circle>), а не e.currentTarget (<g>,
+        // на котором висит обработчик): у него capture никогда не было,
+        // и releasePointerCapture на нём молча ничего не делает.
+        if (e.target instanceof Element) e.target.releasePointerCapture(e.pointerId);
         onPointerDown(id);
       }}
     >
@@ -69,6 +78,16 @@ export const BeadView = memo(({
         fill={finalColor}
         style={{ '--bead-color': finalColor } as React.CSSProperties}
       />
+      {previewColor && (
+        <circle
+          className="bead__preview"
+          cx={x}
+          cy={y}
+          r={isNode ? nodeRadius : spanRadius}
+          fill={previewColor}
+          pointerEvents="none"
+        />
+      )}
     </g>
   );
 });

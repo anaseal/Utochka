@@ -56,3 +56,10 @@
   stroke-width: 2;
   opacity: 0.75;
 }
+
+.bead__preview {
+  opacity: 0.6;
+  stroke: #ffffff;
+  stroke-width: 1px;
+  stroke-dasharray: 2 1.5;
+}

@@ -44,8 +44,8 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
                 className="stats__indicator-btn"
                 onClick={() => onToggleHighlight(color)}
                 aria-pressed={isHighlighted}
-                aria-label={`Подсветить бисерины цвета ${color}`}
-                title="Подсветить на холсте"
+                aria-label={`Highlight beads of color ${color}`}
+                title="Highlight on canvas"
               >
                 <span className="stats__indicator" style={{ backgroundColor: color }} />
               </button>
@@ -56,8 +56,8 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
                   className="stats__replace-btn"
                   onClick={() => onReplaceColor(color)}
                   disabled={isActiveColor}
-                  title={isActiveColor ? 'Это и есть текущий цвет' : `Заменить на текущий цвет (${activeColor})`}
-                  aria-label={`Заменить цвет ${color} на текущий выбранный`}
+                  title={isActiveColor ? 'This is already the current color' : `Replace with current color (${activeColor})`}
+                  aria-label={`Replace color ${color} with the currently selected one`}
                 >
                   <Replace size={11} aria-hidden="true" />
                 </button>
