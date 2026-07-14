@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil,
-  ArrowUpToLine, ArrowDownToLine, Image, Download, Upload, Share2, Palette,
+  ArrowUpToLine, ArrowDownToLine, X, Image, Download, Upload, Share2, Palette,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
@@ -64,6 +64,7 @@ interface SilyankaHeaderProps {
   hasStampPattern: boolean;
   stampAnchorEdge: StampAnchorEdge;
   onToggleStampAnchorEdge: () => void;
+  onCancelStampPattern: () => void;
 }
 
 interface CrossWeaveHeaderProps {
@@ -400,10 +401,10 @@ export const Header = (props: HeaderProps) => {
                 />
                 {pickerOpen && (
                   <>
-                    {/* На ≤767.98px ColorPicker центрируется по viewport (см.
-                        ColorPicker.css), а не анкерится к этой маленькой кнопке —
+                    {/* На ≤767.98px ColorPicker анкерится к верху viewport, под
+                        шапкой (см. ColorPicker.css), а не к этой маленькой кнопке —
                         без затемнения фона попап выглядел как случайно "уехавший"
-                        в середину экрана прямоугольник, не читался как модалка.
+                        прямоугольник, не читался как модалка.
                         На десктопе/планшете подложка невидима (см. CSS). */}
                     <div className="color-picker-backdrop" onClick={() => setPickerOpen(false)} />
                     <ColorPicker
@@ -494,18 +495,30 @@ export const Header = (props: HeaderProps) => {
                 </button>
 
                 {activeTool === 'stamp' && silyankaProps.hasStampPattern && (
-                  <button
-                    onClick={silyankaProps.onToggleStampAnchorEdge}
-                    className="tool-btn-group__badge"
-                    title={silyankaProps.stampAnchorEdge === 'top'
-                      ? 'Stamp anchor point: top (click or Shift to switch to bottom, Alt to reset stamp)'
-                      : 'Stamp anchor point: bottom (click or Shift to switch to top, Alt to reset stamp)'}
-                    aria-pressed={silyankaProps.stampAnchorEdge === 'bottom'}
-                  >
-                    {silyankaProps.stampAnchorEdge === 'top'
-                      ? <ArrowUpToLine size={9} />
-                      : <ArrowDownToLine size={9} />}
-                  </button>
+                  <>
+                    <button
+                      onClick={silyankaProps.onToggleStampAnchorEdge}
+                      className="tool-btn-group__badge"
+                      title={silyankaProps.stampAnchorEdge === 'top'
+                        ? 'Stamp anchor point: top (click or Shift to switch to bottom, Esc/Alt to reset stamp)'
+                        : 'Stamp anchor point: bottom (click or Shift to switch to top, Esc/Alt to reset stamp)'}
+                      aria-pressed={silyankaProps.stampAnchorEdge === 'bottom'}
+                    >
+                      {silyankaProps.stampAnchorEdge === 'top'
+                        ? <ArrowUpToLine size={9} />
+                        : <ArrowDownToLine size={9} />}
+                    </button>
+
+                    {/* Тач-эквивалент Escape/Alt — на тач-экране нет клавиатуры,
+                        так что сброс захваченного узора нужен и кнопкой. */}
+                    <button
+                      onClick={silyankaProps.onCancelStampPattern}
+                      className="tool-btn-group__badge tool-btn-group__badge--cancel"
+                      title="Reset stamp pattern (Esc/Alt)"
+                    >
+                      <X size={9} />
+                    </button>
+                  </>
                 )}
               </div>
 

@@ -48,15 +48,19 @@
      --stats-reserve — реально измеренная высота .stats (useStatsReserve,
      ResizeObserver) вместо захардкоженной константы: при большом числе
      цветов .stats__list переносится на несколько строк и вырастает выше
-     140px, наезжая на нижние ряды бисера — особенно на мобильном. */
+     140px, наезжая на нижние ряды бисера — особенно на мобильном.
+     Финальные -50px — это padding-top у .canvas (см. выше): он лежит МЕЖДУ
+     var(--palette-height) и самой карточкой .canvas__svg, но раньше не
+     вычитался из высоты — карточка была ровно на padding-top длиннее
+     доступного места и своим нижним краем наезжала на .stats. */
   width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
-  height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 140px)));
+  height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
   /* dvh вместо vh — см. index.css: на мобильном 100vh игнорирует
      показ/скрытие адресной строки, а .stats (position:fixed) считается от
      реального видимого viewport, отсюда наезд total count на холст, даже
      когда --stats-reserve уже верно посчитан. Вторая строка переопределяет
      первую там, где dvh поддерживается, иначе браузер её просто отбрасывает. */
-  height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px)));
+  height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
 
   overflow: auto;
   position: relative;
@@ -252,17 +256,20 @@
   }
   .canvas__svg {
     width: min(1200px, calc(100vw - 60px));
-    height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px)));
-    height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px)));
+    /* -24px = padding-top у .canvas на этом брейкпоинте (см. ниже) — та же
+       поправка, что и в базовой формуле выше. */
+    height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
+    height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
     padding: 20px;
     border-radius: 18px;
   }
 }
 
 /* ≤767.98px: ещё компактнее — рамка вокруг карточки холста и внутренний
-   padding самой карточки меньше, отдаёт больше места сетке бисерин. Высоту
-   (formula c "110px" запаса под .stats снизу) не трогаем — это не padding
-   карточки, а зазор под другой элемент, сжатие тут дало бы наложение. */
+   padding самой карточки меньше, отдаёт больше места сетке бисерин.
+   padding-top у .canvas здесь меньше (14px вместо 24px на ≤1024px) — высоту
+   .canvas__svg нужно пересчитать с этой же поправкой, иначе унаследованная
+   с ≤1024px формула (-24px) на 10px избыточно урезает карточку. */
 @media (max-width: 767.98px) {
   .canvas {
     padding-top: 14px;
@@ -270,6 +277,8 @@
   }
   .canvas__svg {
     width: min(1200px, calc(100vw - 40px));
+    height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
+    height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
     padding: 14px;
     border-radius: 14px;
   }

@@ -347,6 +347,16 @@
 }
 .tool-btn-group__badge:hover { transform: scale(1.15); }
 
+/* Второй бейдж (сброс узора) — противоположный угол, чтобы не перекрываться
+   с бейджем точки привязки. */
+.tool-btn-group__badge--cancel {
+  right: auto;
+  bottom: auto;
+  left: -5px;
+  top: -5px;
+  background-color: #f87171;
+}
+
 /* Переключатель Silyanka / CrossWeave: сегментированный pill с иконкой + подписью,
    вместо непрозрачной одиночной кнопки-иконки, которая была нечитаема при 15px. */
 .technique-switch {

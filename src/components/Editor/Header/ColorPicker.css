@@ -324,8 +324,12 @@ border: 1px solid #607086;
    см. .palette-widget в Header.css) — center-под-триггером (left: 50% /
    translateX(-50%) выше) выталкивает 220-260px попап за границу viewport.
    Вместо анкера к кнопке — фиксируем оба попапа (основной пикер и мини-пикер
-   вставки цвета внутри Generate) по центру экрана, тем же приёмом, что
-   .header__overflow-panel уже использует для анкера к viewport вместо кнопки. */
+   вставки цвета внутри Generate) к viewport, тем же приёмом, что
+   .header__overflow-panel уже использует для анкера к viewport вместо кнопки.
+   Якорь — верх экрана (под шапкой), а не вертикальный центр: центр viewport
+   на телефоне приходится на середину холста (сам триггер — вверху, в шапке),
+   и попап там выглядел как случайно вырезанная "дыра" посреди канваса, а не
+   как модалка, растущая из кнопки. */
 @media (max-width: 767.98px) {
   .color-picker-backdrop {
     display: block;
@@ -337,11 +341,12 @@ border: 1px solid #607086;
 
   .color-picker {
     position: fixed;
-    top: 50%;
+    top: calc(var(--palette-height) + 12px);
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     max-width: calc(100vw - 32px);
-    max-height: calc(100vh - 32px);
+    max-height: calc(100vh - var(--palette-height) - 24px);
+    max-height: calc(100dvh - var(--palette-height) - 24px);
     overflow-y: auto;
   }
   .color-picker::before {
@@ -350,10 +355,13 @@ border: 1px solid #607086;
 
   .color-picker__insert-popover {
     position: fixed;
-    top: 50%;
+    top: calc(var(--palette-height) + 12px);
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     max-width: calc(100vw - 32px);
+    max-height: calc(100vh - var(--palette-height) - 24px);
+    max-height: calc(100dvh - var(--palette-height) - 24px);
+    overflow-y: auto;
     z-index: 140;
   }
 }

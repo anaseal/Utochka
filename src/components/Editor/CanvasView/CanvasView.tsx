@@ -26,7 +26,12 @@ import './CanvasView.css';
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
 // (выделение рамкой) — независим от zoom, т.к. сравнивается в client-координатах.
+// Для тач-указателя порог выше: палец толще и дрожит сильнее курсора мыши,
+// а превышение порога при загруженном узоре трактуется как «новый драг —
+// заменить узор» (см. spec.md) — на 4px это срабатывало бы почти при каждом
+// тапе, случайно стирая только что загруженный штамп.
 const STAMP_DRAG_THRESHOLD = 4;
+const STAMP_DRAG_THRESHOLD_TOUCH = 10;
 
 interface CanvasViewProps {
   beads: Bead[];
@@ -325,7 +330,8 @@ export const CanvasView = ({
     if (drag) {
       const dx = e.clientX - drag.startClient.x;
       const dy = e.clientY - drag.startClient.y;
-      if (drag.dragging || Math.hypot(dx, dy) > STAMP_DRAG_THRESHOLD) {
+      const threshold = e.pointerType === 'touch' ? STAMP_DRAG_THRESHOLD_TOUCH : STAMP_DRAG_THRESHOLD;
+      if (drag.dragging || Math.hypot(dx, dy) > threshold) {
         // Момент перехода клика в драг — прячем протухший preview старого
         // штампа, чтобы он не мешал видеть новую рамку выделения.
         if (!drag.dragging) onStampHover(null);

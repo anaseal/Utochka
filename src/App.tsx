@@ -116,19 +116,25 @@ function App() {
     silyanka.drawingControls.setActiveTool(tool);
   };
 
+  // То же самое, что Escape/Alt (см. keydown-хендлер ниже) — общий сброс
+  // захваченного узора штампа, доступный и с клавиатуры, и с тач-экрана
+  // (кнопка-крестик у Stamp в Header, см. hasStampPattern/onCancelStampPattern).
+  const cancelStampPattern = () => {
+    silyanka.setStampPattern(null);
+    silyanka.setStampHoverNodeId(null);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (technique === 'silyanka' && e.key === 'Escape' && silyanka.stampPattern) {
-        silyanka.setStampPattern(null);
-        silyanka.setStampHoverNodeId(null);
+        cancelStampPattern();
         return;
       }
       // Alt сбрасывает захваченный штамп так же, как Escape, — курсор
       // сразу возвращается в режим выделения новой зоны драгом.
       if (technique === 'silyanka' && e.key === 'Alt' && silyanka.stampPattern) {
         e.preventDefault();
-        silyanka.setStampPattern(null);
-        silyanka.setStampHoverNodeId(null);
+        cancelStampPattern();
         return;
       }
       // Shift — клавиатурный шорткат для того же тоггла, что и бейдж у кнопки
@@ -254,6 +260,7 @@ function App() {
             hasStampPattern: silyanka.stampPattern !== null,
             stampAnchorEdge: silyanka.stampAnchorEdge,
             onToggleStampAnchorEdge: silyanka.toggleStampAnchorEdge,
+            onCancelStampPattern: cancelStampPattern,
           }}
         />
       ) : (
