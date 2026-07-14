@@ -1,0 +1,41 @@
+.pendant-chain-bead__hitbox {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.pendant-chain-bead__body {
+  stroke: #000000;
+  stroke-width: 0.5px;
+  pointer-events: none;
+  shape-rendering: geometricPrecision;
+  transition: fill 0.1s ease;
+}
+
+.pendant-chain-remove-btn {
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity var(--transition-speed) ease;
+}
+
+.pendant-chain-group:hover .pendant-chain-remove-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pendant-chain-remove-btn__bg {
+  fill: #ff4757;
+  stroke: #0f172a;
+  stroke-width: 1.5;
+}
+
+.pendant-chain-remove-btn:hover .pendant-chain-remove-btn__bg {
+  fill: #ff6b7a;
+}
+
+.pendant-chain-remove-btn__icon {
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}

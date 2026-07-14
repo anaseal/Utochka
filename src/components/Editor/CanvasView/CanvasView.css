@@ -114,7 +114,8 @@
 }
 
 .editor__viewport--flood-fill .canvas__svg,
-.editor__viewport--stamp .canvas__svg {
+.editor__viewport--stamp .canvas__svg,
+.editor__viewport--chain .canvas__svg {
   cursor: crosshair;
 }
 

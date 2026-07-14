@@ -34,3 +34,13 @@ export interface PendantPlacement {
   /** Цвета отдельных бусин: индекс бусины в template.beads → цвет */
   colorMap: Record<number, string>;
 }
+
+export interface PendantChain {
+  placementId: string;
+  /** Индекс колонки узла нижнего ряда — начало цепочки (всегда startCol < endCol) */
+  startCol: number;
+  /** Индекс колонки узла нижнего ряда — конец цепочки */
+  endCol: number;
+  /** Цвета отдельных бисерин цепочки: индекс бисерины (0..N-1) → цвет */
+  colorMap: Record<number, string>;
+}

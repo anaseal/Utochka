@@ -113,6 +113,12 @@ function App() {
       silyanka.setStampPattern(null);
       silyanka.setStampHoverNodeId(null);
     }
+    // Уход с инструмента выбора узлов цепочки сбрасывает незавершённый выбор
+    // начала — иначе следующий заход в инструмент сразу считал бы старый узел
+    // отмеченным.
+    if (silyanka.drawingControls.activeTool === 'pendant-chain' && tool !== 'pendant-chain') {
+      silyanka.setChainPendingStart(null);
+    }
     silyanka.drawingControls.setActiveTool(tool);
   };
 
@@ -128,6 +134,10 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (technique === 'silyanka' && e.key === 'Escape' && silyanka.stampPattern) {
         cancelStampPattern();
+        return;
+      }
+      if (technique === 'silyanka' && e.key === 'Escape' && silyanka.chainPendingStart !== null) {
+        silyanka.setChainPendingStart(null);
         return;
       }
       // Alt сбрасывает захваченный штамп так же, как Escape, — курсор
@@ -327,6 +337,11 @@ function App() {
           hoveredCol={silyanka.hoveredCol}
           onPaintPendantBead={silyanka.handlePendantPaint}
           onRemovePlacement={silyanka.pendantControls.removePlacement}
+          pendantChains={silyanka.pendantChains}
+          onPaintChainBead={silyanka.handleChainPaint}
+          onRemoveChain={silyanka.chainControls.removeChain}
+          chainPendingStart={silyanka.chainPendingStart}
+          onChainNodeClick={silyanka.handleChainNodeClick}
           canvasSvgRef={silyanka.canvasSvgRef}
           onFloodFill={silyanka.handleFloodFill}
           bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
@@ -382,6 +397,14 @@ function App() {
           onHoveredRowChange={silyanka.setHoveredRow}
           bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
           onBottomEdgeToggle={silyanka.toggleBottomEdgeEnabled}
+          pendantChains={silyanka.pendantChains}
+          chainToolActive={silyanka.drawingControls.activeTool === 'pendant-chain'}
+          onToggleChainTool={() => setSilyankaTool(
+            silyanka.drawingControls.activeTool === 'pendant-chain' ? 'pencil' : 'pendant-chain',
+          )}
+          chainPendingStart={silyanka.chainPendingStart}
+          onRemoveChain={silyanka.chainControls.removeChain}
+          onClearChains={silyanka.chainControls.clearAllChains}
         />
       )}
 

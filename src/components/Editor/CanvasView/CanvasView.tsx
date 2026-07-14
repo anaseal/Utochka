@@ -3,15 +3,17 @@ import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
-import { PendantPlacement, PendantTemplate } from '../../../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BeadView } from '../BeadView/BeadView';
 import { CanvasRulers } from '../CanvasRulers/CanvasRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
+import { PendantChainLayer } from '../PendantChainLayer/PendantChainLayer';
 import { CanvasChrome } from './CanvasChrome';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
+import { chainBeadCountBetween, computeChainBeadPositions } from '../../../utils/pendantChain';
 import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
@@ -21,7 +23,7 @@ import { useStatsReserve } from '../../../hooks/useStatsReserve';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
-import { swapColorInMap, swapColorInPendants } from '../../../utils/colorSwap';
+import { swapColorInMap, swapColorInPendants, swapColorInChains } from '../../../utils/colorSwap';
 import './CanvasView.css';
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
@@ -64,6 +66,11 @@ interface CanvasViewProps {
   hoveredCol: number | null;
   onPaintPendantBead: (placementId: string, beadIndex: number) => void;
   onRemovePlacement: (placementId: string) => void;
+  pendantChains: PendantChain[];
+  onPaintChainBead: (placementId: string, beadIndex: number) => void;
+  onRemoveChain: (placementId: string) => void;
+  chainPendingStart: number | null;
+  onChainNodeClick: (col: number) => void;
   canvasSvgRef: React.RefObject<SVGSVGElement | null>;
   bottomEdgeEnabled: boolean;
   bottomEdgeSpan: number;
@@ -76,6 +83,7 @@ interface CanvasViewProps {
   applyPatch: (
     designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
     pendantsFn: ((p: PendantPlacement[]) => PendantPlacement[]) | null,
+    chainsFn?: ((c: PendantChain[]) => PendantChain[]) | null,
   ) => void;
 }
 
@@ -109,6 +117,11 @@ export const CanvasView = ({
   hoveredCol,
   onPaintPendantBead,
   onRemovePlacement,
+  pendantChains,
+  onPaintChainBead,
+  onRemoveChain,
+  chainPendingStart,
+  onChainNodeClick,
   canvasSvgRef,
   bottomEdgeEnabled,
   bottomEdgeSpan,
@@ -168,8 +181,21 @@ export const CanvasView = ({
       pendantMaxY = Math.max(pendantMaxY, anchor.y + depth * PENDANT_SCALE + 26);
     }
 
-    return computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, { extraMaxY: pendantMaxY });
-  }, [beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
+    // Цепочки-подвески тоже провисают ниже сетки — учитываем глубину дуги.
+    let chainMaxY = 0;
+    for (const c of pendantChains) {
+      const start = bottomNodes.find(n => n.logicalIndex.col === c.startCol);
+      const end = bottomNodes.find(n => n.logicalIndex.col === c.endCol);
+      if (!start || !end) continue;
+      const positions = computeChainBeadPositions(start, end);
+      const maxY = Math.max(start.y, end.y, ...positions.map(p => p.y));
+      chainMaxY = Math.max(chainMaxY, maxY + 26);
+    }
+
+    return computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, {
+      extraMaxY: Math.max(pendantMaxY, chainMaxY),
+    });
+  }, [beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes, pendantChains]);
 
   useWheelZoom(canvasContainerRef, onZoomChange);
 
@@ -217,6 +243,7 @@ export const CanvasView = ({
     applyPatch(
       (m) => swapColorInMap(m, oldColor, activeColor),
       (p) => swapColorInPendants(p, oldColor, activeColor),
+      (c) => swapColorInChains(c, oldColor, activeColor),
     );
     setHighlightedColor((c) => (c === oldColor ? null : c));
   }, [applyPatch, activeColor]);
@@ -231,6 +258,20 @@ export const CanvasView = ({
     );
   }, [pendantPlacements, pendantTemplates, bottomNodes]);
 
+  // Цепочка учитывается в статистике, только если у неё живы оба узла-якоря
+  // на нижнем ряду (та же проверка, что и у validPendantPlacements).
+  const validPendantChains = useMemo(() => {
+    const nodeByCol = new Map(bottomNodes.map(n => [n.logicalIndex.col, n]));
+    return pendantChains
+      .map((c) => {
+        const start = nodeByCol.get(c.startCol);
+        const end = nodeByCol.get(c.endCol);
+        if (!start || !end) return null;
+        return { chain: c, count: chainBeadCountBetween(start, end) };
+      })
+      .filter((v): v is { chain: PendantChain; count: number } => v !== null);
+  }, [pendantChains, bottomNodes]);
+
   const colorStats = useMemo(() => {
     const stats = computeColorStats(beads, designMap, (bead) => defaultColorFor(bead.type));
     validPendantPlacements.forEach((p) => {
@@ -240,16 +281,23 @@ export const CanvasView = ({
         stats.set(color, (stats.get(color) || 0) + 1);
       });
     });
+    validPendantChains.forEach(({ chain, count }) => {
+      for (let i = 0; i < count; i++) {
+        const color = chain.colorMap[i] ?? defaultColorFor('SPAN');
+        stats.set(color, (stats.get(color) || 0) + 1);
+      }
+    });
     return Array.from(stats.entries());
-  }, [beads, designMap, validPendantPlacements, pendantTemplates]);
+  }, [beads, designMap, validPendantPlacements, pendantTemplates, validPendantChains]);
 
   const totalCount = useMemo(() => {
     const pendantBeadCount = validPendantPlacements.reduce(
       (sum, p) => sum + pendantTemplates[p.templateId].beads.length,
       0,
     );
-    return beads.length + pendantBeadCount;
-  }, [beads.length, validPendantPlacements, pendantTemplates]);
+    const chainBeadCount = validPendantChains.reduce((sum, { count }) => sum + count, 0);
+    return beads.length + pendantBeadCount + chainBeadCount;
+  }, [beads.length, validPendantPlacements, pendantTemplates, validPendantChains]);
 
   const colorHighlightedBeadIds = useMemo(() => {
     if (!highlightedColor) return null;
@@ -272,6 +320,13 @@ export const CanvasView = ({
     return ids;
   }, [hoveredRow, beads]);
 
+  // Незавершённый выбор начала цепочки (инструмент 'pendant-chain') —
+  // подсвечиваем уже отмеченный узел нижнего ряда, пока не выбран второй.
+  const chainPendingId = useMemo(() => {
+    if (chainPendingStart === null) return null;
+    return bottomNodes.find(n => n.logicalIndex.col === chainPendingStart)?.id ?? null;
+  }, [chainPendingStart, bottomNodes]);
+
   const mirrorFn = useCallback(
     (id: string) => mirrorBeadId(id, width, internalTop, internalBottom),
     [width, internalTop, internalBottom],
@@ -279,17 +334,24 @@ export const CanvasView = ({
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
   const handlePointerEnter = useCallback((id: string) => {
-    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && isDrawing) applyPaint(id);
+    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && isDrawing) {
+      applyPaint(id);
+    }
   }, [activeTool, isDrawing, applyPaint]);
 
   const handlePointerDown = useCallback((id: string) => {
     if (activeTool === 'stamp') return;
+    if (activeTool === 'pendant-chain') {
+      const node = bottomNodes.find(n => n.id === id);
+      if (node) onChainNodeClick(node.logicalIndex.col);
+      return;
+    }
     if (activeTool === 'flood-fill') {
       onFloodFill(id);
     } else {
       applyPaint(id);
     }
-  }, [activeTool, applyPaint, onFloodFill]);
+  }, [activeTool, applyPaint, onFloodFill, bottomNodes, onChainNodeClick]);
 
   // Переводит client-координаты мыши в локальную систему координат <g>,
   // которая совпадает с bead.x/y — без ручного учёта zoom/offset.
@@ -430,14 +492,14 @@ export const CanvasView = ({
   return (
     <main
       data-canvas-theme={canvasTheme}
-      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}`}
+      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}${activeTool === 'pendant-chain' ? ' editor__viewport--chain' : ''}`}
       style={{ '--stats-reserve': `${statsReserve}px` } as React.CSSProperties}
       onPointerDownCapture={touchGesture.onPointerDownCapture}
       onPointerMove={touchGesture.onPointerMove}
-      onPointerDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp') startDrawing(); }}
-      onPointerUp={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
-      onPointerCancel={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
-      onPointerLeave={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp') stopDrawing(); }}
+      onPointerDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') startDrawing(); }}
+      onPointerUp={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') stopDrawing(); }}
+      onPointerCancel={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') stopDrawing(); }}
+      onPointerLeave={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') stopDrawing(); }}
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
@@ -495,7 +557,8 @@ export const CanvasView = ({
                     defaultColor={defaultColorFor(bead.type)}
                     highlighted={
                       (highlightedNodeIds?.has(bead.id) ?? false) ||
-                      (colorHighlightedBeadIds?.has(bead.id) ?? false)
+                      (colorHighlightedBeadIds?.has(bead.id) ?? false) ||
+                      bead.id === chainPendingId
                     }
                     previewColor={stampPreviewPatch?.[bead.id]}
                     onPointerEnter={handlePointerEnter}
@@ -523,6 +586,15 @@ export const CanvasView = ({
                   hoveredCol={hoveredCol}
                   mirrorMode={mirrorMode}
                   width={width}
+                  highlightedColor={highlightedColor}
+                />
+
+                <PendantChainLayer
+                  chains={pendantChains}
+                  bottomNodes={bottomNodes}
+                  isDrawing={isDrawing}
+                  onPaintBead={onPaintChainBead}
+                  onRemove={onRemoveChain}
                   highlightedColor={highlightedColor}
                 />
               </g>

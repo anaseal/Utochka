@@ -1,7 +1,8 @@
 import { Bead } from '../types/bead';
 import { defaultColorFor } from '../config/theme';
-import { PendantPlacement, PendantTemplate } from '../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain } from '../types/pendant';
 import { decode, encode } from './beadId';
+import { chainBeadId, isChainBeadId, parseChainBeadId, chainBeadCountBetween } from './pendantChain';
 
 type AdjMap = Map<string, string[]>;
 
@@ -139,13 +140,20 @@ interface PendantHit {
   index: number;
 }
 
+interface ChainHit {
+  placementId: string;
+  index: number;
+}
+
 interface UnifiedFloodFillResult {
   gridIds: string[];
   pendantHits: PendantHit[];
+  chainHits: ChainHit[];
 }
 
-// Заливка через сетку и подвески как единый граф: подвеска соединена с сеткой
-// через свою якорную ноду (beads[0] всегда касается ноды нижнего ряда).
+// Заливка через сетку, подвески и цепочки-подвески как единый граф: подвеска
+// соединена с сеткой через свою якорную ноду (beads[0] всегда касается ноды
+// нижнего ряда), цепочка — через оба конца (startCol/endCol на нижнем ряду).
 export function computeUnifiedFloodFill(
   startId: string,
   beads: Bead[],
@@ -154,17 +162,38 @@ export function computeUnifiedFloodFill(
   placements: PendantPlacement[],
   templates: Record<string, PendantTemplate>,
   bottomNodes: Bead[],
+  chains: PendantChain[] = [],
 ): UnifiedFloodFillResult {
   const beadMap = new Map(beads.map(b => [b.id, b]));
   const nodeByCol = new Map<number, Bead>();
   bottomNodes.forEach(n => nodeByCol.set(n.logicalIndex.col, n));
   const placementById = new Map(placements.map(p => [p.placementId, p]));
+  const chainById = new Map(chains.map(c => [c.placementId, c]));
 
   const anchorPendants = (nodeId: string): PendantPlacement[] =>
     placements.filter(p => {
       const anchor = nodeByCol.get(p.col);
       return anchor?.id === nodeId && templates[p.templateId];
     });
+
+  // Цепочки, у которых нода nodeId — один из двух концов (startCol/endCol).
+  const anchorChains = (nodeId: string): { chain: PendantChain; isStart: boolean }[] => {
+    const result: { chain: PendantChain; isStart: boolean }[] = [];
+    for (const chain of chains) {
+      const start = nodeByCol.get(chain.startCol);
+      const end = nodeByCol.get(chain.endCol);
+      if (start?.id === nodeId) result.push({ chain, isStart: true });
+      if (end?.id === nodeId) result.push({ chain, isStart: false });
+    }
+    return result;
+  };
+
+  const chainCount = (chain: PendantChain): number => {
+    const start = nodeByCol.get(chain.startCol);
+    const end = nodeByCol.get(chain.endCol);
+    if (!start || !end) return 0;
+    return chainBeadCountBetween(start, end);
+  };
 
   const parsePendantId = (id: string): [string, number] => {
     const [, placementId, idxStr] = id.split(':');
@@ -178,11 +207,15 @@ export function computeUnifiedFloodFill(
       const beadDef = p ? templates[p.templateId]?.beads[index] : undefined;
       return p?.colorMap[index] ?? defaultColorFor(beadDef?.type ?? 'SPAN');
     }
+    if (isChainBeadId(id)) {
+      const [placementId, index] = parseChainBeadId(id);
+      return chainById.get(placementId)?.colorMap[index] ?? defaultColorFor('SPAN');
+    }
     return designMap[id] ?? defaultColorFor(beadMap.get(id)?.type ?? 'SPAN');
   };
 
   const startColor = effectiveColor(startId);
-  if (startColor === activeColor) return { gridIds: [], pendantHits: [] };
+  if (startColor === activeColor) return { gridIds: [], pendantHits: [], chainHits: [] };
 
   const adjMap = buildAdjacencyMap(beads);
 
@@ -203,21 +236,47 @@ export function computeUnifiedFloodFill(
       }
       return result;
     }
+    if (isChainBeadId(id)) {
+      const [placementId, index] = parseChainBeadId(id);
+      const chain = chainById.get(placementId);
+      if (!chain) return [];
+      const count = chainCount(chain);
+      const result: string[] = [];
+      if (index > 0) {
+        result.push(chainBeadId(placementId, index - 1));
+      } else {
+        const startAnchor = nodeByCol.get(chain.startCol);
+        if (startAnchor) result.push(startAnchor.id);
+      }
+      if (index < count - 1) {
+        result.push(chainBeadId(placementId, index + 1));
+      } else {
+        const endAnchor = nodeByCol.get(chain.endCol);
+        if (endAnchor) result.push(endAnchor.id);
+      }
+      return result;
+    }
     const gridNeighbors = adjMap.get(id) ?? [];
     const pendantRoots = anchorPendants(id).map(p => pendantBeadId(p.placementId, 0));
-    return [...gridNeighbors, ...pendantRoots];
+    const chainRoots = anchorChains(id).map(({ chain, isStart }) =>
+      chainBeadId(chain.placementId, isStart ? 0 : Math.max(0, chainCount(chain) - 1)));
+    return [...gridNeighbors, ...pendantRoots, ...chainRoots];
   };
 
   const visited = new Set([startId]);
   const queue = [startId];
   const gridIds: string[] = [];
   const pendantHits: PendantHit[] = [];
+  const chainHits: ChainHit[] = [];
 
   while (queue.length > 0) {
     const current = queue.shift()!;
     if (current.startsWith(PENDANT_PREFIX)) {
       const [placementId, index] = parsePendantId(current);
       pendantHits.push({ placementId, index });
+    } else if (isChainBeadId(current)) {
+      const [placementId, index] = parseChainBeadId(current);
+      chainHits.push({ placementId, index });
     } else {
       gridIds.push(current);
     }
@@ -229,5 +288,5 @@ export function computeUnifiedFloodFill(
     }
   }
 
-  return { gridIds, pendantHits };
+  return { gridIds, pendantHits, chainHits };
 }

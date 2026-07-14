@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bead } from '../../types/bead';
-import { PendantPlacement, PendantTemplate } from '../../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain } from '../../types/pendant';
 import { BEAD_THEME } from '../../config/theme';
 import './PendantsSidebar.css';
 
@@ -23,6 +23,12 @@ interface PendantsSidebarProps {
   onHoveredRowChange: (row: number | null) => void;
   bottomEdgeEnabled: boolean;
   onBottomEdgeToggle: () => void;
+  pendantChains: PendantChain[];
+  chainToolActive: boolean;
+  onToggleChainTool: () => void;
+  chainPendingStart: number | null;
+  onRemoveChain: (placementId: string) => void;
+  onClearChains: () => void;
 }
 
 const ANCHOR_R = 18;
@@ -117,6 +123,12 @@ export const PendantsSidebar = ({
   onHoveredRowChange,
   bottomEdgeEnabled,
   onBottomEdgeToggle,
+  pendantChains,
+  chainToolActive,
+  onToggleChainTool,
+  chainPendingStart,
+  onRemoveChain,
+  onClearChains,
 }: PendantsSidebarProps) => {
   const [drag, setDrag] = useState<{ templateId: string; x: number; y: number } | null>(null);
   const [decorDrag, setDecorDrag] = useState<{ x: number; y: number } | null>(null);
@@ -221,8 +233,9 @@ export const PendantsSidebar = ({
   const handleClearAll = useCallback(() => {
     onClearAll();
     onClearDecor();
+    onClearChains();
     if (bottomEdgeEnabled) onBottomEdgeToggle();
-  }, [onClearAll, onClearDecor, bottomEdgeEnabled, onBottomEdgeToggle]);
+  }, [onClearAll, onClearDecor, onClearChains, bottomEdgeEnabled, onBottomEdgeToggle]);
 
   return (
     <>
@@ -315,6 +328,60 @@ export const PendantsSidebar = ({
           <section className="pendants-sidebar__section">
             <header className="pendants-sidebar__section-heading">
               <div className="pendants-sidebar__section-heading-row">
+                <h3 className="pendants-sidebar__section-title">Chains</h3>
+                <button
+                  type="button"
+                  className="pendants-sidebar__section-clear"
+                  onClick={onClearChains}
+                  disabled={pendantChains.length === 0}
+                  aria-label="Clear Chains"
+                  title="Clear Chains"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="pendants-sidebar__section-desc">
+                {chainToolActive
+                  ? (chainPendingStart !== null
+                    ? 'Click the end node on the bottom row'
+                    : 'Click the start node on the bottom row')
+                  : 'Drape a chain between two bottom-row nodes'}
+              </p>
+            </header>
+            <button
+              type="button"
+              className={`chain-tool-toggle${chainToolActive ? ' chain-tool-toggle--active' : ''}`}
+              onClick={onToggleChainTool}
+              aria-pressed={chainToolActive}
+            >
+              {chainToolActive ? 'Picking nodes…' : 'Pick chain nodes'}
+            </button>
+
+            {pendantChains.length > 0 && (
+              <div className="decor-bands-list">
+                <div className="decor-bands-list__title">Placed</div>
+                {pendantChains.map((c, i) => (
+                  <div key={c.placementId} className="decor-band-item">
+                    <span className="decor-band-item__label">
+                      Chain {i + 1}: col {c.startCol} → {c.endCol}
+                    </span>
+                    <button
+                      type="button"
+                      className="decor-band-item__btn"
+                      onClick={() => onRemoveChain(c.placementId)}
+                      aria-label={`Remove chain ${i + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="pendants-sidebar__section">
+            <header className="pendants-sidebar__section-heading">
+              <div className="pendants-sidebar__section-heading-row">
                 <h3 className="pendants-sidebar__section-title">Decor</h3>
                 <button
                   type="button"
@@ -380,7 +447,7 @@ export const PendantsSidebar = ({
             type="button"
             className="pendants-sidebar__clear"
             onClick={handleClearAll}
-            disabled={!hasPendants && activeBands.length === 0 && !bottomEdgeEnabled}
+            disabled={!hasPendants && activeBands.length === 0 && !bottomEdgeEnabled && pendantChains.length === 0}
           >
             Reset all
           </button>

@@ -1,4 +1,4 @@
-import { PendantPlacement } from '../types/pendant';
+import { PendantPlacement, PendantChain } from '../types/pendant';
 
 // Заменяет oldColor на newColor во всех значениях карты; возвращает тот же
 // объект без изменений (референс сохраняется), если совпадений нет — вызывающий
@@ -36,4 +36,20 @@ export const swapColorInPendants = (
     return { ...p, colorMap: swappedColorMap };
   });
   return changed ? next : placements;
+};
+
+export const swapColorInChains = (
+  chains: PendantChain[],
+  oldColor: string,
+  newColor: string,
+): PendantChain[] => {
+  if (oldColor === newColor) return chains;
+  let changed = false;
+  const next = chains.map((c) => {
+    const swappedColorMap = swapColorInMap(c.colorMap, oldColor, newColor);
+    if (swappedColorMap === c.colorMap) return c;
+    changed = true;
+    return { ...c, colorMap: swappedColorMap };
+  });
+  return changed ? next : chains;
 };

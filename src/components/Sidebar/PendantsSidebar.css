@@ -386,6 +386,32 @@
   color: #64748b;
 }
 
+.chain-tool-toggle {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 0 14px 8px;
+  padding: 7px 12px;
+  background: var(--color-canvas);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 8px;
+  color: #22d3ee;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
+}
+
+.chain-tool-toggle:hover {
+  border-color: #22d3ee;
+  background: #243349;
+}
+
+.chain-tool-toggle--active {
+  background: rgba(34, 211, 238, 0.25);
+  border-color: #22d3ee;
+  color: #e2e8f0;
+}
+
 .pendant-drag-ghost {
   position: fixed;
   width: 90px;

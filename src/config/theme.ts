@@ -43,6 +43,18 @@ export const BEAD_THEME = {
     maxRows: 10,
   },
 
+  // Цепочки-подвески между двумя нижними узлами (см. utils/pendantChain.ts).
+  pendantChainDefaults: {
+    // Глубина провиса = sagScale · distance^sagExponent — нелинейно от
+    // расстояния между узлами-креплениями (в отличие от edgeArcHeight,
+    // фиксированной дуги кромки). sagExponent < 1 делает отношение
+    // sag/distance убывающим: цепочка между 3 нодами провисает глубоко
+    // относительно своей длины, а между 50 нодами — уже не так глубоко,
+    // иначе линейный рост дал бы неестественно растянутую дугу.
+    sagScale: 3.5,
+    sagExponent: 0.5,
+  },
+
   ui: {
     recentColorsLimit: 5,
   },

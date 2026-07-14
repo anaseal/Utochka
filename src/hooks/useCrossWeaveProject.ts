@@ -3,17 +3,20 @@ import { useDrawing } from './useDrawing';
 import { usePersistedState } from './usePersistedState';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../config/crossWeaveTheme';
 import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
-import { PendantPlacement } from '../types/pendant';
+import { PendantPlacement, PendantChain } from '../types/pendant';
 import { generateCrossWeaveGrid } from '../utils/crossWeaveGenerator';
 import { mirrorCrossWeaveBeadId, shiftCrossWeaveDesignMapColumns } from '../utils/crossWeaveMirror';
 import { computeCrossWeaveFloodFill } from '../utils/crossWeaveFloodFill';
 import { clamp } from '../utils/clamp';
 import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
 
-// CrossWeave не поддерживает подвески (MVP) — стабильные пустая ссылка и
-// no-op сеттер, чтобы useDrawing не считал их «изменившимися» на каждый рендер.
+// CrossWeave не поддерживает подвески и цепочки-подвески (MVP) — стабильные
+// пустая ссылка и no-op сеттер, чтобы useDrawing не считал их «изменившимися»
+// на каждый рендер.
 const EMPTY_PENDANT_PLACEMENTS: PendantPlacement[] = [];
 const noopSetPendantPlacements = () => {};
+const EMPTY_PENDANT_CHAINS: PendantChain[] = [];
+const noopSetPendantChains = () => {};
 
 const isCrossWeaveGridConfig = (v: unknown): v is CrossWeaveGridConfig => {
   if (typeof v !== 'object' || v === null) return false;
@@ -63,7 +66,8 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
   }, [gridSize.width, gridSize.height, gridSize.pitchX, gridSize.pitchY]);
 
   const drawingControls = useDrawing(
-    palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements, 'crossWeave',
+    palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements,
+    EMPTY_PENDANT_CHAINS, noopSetPendantChains, 'crossWeave',
   );
 
   // Заливка: BFS по графу физической смежности бисерин (см.

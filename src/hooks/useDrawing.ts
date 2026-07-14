@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, Dispatch, SetStateAction } from 'react';
 import { BEAD_THEME } from '../config/theme';
 import { usePersistedState } from './usePersistedState';
-import { PendantPlacement } from '../types/pendant';
+import { PendantPlacement, PendantChain } from '../types/pendant';
 
 const MAX_HISTORY = 30;
 const RECENT_LIMIT = BEAD_THEME.ui.recentColorsLimit;
@@ -12,13 +12,15 @@ const isDesignMap = (v: unknown): v is Record<string, string> => {
   return Object.values(v).every(c => typeof c === 'string');
 };
 
-export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp';
+export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp' | 'pendant-chain';
 
-// Единица истории: снимок сетки И подвесок разом — один Undo/Redo
-// откатывает оба состояния синхронно (они рисуются одним мазком/жестом).
+// Единица истории: снимок сетки, подвесок И цепочек-подвесок разом — один
+// Undo/Redo откатывает все три состояния синхронно (они рисуются одним
+// мазком/жестом, например заливка может задеть сетку, подвеску и цепочку разом).
 interface HistorySnapshot {
   designMap: Record<string, string>;
   pendants: PendantPlacement[];
+  chains: PendantChain[];
 }
 
 export const useDrawing = (
@@ -26,6 +28,8 @@ export const useDrawing = (
   basePalette: readonly string[],
   pendantPlacements: PendantPlacement[],
   setPendantPlacements: Dispatch<SetStateAction<PendantPlacement[]>>,
+  pendantChains: PendantChain[],
+  setPendantChains: Dispatch<SetStateAction<PendantChain[]>>,
   storageNamespace: string,
 ) => {
   const recentStorageKey = `${storageNamespace}:recentColors`;
@@ -68,7 +72,7 @@ export const useDrawing = (
   const [past, setPast] = useState<HistorySnapshot[]>([]);
   const [future, setFuture] = useState<HistorySnapshot[]>([]);
 
-  const preStrokeRef = useRef<HistorySnapshot>({ designMap: {}, pendants: [] });
+  const preStrokeRef = useRef<HistorySnapshot>({ designMap: {}, pendants: [], chains: [] });
 
   const pushSnapshot = useCallback((snapshot: HistorySnapshot) => {
     setPast(prev => {
@@ -79,19 +83,19 @@ export const useDrawing = (
   }, []);
 
   const startDrawing = useCallback(() => {
-    preStrokeRef.current = { designMap, pendants: pendantPlacements };
+    preStrokeRef.current = { designMap, pendants: pendantPlacements, chains: pendantChains };
     setIsDrawing(true);
-  }, [designMap, pendantPlacements]);
+  }, [designMap, pendantPlacements, pendantChains]);
 
   const stopDrawing = useCallback(() => {
     if (isDrawing) {
       const pre = preStrokeRef.current;
-      if (pre.designMap !== designMap || pre.pendants !== pendantPlacements) {
+      if (pre.designMap !== designMap || pre.pendants !== pendantPlacements || pre.chains !== pendantChains) {
         pushSnapshot(pre);
       }
     }
     setIsDrawing(false);
-  }, [isDrawing, designMap, pendantPlacements, pushSnapshot]);
+  }, [isDrawing, designMap, pendantPlacements, pendantChains, pushSnapshot]);
 
   const paintBead = useCallback((id: string) => {
     if (activeTool === 'eraser') {
@@ -111,15 +115,21 @@ export const useDrawing = (
   const clearAll = useCallback(() => {
     const hasDesign = Object.keys(designMap).length > 0;
     const hasPendantColors = pendantPlacements.some(p => Object.keys(p.colorMap).length > 0);
-    if (!hasDesign && !hasPendantColors) return;
-    pushSnapshot({ designMap, pendants: pendantPlacements });
+    const hasChainColors = pendantChains.some(c => Object.keys(c.colorMap).length > 0);
+    if (!hasDesign && !hasPendantColors && !hasChainColors) return;
+    pushSnapshot({ designMap, pendants: pendantPlacements, chains: pendantChains });
     if (hasDesign) setDesignMap({});
     if (hasPendantColors) {
       setPendantPlacements(prev => prev.map(p => (
         Object.keys(p.colorMap).length === 0 ? p : { ...p, colorMap: {} }
       )));
     }
-  }, [designMap, pendantPlacements, pushSnapshot, setPendantPlacements]);
+    if (hasChainColors) {
+      setPendantChains(prev => prev.map(c => (
+        Object.keys(c.colorMap).length === 0 ? c : { ...c, colorMap: {} }
+      )));
+    }
+  }, [designMap, pendantPlacements, pendantChains, pushSnapshot, setPendantPlacements, setPendantChains]);
 
   // Управляемая трансформация Design Map (например, пересчёт при смене ширины).
   // Снимок сохраняется в историю — результат можно отменить через Undo.
@@ -128,41 +138,47 @@ export const useDrawing = (
   ) => {
     const next = fn(designMap);
     if (next === designMap) return;
-    pushSnapshot({ designMap, pendants: pendantPlacements });
+    pushSnapshot({ designMap, pendants: pendantPlacements, chains: pendantChains });
     setDesignMap(next);
-  }, [designMap, pendantPlacements, pushSnapshot]);
+  }, [designMap, pendantPlacements, pendantChains, pushSnapshot]);
 
-  // Одновременное изменение сетки И подвесок одним шагом истории (например, заливка,
-  // которая может задеть и обычные бусины, и бусины подвесок за один клик).
+  // Одновременное изменение сетки, подвесок И цепочек одним шагом истории
+  // (например, заливка, которая может задеть обычные бусины, бусины подвески
+  // и бусины цепочки за один клик).
   const applyPatch = useCallback((
     designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
     pendantsFn: ((p: PendantPlacement[]) => PendantPlacement[]) | null,
+    chainsFn: ((c: PendantChain[]) => PendantChain[]) | null = null,
   ) => {
     const nextDesignMap = designMapFn ? designMapFn(designMap) : designMap;
     const nextPendants = pendantsFn ? pendantsFn(pendantPlacements) : pendantPlacements;
-    if (nextDesignMap === designMap && nextPendants === pendantPlacements) return;
-    pushSnapshot({ designMap, pendants: pendantPlacements });
+    const nextChains = chainsFn ? chainsFn(pendantChains) : pendantChains;
+    if (nextDesignMap === designMap && nextPendants === pendantPlacements && nextChains === pendantChains) return;
+    pushSnapshot({ designMap, pendants: pendantPlacements, chains: pendantChains });
     if (nextDesignMap !== designMap) setDesignMap(nextDesignMap);
     if (nextPendants !== pendantPlacements) setPendantPlacements(nextPendants);
-  }, [designMap, pendantPlacements, pushSnapshot, setPendantPlacements]);
+    if (nextChains !== pendantChains) setPendantChains(nextChains);
+  }, [designMap, pendantPlacements, pendantChains, pushSnapshot, setPendantPlacements, setPendantChains]);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;
-    setFuture(f => [{ designMap, pendants: pendantPlacements }, ...f]);
+    setFuture(f => [{ designMap, pendants: pendantPlacements, chains: pendantChains }, ...f]);
     const snapshot = past[past.length - 1];
     setDesignMap(snapshot.designMap);
     setPendantPlacements(snapshot.pendants);
+    setPendantChains(snapshot.chains);
     setPast(p => p.slice(0, -1));
-  }, [past, designMap, pendantPlacements, setPendantPlacements]);
+  }, [past, designMap, pendantPlacements, pendantChains, setPendantPlacements, setPendantChains]);
 
   const redo = useCallback(() => {
     if (future.length === 0) return;
-    setPast(p => [...p, { designMap, pendants: pendantPlacements }]);
+    setPast(p => [...p, { designMap, pendants: pendantPlacements, chains: pendantChains }]);
     const snapshot = future[0];
     setDesignMap(snapshot.designMap);
     setPendantPlacements(snapshot.pendants);
+    setPendantChains(snapshot.chains);
     setFuture(f => f.slice(1));
-  }, [future, designMap, pendantPlacements, setPendantPlacements]);
+  }, [future, designMap, pendantPlacements, pendantChains, setPendantPlacements, setPendantChains]);
 
   return {
     activeColor,

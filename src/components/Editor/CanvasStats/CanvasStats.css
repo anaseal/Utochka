@@ -83,6 +83,27 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.stats__list::-webkit-scrollbar {
+  height: 6px;
+}
+
+.stats__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stats__list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+  background-clip: padding-box;
+  transition: background var(--transition-speed) ease;
+}
+
+.stats__list::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.55);
+  background-clip: padding-box;
 }
 
 .stats__color-badge {
