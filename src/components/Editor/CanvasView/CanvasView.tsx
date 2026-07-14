@@ -48,6 +48,7 @@ interface CanvasViewProps {
   onFloodFill: (id: string) => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
+  onSetZoom: (v: number) => void;
   topSpan: number;
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
@@ -92,6 +93,7 @@ export const CanvasView = ({
   onFloodFill,
   zoom,
   onZoomChange,
+  onSetZoom,
   topSpan,
   bottomSpan,
   rowSpanOverrides,
@@ -150,6 +152,25 @@ export const CanvasView = ({
     ? BEAD_THEME.gridDefaults.offsetXCollapsed
     : offsetX;
 
+  const dim = useMemo(() => {
+    // Подвески свисают ниже сетки — учитываем их глубину в высоте SVG.
+    let pendantMaxY = 0;
+    for (const p of pendantPlacements) {
+      const t = pendantTemplates[p.templateId];
+      const anchor = bottomNodes.find(n => n.logicalIndex.col === p.col);
+      if (!t || !anchor) continue;
+      let depth = -Infinity;
+      for (const b of t.beads) {
+        const reach = b.dy + (b.shape === 'circle' ? (b.r ?? 0) : (b.h ?? 0) / 2);
+        if (reach > depth) depth = reach;
+      }
+      // +26: место под кнопку удаления ниже последней бусины
+      pendantMaxY = Math.max(pendantMaxY, anchor.y + depth * PENDANT_SCALE + 26);
+    }
+
+    return computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, { extraMaxY: pendantMaxY });
+  }, [beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
+
   useWheelZoom(canvasContainerRef, onZoomChange);
 
   // Второй палец на холсте отменяет любой начатый одним пальцем жест
@@ -159,7 +180,7 @@ export const CanvasView = ({
     stampDragRef.current = null;
     setSelectionRect(null);
   }, [stopDrawing]);
-  const touchGesture = useTouchPanZoom(canvasContainerRef, zoom, onZoomChange, cancelActiveStroke);
+  const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, dim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
   // Шеврон (.span-controls-toggle) «пришвартован» к левому краю карточки
@@ -199,25 +220,6 @@ export const CanvasView = ({
     );
     setHighlightedColor((c) => (c === oldColor ? null : c));
   }, [applyPatch, activeColor]);
-
-  const dim = useMemo(() => {
-    // Подвески свисают ниже сетки — учитываем их глубину в высоте SVG.
-    let pendantMaxY = 0;
-    for (const p of pendantPlacements) {
-      const t = pendantTemplates[p.templateId];
-      const anchor = bottomNodes.find(n => n.logicalIndex.col === p.col);
-      if (!t || !anchor) continue;
-      let depth = -Infinity;
-      for (const b of t.beads) {
-        const reach = b.dy + (b.shape === 'circle' ? (b.r ?? 0) : (b.h ?? 0) / 2);
-        if (reach > depth) depth = reach;
-      }
-      // +26: место под кнопку удаления ниже последней бусины
-      pendantMaxY = Math.max(pendantMaxY, anchor.y + depth * PENDANT_SCALE + 26);
-    }
-
-    return computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, { extraMaxY: pendantMaxY });
-  }, [beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes]);
 
   // Подвеска учитывается в статистике, только если у неё есть и валидный
   // шаблон, и живая нода-якорь на нижнем ряду (та же проверка, что и в

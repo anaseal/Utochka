@@ -311,6 +311,7 @@ function App() {
           onToggleCanvasTheme={() => setCanvasTheme(t => (t === 'dark' ? 'light' : 'dark'))}
           zoom={zoom}
           onZoomChange={updateZoom}
+          onSetZoom={setZoomAbsolute}
           topSpan={silyanka.gridSize.topSpan}
           bottomSpan={silyanka.gridSize.bottomSpan}
           rowSpanOverrides={silyanka.rowSpanOverrides}
@@ -347,6 +348,7 @@ function App() {
           onToggleCanvasTheme={() => setCanvasTheme(t => (t === 'dark' ? 'light' : 'dark'))}
           zoom={zoom}
           onZoomChange={updateZoom}
+          onSetZoom={setZoomAbsolute}
           designMap={crossWeave.drawingControls.designMap}
           activeTool={crossWeave.drawingControls.activeTool}
           activeColor={crossWeave.drawingControls.activeColor}

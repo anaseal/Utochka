@@ -33,6 +33,7 @@ interface CrossWeaveCanvasViewProps {
   stopDrawing: () => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
+  onSetZoom: (v: number) => void;
   mirrorMode: boolean;
   rawWidth: number;
   onFloodFill: (id: string) => void;
@@ -60,6 +61,7 @@ export const CrossWeaveCanvasView = ({
   stopDrawing,
   zoom,
   onZoomChange,
+  onSetZoom,
   mirrorMode,
   rawWidth,
   onFloodFill,
@@ -91,14 +93,14 @@ export const CrossWeaveCanvasView = ({
   const offsetY = 60;
   const { beadMajorRadius } = CROSS_WEAVE_THEME.sizes;
 
-  useWheelZoom(canvasContainerRef, onZoomChange);
-  const touchGesture = useTouchPanZoom(canvasContainerRef, zoom, onZoomChange, stopDrawing);
-  const { statsRef, reserve: statsReserve } = useStatsReserve(140);
-
   const dim = useMemo(
     () => computeCanvasDim(beads, offsetX, offsetY, beadMajorRadius),
     [beads, beadMajorRadius],
   );
+
+  useWheelZoom(canvasContainerRef, onZoomChange);
+  const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, dim, onSetZoom, stopDrawing);
+  const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
   const colorStats = useMemo(
     () => Array.from(computeColorStats(beads, designMap, defaultColorForCrossWeave).entries()),
