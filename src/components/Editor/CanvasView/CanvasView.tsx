@@ -5,8 +5,7 @@ import { Bead } from '../../../types/bead';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { PendantPlacement, PendantTemplate, PendantChain } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
-import { BeadView } from '../BeadView/BeadView';
-import { CanvasRulers } from '../CanvasRulers/CanvasRulers';
+import { BeadGrid } from './BeadGrid';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { PendantChainLayer } from '../PendantChainLayer/PendantChainLayer';
@@ -529,10 +528,21 @@ export const CanvasView = ({
                   effectiveOffsetX уже (offsetX) на десктопе/при развёрнутых
                   span-контролах, уже (offsetXCollapsed) на ≤767.98px, когда они
                   свёрнуты — освобождает место, которое иначе пустовало бы под
-                  скрытыми ±/счётчиками. */}
-              <g ref={stampGroupRef} transform={`translate(${effectiveOffsetX}, ${offsetY})`}>
-                <CanvasRulers
+                  скрытыми ±/счётчиками. dim.shiftX — доп. место, когда сетка
+                  заходит левее x=0 (см. canvasDim.ts); панель линейки получает
+                  тот же сдвиг в обратную сторону внутри себя (gutterShiftX на
+                  BeadGrid/CanvasRulers), чтобы визуально остаться на месте, а
+                  не наехать на новые крайние бисерины. */}
+              <g ref={stampGroupRef} transform={`translate(${effectiveOffsetX + dim.shiftX}, ${offsetY})`}>
+                <BeadGrid
                   beads={beads}
+                  designMap={designMap}
+                  highlightedNodeIds={highlightedNodeIds}
+                  colorHighlightedBeadIds={colorHighlightedBeadIds}
+                  chainPendingId={chainPendingId}
+                  stampPreviewPatch={stampPreviewPatch}
+                  onPointerEnter={handlePointerEnter}
+                  onPointerDown={handlePointerDown}
                   topSpan={topSpan}
                   bottomSpan={bottomSpan}
                   rowSpanOverrides={rowSpanOverrides}
@@ -544,27 +554,8 @@ export const CanvasView = ({
                   bottomEdgeSpan={bottomEdgeSpan}
                   onBottomEdgeSpanChange={onBottomEdgeSpanChange}
                   spanControlsExpanded={spanControlsExpanded}
+                  gutterShiftX={dim.shiftX}
                 />
-
-                {beads.map((bead) => (
-                  <BeadView
-                    key={bead.id}
-                    id={bead.id}
-                    x={bead.x}
-                    y={bead.y}
-                    type={bead.type}
-                    color={designMap[bead.id]}
-                    defaultColor={defaultColorFor(bead.type)}
-                    highlighted={
-                      (highlightedNodeIds?.has(bead.id) ?? false) ||
-                      (colorHighlightedBeadIds?.has(bead.id) ?? false) ||
-                      bead.id === chainPendingId
-                    }
-                    previewColor={stampPreviewPatch?.[bead.id]}
-                    onPointerEnter={handlePointerEnter}
-                    onPointerDown={handlePointerDown}
-                  />
-                ))}
 
                 {selectionRect && (
                   <rect

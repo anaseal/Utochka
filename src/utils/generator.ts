@@ -51,7 +51,16 @@ export const generateSilyankaGrid = (
       : 0;
   };
 
-  const nodeGrid: SpanCoords[][] = [];
+  // Нечётные (сдвинутые на stepX/2) ряды начинаются на одну колонку раньше
+  // чётных (c=-1) и заканчиваются на одну позже (c=width-1), а не совпадают
+  // с диапазоном чётных c=0..width-2. Без этого у крайнего узла чётного ряда
+  // (c=0 или c=width-1) снизу/сверху есть только один сосед вместо двух —
+  // единственная диагональ вместо полного зигзага (см. spec.md).
+  const isShiftedRow = (r: number): boolean => r % 2 !== 0;
+  const minC = (r: number): number => (isShiftedRow(r) ? -1 : 0);
+  const maxC = (): number => width - 1;
+
+  const nodeGrid: SpanCoords[][] = []; // nodeGrid[r][c - minC(r)]
   // decorGrid[r] — декор-ряды (сверху вниз) полосы между узловым рядом r и r+1
   const decorGrid: Record<number, SpanCoords[][]> = {};
   let currentY = 0;
@@ -59,11 +68,9 @@ export const generateSilyankaGrid = (
   // 1. Создаём сетку узловых точек; декор-полосы раздвигают полотно по вертикали
   for (let r = 0; r <= 2 * height; r++) {
     const rowNodes: SpanCoords[] = [];
-    const isShifted = r % 2 !== 0;
-    const currentOffsetX = isShifted ? stepX / 2 : 0;
-    const rowWidth = isShifted ? width - 1 : width;
+    const currentOffsetX = isShiftedRow(r) ? stepX / 2 : 0;
 
-    for (let c = 0; c < rowWidth; c++) {
+    for (let c = minC(r); c <= maxC(); c++) {
       rowNodes.push({
         x: c * stepX + currentOffsetX,
         y: currentY
@@ -84,6 +91,8 @@ export const generateSilyankaGrid = (
 
     currentY += getYStep(r);
   }
+
+  const nodeAt = (r: number, c: number): SpanCoords | undefined => nodeGrid[r]?.[c - minC(r)];
 
   const generateSpan = (
     start: SpanCoords,
@@ -135,9 +144,11 @@ export const generateSilyankaGrid = (
     // от нижнего декор-ряда полосы, а не от самого узлового ряда.
     const band = decorGrid[r];
     const edgeStartRow = band ? band[band.length - 1] : nodeGrid[r];
+    const rowMinC = minC(r);
 
-    for (let c = 0; c < nodeGrid[r].length; c++) {
-      const currentNode = nodeGrid[r][c];
+    for (let arrIdx = 0; arrIdx < nodeGrid[r].length; arrIdx++) {
+      const c = arrIdx + rowMinC;
+      const currentNode = nodeGrid[r][arrIdx];
 
       beads.push({
         id: encode({ kind: 'node', r, c }),
@@ -148,18 +159,17 @@ export const generateSilyankaGrid = (
       });
 
       if (r === 0 && c < width - 1) {
-        generateArcSpan(currentNode, nodeGrid[0][c + 1], internalTop, i => encode({ kind: 'topLink', c, i }), r, c, edgeArcHeight, -1);
+        generateArcSpan(currentNode, nodeAt(0, c + 1)!, internalTop, i => encode({ kind: 'topLink', c, i }), r, c, edgeArcHeight, -1);
       }
 
-      const nextRow = nodeGrid[r + 1];
-      if (nextRow) {
+      if (r + 1 <= 2 * height) {
         const isBottomTransition = r % 2 === 0;
         const currentCount = getInternalCount(r);
-        const neighborIndices = isBottomTransition ? [c - 1, c] : [c, c + 1];
-        const edgeStartNode = edgeStartRow[c];
+        const neighborCs = isBottomTransition ? [c - 1, c] : [c, c + 1];
+        const edgeStartNode = edgeStartRow[arrIdx];
 
-        neighborIndices.forEach((nIdx, sideIdx) => {
-          const nextNode = nextRow[nIdx];
+        neighborCs.forEach((nc, sideIdx) => {
+          const nextNode = nodeAt(r + 1, nc);
           if (nextNode) {
             const side = sideIdx === 0 ? 'left' : 'right';
             generateSpan(edgeStartNode, nextNode, currentCount, i => encode({ kind: 'vertEdge', r, c, side, i }), r, c);
@@ -172,7 +182,8 @@ export const generateSilyankaGrid = (
     // Тип SPAN — красятся карандашом/ластиком как обычные пролёты.
     if (band) {
       band.forEach((decorRow, k) => {
-        decorRow.forEach((coord, c) => {
+        decorRow.forEach((coord, arrIdx) => {
+          const c = arrIdx + rowMinC;
           beads.push({
             id: encode({ kind: 'decor', r, k: k + 1, c }),
             x: coord.x,
@@ -189,8 +200,8 @@ export const generateSilyankaGrid = (
     const lastR = 2 * height;
     const lastRow = nodeGrid[lastR];
 
-    for (let c = 0; c < lastRow.length - 1; c++) {
-      generateArcSpan(lastRow[c], lastRow[c + 1], internalBottom, i => encode({ kind: 'bottomLink', c, i }), lastR, c, edgeArcHeight, 1);
+    for (let arrIdx = 0; arrIdx < lastRow.length - 1; arrIdx++) {
+      generateArcSpan(lastRow[arrIdx], lastRow[arrIdx + 1], internalBottom, i => encode({ kind: 'bottomLink', c: arrIdx, i }), lastR, arrIdx, edgeArcHeight, 1);
     }
   }
 

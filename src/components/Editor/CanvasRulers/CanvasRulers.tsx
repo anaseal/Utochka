@@ -20,6 +20,13 @@ interface CanvasRulersProps {
   // вертикали (см. CanvasView.tsx) — сворачивается по умолчанию, раскрывается
   // тогглом. На более широких экранах класс ничего не меняет (см. CanvasRulers.css).
   spanControlsExpanded: boolean;
+  // Доп. сдвиг влево для номеров рядов и ±/счётчиков (canvasDim.ts →
+  // computeCanvasDim.shiftX) — компенсирует общий translate группы в
+  // CanvasView, чтобы сама панель осталась на прежнем месте, а не наехала на
+  // новые крайние бисерины нечётных рядов (см. spec.md). Ось зеркала и номера
+  // колонок этот сдвиг не получают — они уже привязаны к реальным координатам
+  // бисерин.
+  gutterShiftX: number;
 }
 
 const SpanCtrlButton = ({
@@ -60,7 +67,7 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded }: CanvasRulersProps) => {
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded, gutterShiftX }: CanvasRulersProps) => {
   // На ≤767.98px шрифт подписей мельче (CanvasRulers.css), а margin чуть
   // больше — левее для номеров рядов (baselineX=-axisMarginX, text-anchor
   // end — больше margin = левее), выше для номеров колонн (baselineY=
@@ -89,9 +96,12 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
   const colAxesNodes = useMemo(
     () =>
       nodes
-        .filter(n => n.logicalIndex.row === 1)
+        // Ряд 1 теперь на 2 узла шире (c=-1..width-1, см. spec.md) — крайние
+        // два в подсчёт линейки не входят, чтобы отображаемое число колонок
+        // не менялось.
+        .filter(n => n.logicalIndex.row === 1 && n.logicalIndex.col >= 0 && n.logicalIndex.col <= width - 2)
         .sort((a, b) => a.logicalIndex.col - b.logicalIndex.col),
-    [nodes]
+    [nodes, width]
   );
 
   const baselineX = -axisMarginX;
@@ -181,18 +191,54 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
         />
       )}
 
-      {rowAxesNodes.map((node, i) => (
-        <text
-          key={`idx-row-${node.id}`}
-          x={baselineX}
-          y={node.y}
-          dominantBaseline="middle"
-          textAnchor="end"
-          className="canvas__axis-text"
-        >
-          {i + 1}
-        </text>
-      ))}
+      <g transform={`translate(${-gutterShiftX}, 0)`}>
+        {rowAxesNodes.map((node, i) => (
+          <text
+            key={`idx-row-${node.id}`}
+            x={baselineX}
+            y={node.y}
+            dominantBaseline="middle"
+            textAnchor="end"
+            className="canvas__axis-text"
+          >
+            {i + 1}
+          </text>
+        ))}
+
+        <g className={`span-ctrl-layer${spanControlsExpanded ? '' : ' span-ctrl-layer--collapsed'}`}>
+          {spanRowControls.map(({ r, midY, count, isOverridden, isBottom, onDelta }) => {
+            const type = isBottom ? 'bottom' : 'top';
+            const changeBy = onDelta ?? ((delta: number) => onRowSpanChange(r, delta));
+            return (
+              <g key={`span-ctrl-${r}`}>
+                <SpanCtrlButton
+                  cx={ctrlCenterX - 19}
+                  midY={midY}
+                  type={type}
+                  glyph="−"
+                  onClick={() => changeBy(-1)}
+                />
+                <text
+                  x={ctrlCenterX - 3}
+                  y={midY}
+                  dominantBaseline="middle"
+                  textAnchor="middle"
+                  className={`span-ctrl__count span-ctrl__count--${type}${isOverridden ? ' span-ctrl__count--overridden' : ''}`}
+                >
+                  {count}
+                </text>
+                <SpanCtrlButton
+                  cx={ctrlCenterX + 18}
+                  midY={midY}
+                  type={type}
+                  glyph="+"
+                  onClick={() => changeBy(1)}
+                />
+              </g>
+            );
+          })}
+        </g>
+      </g>
 
       {colAxesNodes.map((node, i) => (
         <text
@@ -205,40 +251,6 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
           {i + 1}
         </text>
       ))}
-
-      <g className={`span-ctrl-layer${spanControlsExpanded ? '' : ' span-ctrl-layer--collapsed'}`}>
-        {spanRowControls.map(({ r, midY, count, isOverridden, isBottom, onDelta }) => {
-          const type = isBottom ? 'bottom' : 'top';
-          const changeBy = onDelta ?? ((delta: number) => onRowSpanChange(r, delta));
-          return (
-            <g key={`span-ctrl-${r}`}>
-              <SpanCtrlButton
-                cx={ctrlCenterX - 19}
-                midY={midY}
-                type={type}
-                glyph="−"
-                onClick={() => changeBy(-1)}
-              />
-              <text
-                x={ctrlCenterX - 3}
-                y={midY}
-                dominantBaseline="middle"
-                textAnchor="middle"
-                className={`span-ctrl__count span-ctrl__count--${type}${isOverridden ? ' span-ctrl__count--overridden' : ''}`}
-              >
-                {count}
-              </text>
-              <SpanCtrlButton
-                cx={ctrlCenterX + 18}
-                midY={midY}
-                type={type}
-                glyph="+"
-                onClick={() => changeBy(1)}
-              />
-            </g>
-          );
-        })}
-      </g>
     </g>
   );
 };

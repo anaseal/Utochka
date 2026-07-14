@@ -175,11 +175,25 @@ export const PendantsSidebar = ({
 
   useEffect(() => {
     if (!drag) return;
+    // pointermove на десктопе может сыпаться чаще частоты кадров экрана —
+    // без коалессинга через rAF каждое событие немедленно триггерит setState
+    // (drag.x/y + hoveredCol), а значит и полный ре-рендер App/CanvasView,
+    // что на большой сетке ощущается как лаг при перетаскивании подвески.
+    let rafId: number | null = null;
+    let pending: { x: number; y: number } | null = null;
+    const flush = () => {
+      rafId = null;
+      const point = pending;
+      if (!point) return;
+      setDrag((d) => (d ? { ...d, x: point.x, y: point.y } : d));
+      onHoveredColChange(computeCol(point.x, point.y));
+    };
     const onMove = (e: PointerEvent) => {
-      setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
-      onHoveredColChange(computeCol(e.clientX, e.clientY));
+      pending = { x: e.clientX, y: e.clientY };
+      if (rafId === null) rafId = requestAnimationFrame(flush);
     };
     const onUp = (e: PointerEvent) => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       const col = computeCol(e.clientX, e.clientY);
       if (col !== null) onAddPlacement(drag.templateId, col);
       onHoveredColChange(null);
@@ -189,6 +203,7 @@ export const PendantsSidebar = ({
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
@@ -197,11 +212,21 @@ export const PendantsSidebar = ({
 
   useEffect(() => {
     if (!decorDrag) return;
+    let rafId: number | null = null;
+    let pending: { x: number; y: number } | null = null;
+    const flush = () => {
+      rafId = null;
+      const point = pending;
+      if (!point) return;
+      setDecorDrag((d) => (d ? { ...d, x: point.x, y: point.y } : d));
+      onHoveredRowChange(computeRow(point.x, point.y));
+    };
     const onMove = (e: PointerEvent) => {
-      setDecorDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d));
-      onHoveredRowChange(computeRow(e.clientX, e.clientY));
+      pending = { x: e.clientX, y: e.clientY };
+      if (rafId === null) rafId = requestAnimationFrame(flush);
     };
     const onUp = (e: PointerEvent) => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       const row = computeRow(e.clientX, e.clientY);
       if (row !== null) onDecorDrop(row);
       onHoveredRowChange(null);
@@ -211,6 +236,7 @@ export const PendantsSidebar = ({
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);

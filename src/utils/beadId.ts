@@ -12,11 +12,11 @@ export type BeadRef =
   | { kind: 'bottomLink'; c: number; i: number }
   | { kind: 'decor'; r: number; k: number; c: number };
 
-const NODE_RE = /^node-(\d+)-(\d+)$/;
+const NODE_RE = /^node-(-?\d+)-(-?\d+)$/;
 const TOP_LINK_RE = /^span-edge-top-link-(\d+)-bead-(\d+)$/;
 const BOTTOM_LINK_RE = /^span-edge-bottom-link-(\d+)-bead-(\d+)$/;
-const VERT_EDGE_RE = /^span-edge-(\d+)-(\d+)-(left|right)-bead-(\d+)$/;
-const DECOR_RE = /^decor-(\d+)-(\d+)-(\d+)$/;
+const VERT_EDGE_RE = /^span-edge-(-?\d+)-(-?\d+)-(left|right)-bead-(\d+)$/;
+const DECOR_RE = /^decor-(\d+)-(\d+)-(-?\d+)$/;
 
 export const decode = (id: string): BeadRef | null => {
   const nodeM = id.match(NODE_RE);

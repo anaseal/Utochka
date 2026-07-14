@@ -13,23 +13,18 @@ const shiftId = (id: string, shift: number, newW: number): string | null => {
   if (!ref) return null;
 
   switch (ref.kind) {
-    case 'node': {
+    case 'node':
+    case 'vertEdge': {
       const c = ref.c + shift;
-      const maxC = ref.r % 2 === 0 ? newW - 1 : newW - 2;
-      if (c < 0 || c > maxC) return null;
+      const minC = ref.r % 2 === 0 ? 0 : -1;
+      const maxC = newW - 1;
+      if (c < minC || c > maxC) return null;
       return encode({ ...ref, c });
     }
     case 'topLink':
     case 'bottomLink': {
       const c = ref.c + shift;
       if (c < 0 || c > newW - 2) return null;
-      return encode({ ...ref, c });
-    }
-    case 'vertEdge': {
-      const c = ref.c + shift;
-      const maxC = ref.r % 2 === 0 ? newW - 1 : newW - 2;
-      if (c < 0 || c > maxC) return null;
-      if (ref.r % 2 === 0 && ref.side === 'left' && c < 1) return null;
       return encode({ ...ref, c });
     }
     case 'decor':
