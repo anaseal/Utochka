@@ -1,6 +1,12 @@
+/* Mobile-first: базовые правила ниже — самый узкий диапазон (320–767px),
+   брейкпоинты 768px/1024px переопределяют под планшет/десктоп. Брейкпоинты
+   у .stats__list (колонки/max-width) и у .stats__color-badge (паддинги/gap)
+   намеренно совпадают — иначе на стыке диапазонов реальная ширина бейджа
+   (из паддингов одного брейкпоинта) не совпадает с шириной колонки,
+   рассчитанной под другой брейкпоинт, и скролл включается раньше времени. */
 .stats {
   position: fixed;
-  bottom: 16px;
+  bottom: 8px;
   /* Центр не всего окна, а видимой области холста (слева от сайдбара
      подвесок) — иначе при открытом сайдбаре плашка съезжает вправо и
      на узких экранах наезжает на него, см. .export-btn/.canvas-theme-toggle,
@@ -10,15 +16,16 @@
   background-color: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 10px 16px;
+  border-radius: 10px;
+  padding: 8px 12px;
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   max-width: calc(100vw - var(--sidebar-width) - 24px);
   box-sizing: border-box;
-  transition: left var(--transition-speed) ease, max-width var(--transition-speed) ease;
+  transition: left var(--transition-speed) ease, max-width var(--transition-speed) ease,
+    padding var(--transition-speed) ease, gap var(--transition-speed) ease;
 }
 
 .stats__total {
@@ -31,11 +38,11 @@
 }
 
 .stats__label {
-  font-size: 9px;
+  font-size: 7px;
   color: #64748b;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   line-height: 1;
   margin: 0;
 }
@@ -43,7 +50,7 @@
 .stats__value {
   color: #e2e8f0;
   font-family: monospace;
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1;
   margin: 0;
@@ -56,21 +63,33 @@
   flex-shrink: 0;
 }
 
+/* Grid высотой ровно в 2 строки (grid-auto-flow: column) — бейджи цветов
+   заполняют колонки по 2 шт. вместо переноса, высота панели не растёт
+   от количества цветов. grid-auto-columns фиксирует ширину колонки, а
+   max-width считается под неё (N * colWidth + (N-1) * gap), чтобы после
+   заданного числа колонок гарантированно появлялся горизонтальный скролл. */
 .stats__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(64px, max-content);
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
+  min-width: 0;
+  max-width: 134px; /* 2 колонки: 2*64 + 1*6 */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .stats__color-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px 4px 4px;
+  gap: 5px;
+  padding: 3px 6px;
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -97,8 +116,8 @@
 }
 
 .stats__indicator {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -106,7 +125,7 @@
 .stats__count {
   color: #e2e8f0;
   font-family: monospace;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1;
 }
 
@@ -134,12 +153,12 @@
   background: none;
 }
 
-/* Tablet: compact spacing, allow color badges to wrap into multiple rows */
-@media (max-width: 1024px) {
+/* Tablet (768–1023px): чуть просторнее мобильных отступов, 3 колонки бейджей */
+@media (min-width: 768px) {
   .stats {
     bottom: 12px;
-    padding: 8px 12px;
-    gap: 10px;
+    padding: 9px 14px;
+    gap: 12px;
   }
 
   .stats__value {
@@ -147,14 +166,15 @@
   }
 
   .stats__list {
-    gap: 4px 5px;
-    max-width: min(60vw, 360px);
+    gap: 5px 6px;
+    grid-auto-columns: minmax(72px, max-content);
+    max-width: 228px; /* 3 колонки: 3*72 + 2*6 */
   }
 
   .stats__color-badge {
-    padding: 3px 6px;
-    gap: 5px;
-    min-width: 44px;
+    padding: 4px 7px;
+    gap: 6px;
+    min-width: 46px;
   }
 
   .stats__indicator {
@@ -167,42 +187,42 @@
   }
 }
 
-/* Mobile: tighter padding, smaller text, badges wrap freely */
-@media (max-width: 639.98px) {
+/* Desktop (1024px+): полноразмерные отступы, 4 колонки бейджей */
+@media (min-width: 1024px) {
   .stats {
-    bottom: 8px;
-    padding: 6px 10px;
-    gap: 8px;
-    border-radius: 10px;
+    bottom: 16px;
+    padding: 10px 16px;
+    gap: 14px;
+    border-radius: 12px;
   }
 
   .stats__label {
-    font-size: 7px;
-    letter-spacing: 0.05em;
+    font-size: 9px;
+    letter-spacing: 0.1em;
   }
 
   .stats__value {
-    font-size: 14px;
+    font-size: 20px;
   }
 
   .stats__list {
-    gap: 3px 4px;
-    max-width: 65vw;
+    gap: 6px;
+    grid-auto-columns: minmax(72px, max-content);
+    max-width: 306px; /* 4 колонки: 4*72 + 3*6 */
   }
 
   .stats__color-badge {
-    padding: 2px 5px;
-    gap: 4px;
-    min-width: 38px;
-    border-radius: 4px;
+    padding: 4px 6px 4px 4px;
+    gap: 6px;
+    min-width: 0;
   }
 
   .stats__indicator {
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
   }
 
   .stats__count {
-    font-size: 11px;
+    font-size: 13px;
   }
 }

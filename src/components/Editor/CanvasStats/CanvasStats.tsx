@@ -14,9 +14,10 @@ interface CanvasStatsProps {
 }
 
 // Ref прокидывается наружу — CanvasView меряет реальную высоту панели
-// (ResizeObserver), чтобы резервировать под неё место под холстом и не
-// давать бейджам цветов (переносятся на несколько строк при большом числе
-// цветов) наезжать на нижние ряды бисера на мобильном.
+// (ResizeObserver), чтобы резервировать под неё место под холстом. Список
+// цветов (.stats__list) — grid высотой в 2 строки с горизонтальным скроллом,
+// так что высота панели не растёт от количества цветов и не наезжает на
+// нижние ряды бисера на мобильном.
 export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
   totalCount, colorStats, highlightedColor, onToggleHighlight, activeColor, onReplaceColor,
 }, ref) => {
