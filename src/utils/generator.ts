@@ -14,7 +14,9 @@ export const generateSilyankaGrid = (
   rowSpanOverrides: Record<number, number> = {},
   decorBands: Record<number, number> = {},
   bottomEdgeEnabled: boolean = false,
-  bottomEdgeSpan: number = 3
+  bottomEdgeSpan: number = 3,
+  extendLeftEdge: boolean = true,
+  extendRightEdge: boolean = true
 ): Bead[] => {
   const beads: Bead[] = [];
   const {
@@ -51,14 +53,17 @@ export const generateSilyankaGrid = (
       : 0;
   };
 
-  // Нечётные (сдвинутые на stepX/2) ряды начинаются на одну колонку раньше
-  // чётных (c=-1) и заканчиваются на одну позже (c=width-1), а не совпадают
-  // с диапазоном чётных c=0..width-2. Без этого у крайнего узла чётного ряда
-  // (c=0 или c=width-1) снизу/сверху есть только один сосед вместо двух —
-  // единственная диагональ вместо полного зигзага (см. spec.md).
+  // Нечётные (сдвинутые на stepX/2) ряды по умолчанию начинаются на одну
+  // колонку раньше чётных (c=-1) и заканчиваются на одну позже (c=width-1),
+  // а не совпадают с диапазоном чётных c=0..width-2 — иначе у крайнего узла
+  // чётного ряда (c=0 или c=width-1) снизу/сверху был бы только один сосед
+  // вместо двух (единственная диагональ вместо полного зигзага). Каждая из
+  // сторон регулируется независимо через extendLeftEdge/extendRightEdge —
+  // отключение возвращает исходную (без расширения) границу с этой стороны
+  // (см. spec.md).
   const isShiftedRow = (r: number): boolean => r % 2 !== 0;
-  const minC = (r: number): number => (isShiftedRow(r) ? -1 : 0);
-  const maxC = (): number => width - 1;
+  const minC = (r: number): number => (isShiftedRow(r) && extendLeftEdge ? -1 : 0);
+  const maxC = (r: number): number => (isShiftedRow(r) && !extendRightEdge ? width - 2 : width - 1);
 
   const nodeGrid: SpanCoords[][] = []; // nodeGrid[r][c - minC(r)]
   // decorGrid[r] — декор-ряды (сверху вниз) полосы между узловым рядом r и r+1
@@ -70,7 +75,7 @@ export const generateSilyankaGrid = (
     const rowNodes: SpanCoords[] = [];
     const currentOffsetX = isShiftedRow(r) ? stepX / 2 : 0;
 
-    for (let c = minC(r); c <= maxC(); c++) {
+    for (let c = minC(r); c <= maxC(r); c++) {
       rowNodes.push({
         x: c * stepX + currentOffsetX,
         y: currentY

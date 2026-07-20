@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Bead, BottomEdgeDecor, GridConfig } from '../types/bead';
+import { Bead, BottomEdgeDecor, EdgeExtension, GridConfig } from '../types/bead';
 import { generateSilyankaGrid } from '../utils/generator';
 
 export const useGrid = (
@@ -7,6 +7,7 @@ export const useGrid = (
   rowSpanOverrides: Record<number, number>,
   decorBands: Record<number, number>,
   bottomEdgeDecor: BottomEdgeDecor,
+  edgeExtension: EdgeExtension,
 ): Bead[] => {
   return useMemo(() => {
     return generateSilyankaGrid(
@@ -18,7 +19,12 @@ export const useGrid = (
       rowSpanOverrides,
       decorBands,
       bottomEdgeDecor.enabled,
-      bottomEdgeDecor.span
+      bottomEdgeDecor.span,
+      edgeExtension.left,
+      edgeExtension.right
     );
-  }, [config.width, config.height, config.spacing, config.topSpan, config.bottomSpan, rowSpanOverrides, decorBands, bottomEdgeDecor]);
+  }, [
+    config.width, config.height, config.spacing, config.topSpan, config.bottomSpan,
+    rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension,
+  ]);
 };

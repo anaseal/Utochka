@@ -15,6 +15,26 @@ export const parseChainBeadId = (id: string): [string, number] => {
   return [placementId, Number(indexStr)];
 };
 
+// Нитка не может «перепрыгнуть» бисерины цепочки-подвески — те уже физически
+// нанизаны друг за другом. Поэтому если трассировка нитки перескакивает с
+// одной бисерины цепочки сразу на другую бисерину ТОЙ ЖЕ цепочки (например,
+// с первой сразу на последнюю), путь достраивается через все промежуточные —
+// в любом направлении (первая→последняя и наоборот). Для разных цепочек или
+// не-цепочечных id возвращает null — вызывающий код просто добавляет toId как есть.
+export const expandChainRun = (fromId: string, toId: string): string[] | null => {
+  if (!isChainBeadId(fromId) || !isChainBeadId(toId)) return null;
+  const [fromPlacementId, fromIndex] = parseChainBeadId(fromId);
+  const [toPlacementId, toIndex] = parseChainBeadId(toId);
+  if (fromPlacementId !== toPlacementId || fromIndex === toIndex) return null;
+  const step = toIndex > fromIndex ? 1 : -1;
+  const run: string[] = [];
+  for (let i = fromIndex + step; i !== toIndex; i += step) {
+    run.push(chainBeadId(fromPlacementId, i));
+  }
+  run.push(toId);
+  return run;
+};
+
 // Число бисерин в цепочке зависит от расстояния между узлами-креплениями:
 // шаг между соседними бисеринами держится примерно постоянным (минимальный шаг
 // без наложения — та же формула, что даёт minBeadPitch в generator.ts), поэтому

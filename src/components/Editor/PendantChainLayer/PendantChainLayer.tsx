@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantChain } from '../../../types/pendant';
-import { computeChainBeadPositions } from '../../../utils/pendantChain';
+import { computeChainBeadPositions, chainBeadId } from '../../../utils/pendantChain';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import './PendantChainLayer.css';
 
@@ -12,6 +12,9 @@ interface PendantChainLayerProps {
   onPaintBead: (placementId: string, beadIndex: number) => void;
   onRemove: (placementId: string) => void;
   highlightedColor?: string | null;
+  // См. PendantLayer.tsx — магнит нитки работает и по бисеринам цепочки-подвески.
+  threadToolActive: boolean;
+  onThreadPoint: (id: string) => void;
 }
 
 const ID_SEP = '::';
@@ -23,20 +26,28 @@ export const PendantChainLayer = ({
   onPaintBead,
   onRemove,
   highlightedColor,
+  threadToolActive,
+  onThreadPoint,
 }: PendantChainLayerProps) => {
   const nodeByCol = new Map<number, Bead>();
   bottomNodes.forEach((n) => nodeByCol.set(n.logicalIndex.col, n));
 
   const handlePointerDown = useCallback((id: string) => {
     const [placementId, idx] = id.split(ID_SEP);
+    if (threadToolActive) {
+      onThreadPoint(chainBeadId(placementId, Number(idx)));
+      return;
+    }
     onPaintBead(placementId, Number(idx));
-  }, [onPaintBead]);
+  }, [onPaintBead, threadToolActive, onThreadPoint]);
 
+  // Нитка добавляет точки только явным кликом (handlePointerDown) — протяжка
+  // сюда не заходит, поэтому threadToolActive тут не проверяется вовсе.
   const handlePointerEnter = useCallback((id: string) => {
-    if (!isDrawing) return;
+    if (threadToolActive || !isDrawing) return;
     const [placementId, idx] = id.split(ID_SEP);
     onPaintBead(placementId, Number(idx));
-  }, [isDrawing, onPaintBead]);
+  }, [isDrawing, onPaintBead, threadToolActive]);
 
   const { spanRadius } = BEAD_THEME.sizes;
 

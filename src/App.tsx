@@ -206,6 +206,26 @@ function App() {
           if (technique === 'silyanka') silyanka.setMirrorMode(!silyanka.mirrorMode);
           else crossWeave.setMirrorMode(!crossWeave.mirrorMode);
           break;
+        case 't':
+          e.preventDefault();
+          if (technique === 'silyanka') {
+            setSilyankaTool(silyanka.drawingControls.activeTool === 'thread' ? 'pencil' : 'thread');
+          } else {
+            crossWeave.drawingControls.setActiveTool(
+              crossWeave.drawingControls.activeTool === 'thread' ? 'pencil' : 'thread',
+            );
+          }
+          break;
+        // Крестик плетётся двумя нитками одновременно (силянка — одной) —
+        // 1/2 выбирают, какую из них ведём, и сразу включают инструмент
+        // «Нитка» (тот же выбор доступен через ThreadMenu в хедере).
+        case '1':
+        case '2':
+          if (technique !== 'crossWeave') break;
+          e.preventDefault();
+          crossWeave.setActiveThreadStrand(e.key === '1' ? 1 : 2);
+          crossWeave.drawingControls.setActiveTool('thread');
+          break;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -241,6 +261,8 @@ function App() {
           canRedo={silyanka.drawingControls.canRedo}
           referenceWindowOpen={referenceOpen}
           onToggleReferenceWindow={() => setReferenceOpen(o => !o)}
+          threads={silyanka.threads}
+          onClearAllThreads={silyanka.threadControls.clearAllThreads}
           silyankaProps={{
             // Линейка на холсте — источник правды: чётный ряд её колонок на 1 меньше
             // gridSize.width, а ряд её строк на 1 больше gridSize.height (см. spec.md,
@@ -258,6 +280,8 @@ function App() {
             onBottomEdgeReset: () => silyanka.resetEdge('bottom'),
             mirrorMode: silyanka.mirrorMode,
             setMirrorMode: silyanka.setMirrorMode,
+            onMakeSymmetric: silyanka.makeSymmetric,
+            canMakeSymmetric: Object.keys(silyanka.drawingControls.designMap).length > 0,
             spacing: silyanka.gridSize.spacing,
             onSpacingChange: silyanka.updateSpacing,
             sidebarOpen: silyanka.sidebarOpen,
@@ -298,7 +322,11 @@ function App() {
           canRedo={crossWeave.drawingControls.canRedo}
           referenceWindowOpen={referenceOpen}
           onToggleReferenceWindow={() => setReferenceOpen(o => !o)}
+          threads={crossWeave.threads}
+          onClearAllThreads={crossWeave.threadControls.clearAllThreads}
           crossWeaveProps={{
+            activeThreadStrand: crossWeave.activeThreadStrand,
+            onSelectThreadStrand: crossWeave.setActiveThreadStrand,
             gridWidth: crossWeave.gridSize.width,
             gridHeight: crossWeave.gridSize.height,
             spacing: crossWeave.gridSize.pitchX,
@@ -310,6 +338,8 @@ function App() {
             onSetSpacing: crossWeave.setSpacingAbsolute,
             mirrorMode: crossWeave.mirrorMode,
             setMirrorMode: crossWeave.setMirrorMode,
+            onMakeSymmetric: crossWeave.makeSymmetric,
+            canMakeSymmetric: Object.keys(crossWeave.drawingControls.designMap).length > 0,
           }}
         />
       )}
@@ -331,6 +361,8 @@ function App() {
           width={silyanka.gridSize.width}
           internalTop={silyanka.internalTop}
           internalBottom={silyanka.internalBottom}
+          extendLeftEdge={silyanka.edgeExtension.left}
+          extendRightEdge={silyanka.edgeExtension.right}
           pendantPlacements={silyanka.pendantPlacements}
           pendantTemplates={PENDANT_TEMPLATES_BY_ID}
           bottomNodes={silyanka.bottomNodes}
@@ -340,6 +372,10 @@ function App() {
           pendantChains={silyanka.pendantChains}
           onPaintChainBead={silyanka.handleChainPaint}
           onRemoveChain={silyanka.chainControls.removeChain}
+          threads={silyanka.threads}
+          onAddThread={silyanka.threadControls.addThread}
+          onRerouteThreadEnd={silyanka.threadControls.rerouteThreadEnd}
+          onRemoveThread={silyanka.threadControls.removeThread}
           chainPendingStart={silyanka.chainPendingStart}
           onChainNodeClick={silyanka.handleChainNodeClick}
           canvasSvgRef={silyanka.canvasSvgRef}
@@ -374,6 +410,11 @@ function App() {
           mirrorMode={crossWeave.mirrorMode}
           rawWidth={crossWeave.rawWidth}
           onFloodFill={crossWeave.handleFloodFill}
+          threads={crossWeave.threads}
+          onAddThread={crossWeave.threadControls.addThread}
+          onRerouteThreadEnd={crossWeave.threadControls.rerouteThreadEnd}
+          onRemoveThread={crossWeave.threadControls.removeThread}
+          activeThreadStrand={crossWeave.activeThreadStrand}
           applyPatch={crossWeave.drawingControls.applyPatch}
         />
       )}
@@ -397,6 +438,10 @@ function App() {
           onHoveredRowChange={silyanka.setHoveredRow}
           bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
           onBottomEdgeToggle={silyanka.toggleBottomEdgeEnabled}
+          extendLeftEdge={silyanka.edgeExtension.left}
+          extendRightEdge={silyanka.edgeExtension.right}
+          onToggleExtendLeftEdge={silyanka.toggleExtendLeftEdge}
+          onToggleExtendRightEdge={silyanka.toggleExtendRightEdge}
           pendantChains={silyanka.pendantChains}
           chainToolActive={silyanka.drawingControls.activeTool === 'pendant-chain'}
           onToggleChainTool={() => setSilyankaTool(

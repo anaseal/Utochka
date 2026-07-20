@@ -35,6 +35,12 @@
   --canvas-border: rgba(255, 255, 255, 0.05);
   --canvas-scrollbar-thumb: #334155;
   --canvas-scrollbar-track: rgba(15, 23, 42, 0.5);
+  /* Нитка (ThreadLayer) — тёплый льняной оттенок, отличимый и от cyan-акцента
+     (stamp/mirror), и от красных кнопок удаления. --thread-color-2 — вторая
+     нитка у крестика (там плетение идёт двумя нитками одновременно, см.
+     spec.md, «Нитка»); у силянки не используется. */
+  --thread-color: rgba(226, 214, 187, 0.85);
+  --thread-color-2: rgba(34, 211, 238, 0.85);
 
   display: block;
   background-color: var(--canvas-surface);
@@ -91,6 +97,8 @@
   --canvas-border: rgba(15, 23, 42, 0.08);
   --canvas-scrollbar-thumb: #94a3b8;
   --canvas-scrollbar-track: rgba(148, 163, 184, 0.25);
+  --thread-color: rgba(92, 71, 33, 0.75);
+  --thread-color-2: rgba(8, 145, 178, 0.8);
 }
 
 .canvas__svg-content {
@@ -115,7 +123,8 @@
 
 .editor__viewport--flood-fill .canvas__svg,
 .editor__viewport--stamp .canvas__svg,
-.editor__viewport--chain .canvas__svg {
+.editor__viewport--chain .canvas__svg,
+.editor__viewport--thread .canvas__svg {
   cursor: crosshair;
 }
 
@@ -188,6 +197,48 @@
 
 .canvas-theme-toggle:active {
   transform: translateY(1px);
+}
+
+/* Тач-панель управления незавершённой трассировкой нитки (см.
+   ThreadTraceControls) — зеркальная пара к export-btn/canvas-theme-toggle,
+   но у левого края (те завязаны на --sidebar-width, тут проще: слева сайдбара
+   нет). Видна только пока трассировка активна (компонент возвращает null
+   иначе), поэтому в состоянии покоя ничего не занимает. */
+.thread-trace-controls {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+}
+
+.thread-trace-controls__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #111727;
+  color: #607086;
+  border: 1px solid #607086;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.thread-trace-controls__btn:hover {
+  color: #21cfe9;
+  border-color: #21cfe9;
+}
+
+.thread-trace-controls__btn:active {
+  transform: translateY(1px);
+}
+
+.thread-trace-controls__btn--cancel:hover {
+  color: #ff6b7a;
+  border-color: #ff6b7a;
 }
 
 /* Ручка выдвижной панели редактора количества бисерин (per-row span controls

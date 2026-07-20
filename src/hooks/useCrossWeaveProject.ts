@@ -1,22 +1,35 @@
 import { useCallback, useMemo } from 'react';
 import { useDrawing } from './useDrawing';
+import { useThreads } from './useThreads';
 import { usePersistedState } from './usePersistedState';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../config/crossWeaveTheme';
 import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
 import { PendantPlacement, PendantChain } from '../types/pendant';
+import { Thread } from '../types/thread';
 import { generateCrossWeaveGrid } from '../utils/crossWeaveGenerator';
 import { mirrorCrossWeaveBeadId, shiftCrossWeaveDesignMapColumns } from '../utils/crossWeaveMirror';
 import { computeCrossWeaveFloodFill } from '../utils/crossWeaveFloodFill';
+import { fillMissingMirror } from '../utils/symmetrize';
 import { clamp } from '../utils/clamp';
 import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
 
 // CrossWeave не поддерживает подвески и цепочки-подвески (MVP) — стабильные
 // пустая ссылка и no-op сеттер, чтобы useDrawing не считал их «изменившимися»
-// на каждый рендер.
+// на каждый рендер. Нитка (в отличие от подвесок) работает в обеих техниках —
+// см. spec.md, «Нитка».
 const EMPTY_PENDANT_PLACEMENTS: PendantPlacement[] = [];
 const noopSetPendantPlacements = () => {};
 const EMPTY_PENDANT_CHAINS: PendantChain[] = [];
 const noopSetPendantChains = () => {};
+
+const isThreads = (v: unknown): v is Thread[] =>
+  Array.isArray(v) && v.every(t =>
+    typeof t === 'object' && t !== null &&
+    typeof (t as Thread).id === 'string' &&
+    Array.isArray((t as Thread).beadIds) &&
+    (t as Thread).beadIds.every(id => typeof id === 'string'));
+
+const isThreadStrand = (v: unknown): v is 1 | 2 => v === 1 || v === 2;
 
 const isCrossWeaveGridConfig = (v: unknown): v is CrossWeaveGridConfig => {
   if (typeof v !== 'object' || v === null) return false;
@@ -65,10 +78,22 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
     return generateCrossWeaveGrid(rw, rawHeight, gridSize.pitchX, gridSize.pitchY);
   }, [gridSize.width, gridSize.height, gridSize.pitchX, gridSize.pitchY]);
 
+  const [threads, setThreads] = usePersistedState<Thread[]>(
+    'crossWeave:threads', [], isThreads,
+  );
+
+  // Крестик физически плетётся двумя нитками одновременно (силянка — одной,
+  // см. spec.md, «Нитка») — какую из двух метить новым ниткам, выбирается
+  // в Header (ThreadMenu) или хоткеями 1/2.
+  const [activeThreadStrand, setActiveThreadStrand] = usePersistedState<1 | 2>(
+    'crossWeave:activeThreadStrand', 1, isThreadStrand,
+  );
+
   const drawingControls = useDrawing(
     palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements,
-    EMPTY_PENDANT_CHAINS, noopSetPendantChains, 'crossWeave',
+    EMPTY_PENDANT_CHAINS, noopSetPendantChains, threads, setThreads, 'crossWeave',
   );
+  const threadControls = useThreads(threads, drawingControls.applyPatch);
 
   // Заливка: BFS по графу физической смежности бисерин (см.
   // crossWeaveFloodFill.ts) — своя, отдельная от силяночной
@@ -97,6 +122,15 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
       return next;
     }, null);
   }, [beads, drawingControls, mirrorMode, rawWidth]);
+
+  // Ретроактивная симметризация — тот же смысл, что и у силянки (см.
+  // useSilyankaProject.makeSymmetric), но по формуле mirrorCrossWeaveBeadId.
+  const makeSymmetric = useCallback(() => {
+    drawingControls.remapDesignMap(map => fillMissingMirror(
+      map,
+      id => mirrorCrossWeaveBeadId(id, rawWidth),
+    ));
+  }, [drawingControls, rawWidth]);
 
   // Общий обработчик результата resizeWidthRelative/resizeWidthAbsolute:
   // сдвиг designMap в Mirror Mode (та же схема, что и у силянки — см.
@@ -147,10 +181,11 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
 
   return {
     gridSize, beads, drawingControls, rawWidth,
+    threads, threadControls, activeThreadStrand, setActiveThreadStrand,
     mirrorMode, setMirrorMode,
     updateDimension, setWidthAbsolute, setHeightAbsolute,
     updateSpacing, setSpacingAbsolute,
-    handleFloodFill,
+    handleFloodFill, makeSymmetric,
   };
 };
 

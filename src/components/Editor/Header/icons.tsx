@@ -66,6 +66,35 @@ export const PendantIcon = ({ size = 26, strokeWidth = 1}: RingIconProps) => (
   </svg>
 );
 
+// «Сделать симметричным» (по референсу Union (3).svg): левая/верхняя/нижняя
+// грани нарисованной половины — сплошные, правая грань (ось зеркала) —
+// пунктирная, и сквозь неё наружу, в сторону недостающей половины, бьёт
+// стрелка. Читается как «дозаполнить недостающую сторону», а не как
+// «сгенерировать» (в отличие от волшебной палочки/wand-иконок).
+export const MakeSymmetricIcon = ({ size = 14, className }: IconProps & { className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M13 3H3V21H13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <line x1="13" y1="3" x2="13" y2="21" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2.3 2.1" />
+    <path d="M7 12H21M16 8.2L21 12L16 15.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+// Нитка: волнистая линия, продетая через две бусины-точки — читается как
+// «нить сквозь бисер» без привязки к конкретному узору.
+export const ThreadIcon = ({ size = 14 }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M2 18C5 18 5 6 8 6C11 6 11 18 14 18C17 18 17 6 20 6"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="8" cy="6" r="1.7" fill="currentColor" />
+    <circle cx="14" cy="18" r="1.7" fill="currentColor" />
+  </svg>
+);
+
 export const EyedropperIcon = ({ size = 14 }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

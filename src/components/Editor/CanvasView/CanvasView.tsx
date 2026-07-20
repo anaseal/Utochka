@@ -4,15 +4,19 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { PendantPlacement, PendantTemplate, PendantChain } from '../../../types/pendant';
+import { Thread } from '../../../types/thread';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BeadGrid } from './BeadGrid';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { PendantChainLayer } from '../PendantChainLayer/PendantChainLayer';
+import { ThreadLayer, ThreadTrace } from '../ThreadLayer/ThreadLayer';
 import { CanvasChrome } from './CanvasChrome';
+import { ThreadTraceControls } from './ThreadTraceControls';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
-import { chainBeadCountBetween, computeChainBeadPositions } from '../../../utils/pendantChain';
+import { chainBeadCountBetween, computeChainBeadPositions, expandChainRun } from '../../../utils/pendantChain';
+import { buildBeadPositionIndex } from '../../../utils/beadPositions';
 import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
@@ -59,6 +63,8 @@ interface CanvasViewProps {
   width: number;
   internalTop: number;
   internalBottom: number;
+  extendLeftEdge: boolean;
+  extendRightEdge: boolean;
   pendantPlacements: PendantPlacement[];
   pendantTemplates: Record<string, PendantTemplate>;
   bottomNodes: Bead[];
@@ -68,6 +74,10 @@ interface CanvasViewProps {
   pendantChains: PendantChain[];
   onPaintChainBead: (placementId: string, beadIndex: number) => void;
   onRemoveChain: (placementId: string) => void;
+  threads: Thread[];
+  onAddThread: (beadIds: string[]) => void;
+  onRerouteThreadEnd: (threadId: string, end: 'start' | 'end', traceBeadIds: string[]) => void;
+  onRemoveThread: (id: string) => void;
   chainPendingStart: number | null;
   onChainNodeClick: (col: number) => void;
   canvasSvgRef: React.RefObject<SVGSVGElement | null>;
@@ -110,6 +120,8 @@ export const CanvasView = ({
   width,
   internalTop,
   internalBottom,
+  extendLeftEdge,
+  extendRightEdge,
   pendantPlacements,
   pendantTemplates,
   bottomNodes,
@@ -119,6 +131,10 @@ export const CanvasView = ({
   pendantChains,
   onPaintChainBead,
   onRemoveChain,
+  threads,
+  onAddThread,
+  onRerouteThreadEnd,
+  onRemoveThread,
   chainPendingStart,
   onChainNodeClick,
   canvasSvgRef,
@@ -150,6 +166,24 @@ export const CanvasView = ({
   } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
+  // Незавершённая трассировка нитки (инструмент 'thread') — либо новая нитка
+  // (rerouting: null), либо перепрокладка одного конца существующей
+  // (rerouting задан ручкой в ThreadLayer, см. beginThreadReroute ниже).
+  const [threadTrace, setThreadTrace] = useState<ThreadTrace | null>(null);
+  // Живой курсор во время протяжки нитки: resolved-позиция (примагниченная
+  // к ближайшей бусине в пределах hitboxRadius, иначе — сырые координаты
+  // курсора) + id бусины-магнита, если попали в радиус. Используется и для
+  // «резиновой» линии за курсором, и для определения, когда показать
+  // крестик поверх последней точки трассировки (см. ThreadLayer).
+  const [threadCursor, setThreadCursor] = useState<{ pos: { x: number; y: number }; magnetId: string | null } | null>(null);
+  // Уход с инструмента «нитка» посреди незавершённой протяжки (например,
+  // горячей клавишей) не должен оставлять висящий пунктирный превью-путь.
+  useEffect(() => {
+    if (activeTool !== 'thread') {
+      setThreadTrace(null);
+      setThreadCursor(null);
+    }
+  }, [activeTool]);
   // Сворачиваемый редактор количества бисерин (per-row span controls,
   // CanvasRulers) — видимость даёт CSS (CanvasRulers.css, эффект только на
   // ≤767.98px), поэтому дефолт "свёрнуто" безопасен для десктопа. Но сам
@@ -199,12 +233,22 @@ export const CanvasView = ({
   useWheelZoom(canvasContainerRef, onZoomChange);
 
   // Второй палец на холсте отменяет любой начатый одним пальцем жест
-  // (мазок карандаша/ластика, драг штампа) — переключение на панораму/zoom.
+  // (мазок карандаша/ластика, драг штампа, трассировка нитки) — переключение
+  // на панораму/zoom.
   const cancelActiveStroke = useCallback(() => {
     stopDrawing();
     stampDragRef.current = null;
     setSelectionRect(null);
+    setThreadTrace(null);
+    setThreadCursor(null);
   }, [stopDrawing]);
+
+  // Единая карта id → координаты по сетке, подвескам и цепочкам-подвесок —
+  // нитка магнитится к любой бусине любого слоя (см. spec.md, «Нитка»).
+  const beadPositionIndex = useMemo(
+    () => buildBeadPositionIndex(beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains),
+    [beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains],
+  );
   const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, dim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
@@ -327,18 +371,113 @@ export const CanvasView = ({
   }, [chainPendingStart, bottomNodes]);
 
   const mirrorFn = useCallback(
-    (id: string) => mirrorBeadId(id, width, internalTop, internalBottom),
-    [width, internalTop, internalBottom],
+    (id: string) => mirrorBeadId(id, width, internalTop, internalBottom, extendLeftEdge, extendRightEdge),
+    [width, internalTop, internalBottom, extendLeftEdge, extendRightEdge],
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
+  // Хватание ручки конца существующей нитки (ThreadLayer) — сеет трассировку
+  // якорной бусиной того конца; сам якорь не входит в итоговый traceBeadIds
+  // (см. useThreads.rerouteThreadEnd — там slice(1) убирает первую точку).
+  const beginThreadReroute = useCallback((threadId: string, end: 'start' | 'end') => {
+    const thread = threads.find(t => t.id === threadId);
+    if (!thread) return;
+    const anchorId = end === 'start' ? thread.beadIds[0] : thread.beadIds[thread.beadIds.length - 1];
+    setThreadTrace({ beadIds: [anchorId], rerouting: { threadId, end } });
+  }, [threads]);
+
+  // Коммит трассировки нитки — по двойному клику (onDoubleClick на <main>
+  // ниже), а не по завершению drag-жеста: точное перетаскивание через мелкие
+  // бусины неудобно (особенно на тач), поэтому нитка прокладывается
+  // отдельными кликами (каждый клик — новая точка).
+  const commitThreadTrace = useCallback(() => {
+    setThreadTrace((prev) => {
+      if (!prev) return null;
+      if (prev.rerouting) {
+        if (prev.beadIds.length >= 2) {
+          onRerouteThreadEnd(prev.rerouting.threadId, prev.rerouting.end, prev.beadIds.slice(1));
+        }
+      } else if (prev.beadIds.length >= 2) {
+        onAddThread(prev.beadIds);
+      }
+      return null;
+    });
+    setThreadCursor(null);
+  }, [onAddThread, onRerouteThreadEnd]);
+
+  // Единая точка входа для трассировки нитки: каждый явный клик по бусине
+  // зовёт эту функцию. Повторный клик по уже последней точке трассировки не
+  // добавляет дубль, а завершает нитку тем же путём, что и двойной клик/Enter
+  // (коммитит, если точек ≥2, иначе черновик просто отбрасывается) — иначе
+  // клик по той же бусине выглядел бы так, будто ничего не происходит, и
+  // пользователь застревал бы в незавершённой трассировке. Только клик, не
+  // протяжка (см. handlePointerEnter ниже) — точное перетаскивание через
+  // мелкие бусины неудобно. Используется и напрямую (сетка), и через
+  // PendantLayer/PendantChainLayer (onThreadPoint) — магнит работает по любой
+  // бусине холста (см. spec.md, «Нитка»).
+  //
+  // Если клик перескакивает с одной бисерины цепочки-подвески сразу на
+  // другую бисерину ТОЙ ЖЕ цепочки (например, с первой сразу на последнюю),
+  // путь достраивается через все промежуточные — нитка физически не может
+  // миновать бисерины, уже нанизанные друг за другом (см. expandChainRun).
+  const handleThreadPoint = useCallback((id: string) => {
+    if (threadTrace && threadTrace.beadIds[threadTrace.beadIds.length - 1] === id) {
+      commitThreadTrace();
+      return;
+    }
+    setThreadTrace(prev => {
+      if (!prev) return { beadIds: [id], rerouting: null };
+      const lastId = prev.beadIds[prev.beadIds.length - 1];
+      if (lastId === id) return prev;
+      const run = expandChainRun(lastId, id);
+      return { ...prev, beadIds: [...prev.beadIds, ...(run ?? [id])] };
+    });
+  }, [threadTrace, commitThreadTrace]);
+
+  // Отменяет последнюю точку трассировки (крестик на её месте в ThreadLayer,
+  // см. threadCursor.magnetId) — трассировка не прерывается, просто «шаг
+  // назад». Стартовую точку так не убрать (см. ThreadLayer — крестик виден
+  // только когда точек ≥ 2), для полной отмены есть Escape.
+  const removeLastTracePoint = useCallback(() => {
+    setThreadTrace(prev => {
+      if (!prev || prev.beadIds.length < 2) return prev;
+      return { ...prev, beadIds: prev.beadIds.slice(0, -1) };
+    });
+  }, []);
+
+  // Enter коммитит трассировку (как двойной клик), Escape сбрасывает её,
+  // не выходя из инструмента «нитка» — активны, только пока есть незавершённая
+  // протяжка, чтобы не мешать другим горячим клавишам (Ctrl+Z и т.п.).
+  useEffect(() => {
+    if (activeTool !== 'thread' || !threadTrace) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitThreadTrace();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setThreadTrace(null);
+        setThreadCursor(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTool, threadTrace, commitThreadTrace]);
+
+  // 'thread' сюда не заходит: точки добавляются только явным кликом
+  // (handlePointerDown), протяжка/наведение их не добавляет — см.
+  // commitThreadTrace выше.
   const handlePointerEnter = useCallback((id: string) => {
-    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && isDrawing) {
+    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread' && isDrawing) {
       applyPaint(id);
     }
   }, [activeTool, isDrawing, applyPaint]);
 
   const handlePointerDown = useCallback((id: string) => {
+    if (activeTool === 'thread') {
+      handleThreadPoint(id);
+      return;
+    }
     if (activeTool === 'stamp') return;
     if (activeTool === 'pendant-chain') {
       const node = bottomNodes.find(n => n.id === id);
@@ -350,7 +489,7 @@ export const CanvasView = ({
     } else {
       applyPaint(id);
     }
-  }, [activeTool, applyPaint, onFloodFill, bottomNodes, onChainNodeClick]);
+  }, [activeTool, applyPaint, onFloodFill, bottomNodes, onChainNodeClick, handleThreadPoint]);
 
   // Переводит client-координаты мыши в локальную систему координат <g>,
   // которая совпадает с bead.x/y — без ручного учёта zoom/offset.
@@ -383,6 +522,29 @@ export const CanvasView = ({
     return nearest;
   }, [beads]);
 
+  // Аналог findNearestNode для нитки, но по всем слоям сразу (сетка +
+  // подвески + цепочки-подвески, см. beadPositionIndex) — магнит нитки не
+  // ограничен узлами сетки. Возвращает null, если ближайшая бусина дальше
+  // hitboxRadius (курсор в пустоте, примагничивать не к чему).
+  const findNearestThreadAnchor = useCallback((point: { x: number; y: number }) => {
+    let nearestId: string | null = null;
+    let nearestPos: { x: number; y: number } | null = null;
+    let bestDist = Infinity;
+    for (const [id, pos] of beadPositionIndex) {
+      const dx = pos.x - point.x;
+      const dy = pos.y - point.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < bestDist) {
+        bestDist = dist;
+        nearestId = id;
+        nearestPos = pos;
+      }
+    }
+    const threshold = BEAD_THEME.sizes.hitboxRadius;
+    if (!nearestPos || bestDist > threshold * threshold) return null;
+    return { id: nearestId as string, pos: nearestPos };
+  }, [beadPositionIndex]);
+
   const handleStampContainerPointerDown = useCallback((e: React.PointerEvent) => {
     if (activeTool !== 'stamp') return;
     const beadPoint = toBeadCoords(e.clientX, e.clientY);
@@ -405,6 +567,14 @@ export const CanvasView = ({
   }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover]);
 
   const handleStampContainerPointerMove = useCallback((e: React.PointerEvent) => {
+    if (activeTool === 'thread') {
+      if (!threadTrace || touchGesture.isMultiTouch()) return;
+      const beadPoint = toBeadCoords(e.clientX, e.clientY);
+      if (!beadPoint) return;
+      const nearest = findNearestThreadAnchor(beadPoint);
+      setThreadCursor({ pos: nearest?.pos ?? beadPoint, magnetId: nearest?.id ?? null });
+      return;
+    }
     if (activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;
     const drag = stampDragRef.current;
     if (drag) {
@@ -439,7 +609,7 @@ export const CanvasView = ({
       const nearest = beadPoint ? findNearestNode(beadPoint) : null;
       onStampHover(nearest?.id ?? null);
     }
-  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover, touchGesture.isMultiTouch]);
+  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover, touchGesture.isMultiTouch, threadTrace, findNearestThreadAnchor]);
 
   const handleStampContainerPointerUp = useCallback((e: React.PointerEvent) => {
     if (activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;
@@ -477,6 +647,7 @@ export const CanvasView = ({
   const handleStampContainerPointerLeave = useCallback(() => {
     stampDragRef.current = null;
     setSelectionRect(null);
+    setThreadCursor(null);
     onStampHover(null);
   }, [onStampHover]);
 
@@ -491,14 +662,24 @@ export const CanvasView = ({
   return (
     <main
       data-canvas-theme={canvasTheme}
-      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}${activeTool === 'pendant-chain' ? ' editor__viewport--chain' : ''}`}
+      className={`editor__viewport${activeTool === 'flood-fill' ? ' editor__viewport--flood-fill' : ''}${activeTool === 'stamp' ? ' editor__viewport--stamp' : ''}${activeTool === 'pendant-chain' ? ' editor__viewport--chain' : ''}${activeTool === 'thread' ? ' editor__viewport--thread' : ''}`}
       style={{ '--stats-reserve': `${statsReserve}px` } as React.CSSProperties}
       onPointerDownCapture={touchGesture.onPointerDownCapture}
       onPointerMove={touchGesture.onPointerMove}
-      onPointerDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') startDrawing(); }}
-      onPointerUp={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') stopDrawing(); }}
-      onPointerCancel={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') stopDrawing(); }}
-      onPointerLeave={(e) => { touchGesture.releasePointer(e); if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain') stopDrawing(); }}
+      onPointerDown={() => { if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread') startDrawing(); }}
+      onPointerUp={(e) => {
+        touchGesture.releasePointer(e);
+        if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread') stopDrawing();
+      }}
+      onPointerCancel={(e) => {
+        touchGesture.releasePointer(e);
+        if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread') stopDrawing();
+      }}
+      onPointerLeave={(e) => {
+        touchGesture.releasePointer(e);
+        if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread') stopDrawing();
+      }}
+      onDoubleClick={() => { if (activeTool === 'thread') commitThreadTrace(); }}
       onDragStart={(e) => e.preventDefault()}
     >
       <section className="canvas">
@@ -578,6 +759,8 @@ export const CanvasView = ({
                   mirrorMode={mirrorMode}
                   width={width}
                   highlightedColor={highlightedColor}
+                  threadToolActive={activeTool === 'thread'}
+                  onThreadPoint={handleThreadPoint}
                 />
 
                 <PendantChainLayer
@@ -587,6 +770,19 @@ export const CanvasView = ({
                   onPaintBead={onPaintChainBead}
                   onRemove={onRemoveChain}
                   highlightedColor={highlightedColor}
+                  threadToolActive={activeTool === 'thread'}
+                  onThreadPoint={handleThreadPoint}
+                />
+
+                <ThreadLayer
+                  threads={threads}
+                  positionIndex={beadPositionIndex}
+                  liveTrace={threadTrace}
+                  liveCursor={threadCursor}
+                  interactive={activeTool === 'thread'}
+                  onBeginReroute={beginThreadReroute}
+                  onRemove={onRemoveThread}
+                  onRemoveLastTracePoint={removeLastTracePoint}
                 />
               </g>
             </svg>
@@ -631,6 +827,12 @@ export const CanvasView = ({
         canvasTheme={canvasTheme}
         onToggleCanvasTheme={onToggleCanvasTheme}
         onExport={handleExport}
+      />
+
+      <ThreadTraceControls
+        trace={threadTrace}
+        onRemoveLastPoint={removeLastTracePoint}
+        onCancel={() => { setThreadTrace(null); setThreadCursor(null); }}
       />
     </main>
   );

@@ -23,6 +23,10 @@ interface PendantsSidebarProps {
   onHoveredRowChange: (row: number | null) => void;
   bottomEdgeEnabled: boolean;
   onBottomEdgeToggle: () => void;
+  extendLeftEdge: boolean;
+  extendRightEdge: boolean;
+  onToggleExtendLeftEdge: () => void;
+  onToggleExtendRightEdge: () => void;
   pendantChains: PendantChain[];
   chainToolActive: boolean;
   onToggleChainTool: () => void;
@@ -123,6 +127,10 @@ export const PendantsSidebar = ({
   onHoveredRowChange,
   bottomEdgeEnabled,
   onBottomEdgeToggle,
+  extendLeftEdge,
+  extendRightEdge,
+  onToggleExtendLeftEdge,
+  onToggleExtendRightEdge,
   pendantChains,
   chainToolActive,
   onToggleChainTool,
@@ -303,6 +311,37 @@ export const PendantsSidebar = ({
                   Clear pendants (above) to enable Bottom Chain
                 </p>
               )}
+            </div>
+          </section>
+
+          <section className="pendants-sidebar__section">
+            <header className="pendants-sidebar__section-heading">
+              <div className="pendants-sidebar__section-heading-row">
+                <h3 className="pendants-sidebar__section-title">Edge Extension</h3>
+              </div>
+              <p className="pendants-sidebar__section-desc">Full diamond at the left/right edge, per side</p>
+            </header>
+            <div className="edge-extension-control">
+              <div className="edge-extension-control__row">
+                <span className="edge-extension-control__label">Left</span>
+                <button
+                  type="button"
+                  className={`bottom-chain-control__toggle${extendLeftEdge ? ' bottom-chain-control__toggle--active' : ''}`}
+                  onClick={onToggleExtendLeftEdge}
+                  aria-pressed={extendLeftEdge}
+                  aria-label="Toggle left edge extension"
+                />
+              </div>
+              <div className="edge-extension-control__row">
+                <span className="edge-extension-control__label">Right</span>
+                <button
+                  type="button"
+                  className={`bottom-chain-control__toggle${extendRightEdge ? ' bottom-chain-control__toggle--active' : ''}`}
+                  onClick={onToggleExtendRightEdge}
+                  aria-pressed={extendRightEdge}
+                  aria-label="Toggle right edge extension"
+                />
+              </div>
             </div>
           </section>
 

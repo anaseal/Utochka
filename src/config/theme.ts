@@ -55,6 +55,15 @@ export const BEAD_THEME = {
     sagExponent: 0.5,
   },
 
+  // Нитка — визуальный слой поверх схемы (не бисерина, не входит в
+  // спецификацию материалов, см. spec.md, «Нитка»). Цвет и толщина линии —
+  // в CSS (--thread-color в CanvasView.css, зависит от темы холста; сама
+  // толщина — в ThreadLayer.css, как у прочих декоративных слоёв); тут только
+  // размер ручек концов, т.к. он завязан на общий hitboxRadius сетки.
+  threadDefaults: {
+    handleRadiusFactor: 0.7, // от hitboxRadius
+  },
+
   ui: {
     recentColorsLimit: 5,
   },

@@ -3,6 +3,7 @@ import { Bead } from '../../../types/bead';
 import { PendantPlacement, PendantTemplate, PendantTemplateBead } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
+import { pendantBeadId } from '../../../utils/floodFill';
 import './PendantLayer.css';
 
 interface PendantLayerProps {
@@ -16,6 +17,11 @@ interface PendantLayerProps {
   mirrorMode: boolean;
   width: number;
   highlightedColor?: string | null;
+  // Инструмент «нитка» магнитится к любой бусине на холсте, включая подвески
+  // (см. spec.md, «Нитка») — пока он активен, наведение/клик по бусине
+  // подвески трассирует нитку вместо покраски.
+  threadToolActive: boolean;
+  onThreadPoint: (id: string) => void;
 }
 
 const ID_SEP = '::';
@@ -36,6 +42,8 @@ export const PendantLayer = ({
   mirrorMode,
   width,
   highlightedColor,
+  threadToolActive,
+  onThreadPoint,
 }: PendantLayerProps) => {
   const nodeByCol = new Map<number, Bead>();
   bottomNodes.forEach((n) => nodeByCol.set(n.logicalIndex.col, n));
@@ -50,14 +58,20 @@ export const PendantLayer = ({
 
   const handlePointerDown = useCallback((id: string) => {
     const [placementId, idx] = id.split(ID_SEP);
+    if (threadToolActive) {
+      onThreadPoint(pendantBeadId(placementId, Number(idx)));
+      return;
+    }
     onPaintBead(placementId, Number(idx));
-  }, [onPaintBead]);
+  }, [onPaintBead, threadToolActive, onThreadPoint]);
 
+  // Нитка добавляет точки только явным кликом (handlePointerDown) — протяжка
+  // сюда не заходит, поэтому threadToolActive тут не проверяется вовсе.
   const handlePointerEnter = useCallback((id: string) => {
-    if (!isDrawing) return;
+    if (threadToolActive || !isDrawing) return;
     const [placementId, idx] = id.split(ID_SEP);
     onPaintBead(placementId, Number(idx));
-  }, [isDrawing, onPaintBead]);
+  }, [isDrawing, onPaintBead, threadToolActive]);
 
   return (
     <g className="pendant-layer">

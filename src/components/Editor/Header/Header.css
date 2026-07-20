@@ -347,6 +347,18 @@
 }
 .tool-btn-group__badge:hover { transform: scale(1.15); }
 
+/* Невидимая зона побольше визуального круга (14px) — на тач-экране в 14px
+   сложно точно попасть пальцем. -5px с каждой стороны даёт ~24px, тот же
+   масштаб, что и hitboxRadius бисерин (BEAD_THEME/CROSS_WEAVE_THEME) —
+   не выбираем рекомендуемые ~40-44px намеренно: бейджи сидят на углу 26px
+   кнопки инструмента (.tool-btn), больший отступ перекрыл бы половину её
+   собственной кликабельной области. */
+.tool-btn-group__badge::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
 /* Второй бейдж (сброс узора) — противоположный угол, чтобы не перекрываться
    с бейджем точки привязки. */
 .tool-btn-group__badge--cancel {
@@ -356,6 +368,50 @@
   top: -5px;
   background-color: #f87171;
 }
+
+/* Попап кнопки Mirror Mode: сама кнопка (.tool-btn) переключает режим по
+   тултипу, но клик открывает мини-меню с этим тумблером ещё раз + связанным
+   одноразовым действием "Сделать симметричным" — та же визуальная схема,
+   что и .header__overflow-panel (тёмная плашка-меню), но без брейкпоинтов,
+   т.к. .mirror-menu видна на всех шириндах. */
+.mirror-menu { position: relative; display: inline-flex; flex-shrink: 0; }
+.mirror-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 132px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.mirror-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 11px;
+  text-align: left;
+  padding: 5px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.mirror-menu__item-icon { flex-shrink: 0; opacity: 0.85; }
+.mirror-menu__item-label { flex: 1; white-space: nowrap; }
+.mirror-menu__item-check { flex-shrink: 0; }
+.mirror-menu__item:hover { background: rgba(255, 255, 255, 0.08); }
+.mirror-menu__item--active { color: #22d3ee; font-weight: 700; }
+.mirror-menu__item--active .mirror-menu__item-icon { opacity: 1; }
+.mirror-menu__item:disabled { opacity: 0.35; cursor: default; }
+.mirror-menu__item:disabled:hover { background: transparent; }
 
 /* Переключатель Silyanka / CrossWeave: сегментированный pill с иконкой + подписью,
    вместо непрозрачной одиночной кнопки-иконки, которая была нечитаема при 15px. */

@@ -2,14 +2,28 @@ import { useEffect, useRef, useState } from 'react';
 import {
   MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil,
   ArrowUpToLine, ArrowDownToLine, X, Image, Download, Upload, Share2, Palette,
+  Check,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
-import { EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, CrossWeaveIcon } from './icons';
+import {
+  EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, CrossWeaveIcon, MakeSymmetricIcon, ThreadIcon,
+} from './icons';
 import { DrawingTool } from '../../../hooks/useDrawing';
+import { Thread } from '../../../types/thread';
 import { StampAnchorEdge } from '../../../utils/stamp';
 import { APP_CONSTRAINTS, BEAD_THEME } from '../../../config/theme';
 import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
+
+// Цвета-образцы для ThreadMenu (крестик) — независимы от --thread-color/-2
+// в CanvasView.css (те завязаны на тёмную/светлую тему холста, а хедер вне
+// этого скоупа), но подобраны в тон: тёплый лён для нитки 1, акцентный cyan
+// (уже использован у Stamp/Mirror) — для нитки 2, чтобы две нитки было легко
+// различить на глаз.
+const THREAD_STRAND_COLORS: Record<1 | 2, string> = {
+  1: '#e2d6bb',
+  2: '#22d3ee',
+};
 
 export type Technique = 'silyanka' | 'crossWeave';
 
@@ -37,6 +51,8 @@ interface SharedHeaderProps {
   onTechniqueChange: (technique: Technique) => void;
   referenceWindowOpen: boolean;
   onToggleReferenceWindow: () => void;
+  threads: Thread[];
+  onClearAllThreads: () => void;
 }
 
 interface SilyankaHeaderProps {
@@ -52,6 +68,8 @@ interface SilyankaHeaderProps {
   onBottomEdgeReset: () => void;
   mirrorMode: boolean;
   setMirrorMode: (v: boolean) => void;
+  onMakeSymmetric: () => void;
+  canMakeSymmetric: boolean;
   spacing: number;
   onSpacingChange: (delta: number) => void;
   sidebarOpen: boolean;
@@ -79,6 +97,12 @@ interface CrossWeaveHeaderProps {
   onSetSpacing?: (v: number) => void;
   mirrorMode: boolean;
   setMirrorMode: (v: boolean) => void;
+  onMakeSymmetric: () => void;
+  canMakeSymmetric: boolean;
+  // Крестик плетётся двумя нитками одновременно (силянка — одной, см.
+  // spec.md, «Нитка») — выбор, какой из двух метить новые нитки.
+  activeThreadStrand: 1 | 2;
+  onSelectThreadStrand: (strand: 1 | 2) => void;
 }
 
 type HeaderProps = SharedHeaderProps & (
@@ -197,6 +221,178 @@ const Stepper = ({
   );
 };
 
+// Единая кнопка Mirror Mode раскрывает мини-попап с двумя связанными
+// зеркальными операциями — переключателем режима и одноразовым действием
+// "Сделать симметричным" — вместо отдельной иконки для второго действия
+// (та же логика открытия/закрытия по клику снаружи и Escape, что и у
+// header__overflow ниже).
+const MirrorMenu = ({
+  mirrorMode, setMirrorMode, onMakeSymmetric, canMakeSymmetric,
+}: {
+  mirrorMode: boolean;
+  setMirrorMode: (v: boolean) => void;
+  onMakeSymmetric: () => void;
+  canMakeSymmetric: boolean;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="mirror-menu" ref={ref}>
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen(o => !o)}
+        className={`tool-btn ${mirrorMode ? 'tool-btn--active' : ''}`}
+        title="Mirror Mode (M)"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <FlipHorizontal size={14} />
+      </button>
+
+      {open && (
+        <div className="mirror-menu__panel" role="menu">
+          <button
+            onClick={() => setMirrorMode(!mirrorMode)}
+            className={`mirror-menu__item ${mirrorMode ? 'mirror-menu__item--active' : ''}`}
+            role="menuitemcheckbox"
+            aria-checked={mirrorMode}
+          >
+            <FlipHorizontal size={12} className="mirror-menu__item-icon" />
+            <span className="mirror-menu__item-label">Mirror Mode</span>
+            {mirrorMode && <Check size={12} className="mirror-menu__item-check" />}
+          </button>
+          <button
+            onClick={() => { onMakeSymmetric(); setOpen(false); }}
+            className="mirror-menu__item"
+            disabled={!canMakeSymmetric}
+            title="Fills the missing mirrored half of the current design"
+          >
+            <MakeSymmetricIcon size={12} className="mirror-menu__item-icon" />
+            <span className="mirror-menu__item-label">Make symmetric</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Кнопка «Нитка» у крестика — не простой тоггл, а мини-попап с выбором одной
+// из двух нитей (крестик физически плетётся двумя нитками одновременно,
+// см. spec.md, «Нитка»): клик по пункту сразу и выбирает нить, и включает
+// инструмент. Та же логика открытия/закрытия, что у MirrorMenu.
+const ThreadMenu = ({
+  activeTool, setActiveTool, activeThreadStrand, onSelectThreadStrand, threads, onClearAllThreads,
+}: {
+  activeTool: DrawingTool;
+  setActiveTool: (tool: DrawingTool) => void;
+  activeThreadStrand: 1 | 2;
+  onSelectThreadStrand: (strand: 1 | 2) => void;
+  threads: Thread[];
+  onClearAllThreads: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const selectStrand = (strand: 1 | 2) => {
+    onSelectThreadStrand(strand);
+    setActiveTool('thread');
+    setOpen(false);
+  };
+
+  return (
+    <div className="mirror-menu" ref={ref}>
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen(o => !o)}
+        className={`tool-btn ${activeTool === 'thread' ? 'tool-btn--active' : ''}`}
+        title="Thread (1/2)"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <ThreadIcon size={14} />
+      </button>
+
+      {activeTool === 'thread' && threads.length > 0 && (
+        <button
+          onClick={onClearAllThreads}
+          className="tool-btn-group__badge tool-btn-group__badge--cancel"
+          title="Clear all threads"
+        >
+          <X size={9} />
+        </button>
+      )}
+
+      {open && (
+        <div className="mirror-menu__panel" role="menu">
+          {([1, 2] as const).map((strand) => (
+            <button
+              key={strand}
+              onClick={() => selectStrand(strand)}
+              className={`mirror-menu__item ${activeTool === 'thread' && activeThreadStrand === strand ? 'mirror-menu__item--active' : ''}`}
+              role="menuitemradio"
+              aria-checked={activeTool === 'thread' && activeThreadStrand === strand}
+              title={`Thread ${strand} (${strand})`}
+            >
+              <span
+                className="mirror-menu__item-icon"
+                style={{
+                  width: 10, height: 10, borderRadius: '50%', display: 'inline-block',
+                  background: THREAD_STRAND_COLORS[strand],
+                }}
+              />
+              <span className="mirror-menu__item-label">Thread {strand}</span>
+              {activeTool === 'thread' && activeThreadStrand === strand && (
+                <Check size={12} className="mirror-menu__item-check" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Header = (props: HeaderProps) => {
   const {
     palette, onPaletteChange, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
@@ -205,6 +401,7 @@ export const Header = (props: HeaderProps) => {
     onUndo, onRedo, canUndo, canRedo,
     technique, onTechniqueChange,
     referenceWindowOpen, onToggleReferenceWindow,
+    threads, onClearAllThreads,
   } = props;
 
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
@@ -451,6 +648,40 @@ export const Header = (props: HeaderProps) => {
             <EraserIcon size={14} />
           </button>
 
+          {silyankaProps && (
+            <div className="tool-btn-group">
+              <button
+                onClick={() => setActiveTool(activeTool === 'thread' ? 'pencil' : 'thread')}
+                className={`tool-btn ${activeTool === 'thread' ? 'tool-btn--active' : ''}`}
+                title="Thread (T)"
+                aria-pressed={activeTool === 'thread'}
+              >
+                <ThreadIcon size={14} />
+              </button>
+
+              {activeTool === 'thread' && threads.length > 0 && (
+                <button
+                  onClick={onClearAllThreads}
+                  className="tool-btn-group__badge tool-btn-group__badge--cancel"
+                  title="Clear all threads"
+                >
+                  <X size={9} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {crossWeaveProps && (
+            <ThreadMenu
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              activeThreadStrand={crossWeaveProps.activeThreadStrand}
+              onSelectThreadStrand={crossWeaveProps.onSelectThreadStrand}
+              threads={threads}
+              onClearAllThreads={onClearAllThreads}
+            />
+          )}
+
           {crossWeaveProps && (
             <>
               <button
@@ -462,14 +693,12 @@ export const Header = (props: HeaderProps) => {
                 <PaintBucket size={14} />
               </button>
 
-              <button
-                onClick={() => crossWeaveProps.setMirrorMode(!crossWeaveProps.mirrorMode)}
-                className={`tool-btn ${crossWeaveProps.mirrorMode ? 'tool-btn--active' : ''}`}
-                title="Mirror Mode (M)"
-                aria-pressed={crossWeaveProps.mirrorMode}
-              >
-                <FlipHorizontal size={14} />
-              </button>
+              <MirrorMenu
+                mirrorMode={crossWeaveProps.mirrorMode}
+                setMirrorMode={crossWeaveProps.setMirrorMode}
+                onMakeSymmetric={crossWeaveProps.onMakeSymmetric}
+                canMakeSymmetric={crossWeaveProps.canMakeSymmetric}
+              />
             </>
           )}
 
@@ -522,14 +751,12 @@ export const Header = (props: HeaderProps) => {
                 )}
               </div>
 
-              <button
-                onClick={() => silyankaProps.setMirrorMode(!silyankaProps.mirrorMode)}
-                className={`tool-btn ${silyankaProps.mirrorMode ? 'tool-btn--active' : ''}`}
-                title="Mirror Mode (M)"
-                aria-pressed={silyankaProps.mirrorMode}
-              >
-                <FlipHorizontal size={14} />
-              </button>
+              <MirrorMenu
+                mirrorMode={silyankaProps.mirrorMode}
+                setMirrorMode={silyankaProps.setMirrorMode}
+                onMakeSymmetric={silyankaProps.onMakeSymmetric}
+                canMakeSymmetric={silyankaProps.canMakeSymmetric}
+              />
             </>
           )}
 

@@ -8,7 +8,13 @@ import { decode, encode } from './beadId';
 // Декор-полосы regrid не обрабатывает (сдвиг колонок актуален только для
 // mirror-resize по ширине, которым декор не пользуется) — decode вернёт
 // структуру, но explicit-ветки для неё здесь нет, и она отбрасывается.
-const shiftId = (id: string, shift: number, newW: number): string | null => {
+const shiftId = (
+  id: string,
+  shift: number,
+  newW: number,
+  extendLeft: boolean,
+  extendRight: boolean,
+): string | null => {
   const ref = decode(id);
   if (!ref) return null;
 
@@ -16,8 +22,9 @@ const shiftId = (id: string, shift: number, newW: number): string | null => {
     case 'node':
     case 'vertEdge': {
       const c = ref.c + shift;
-      const minC = ref.r % 2 === 0 ? 0 : -1;
-      const maxC = newW - 1;
+      const isOdd = ref.r % 2 !== 0;
+      const minC = isOdd && extendLeft ? -1 : 0;
+      const maxC = isOdd && !extendRight ? newW - 2 : newW - 1;
       if (c < minC || c > maxC) return null;
       return encode({ ...ref, c });
     }
@@ -37,10 +44,12 @@ export const shiftDesignMapColumns = (
   designMap: Record<string, string>,
   shift: number,
   newW: number,
+  extendLeft: boolean = true,
+  extendRight: boolean = true,
 ): Record<string, string> => {
   const next: Record<string, string> = {};
   for (const id of Object.keys(designMap)) {
-    const moved = shiftId(id, shift, newW);
+    const moved = shiftId(id, shift, newW, extendLeft, extendRight);
     if (moved !== null) next[moved] = designMap[id];
   }
   return next;

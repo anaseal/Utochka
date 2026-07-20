@@ -33,6 +33,12 @@ interface ExportPalette {
   swatchStroke: string;
   /** Значение filter для закрашенной ноды: glow в тёмной теме, none в светлой. */
   nodeGlow: string;
+  /** Незакрашенный (bead--empty) бисер — те же токены, что в BeadView.css. */
+  beadEmptyStroke: string;
+  beadEmptyFill: string;
+  beadNodeEmptyFill: string;
+  beadNodeEmptyStroke: string;
+  beadNodeEmptyGlow: string;
 }
 
 const PALETTES: Record<CanvasTheme, ExportPalette> = {
@@ -45,6 +51,11 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     legendLabel: '#e2e8f0',
     swatchStroke: 'rgba(255, 255, 255, 0.25)',
     nodeGlow: 'drop-shadow(0 0 1px var(--bead-color))',
+    beadEmptyStroke: 'rgba(160, 200, 230, 0.6)',
+    beadEmptyFill: 'rgba(255, 255, 255, 0.04)',
+    beadNodeEmptyFill: 'rgba(140, 185, 220, 0.07)',
+    beadNodeEmptyStroke: 'rgba(140, 185, 220, 0.85)',
+    beadNodeEmptyGlow: 'rgba(140, 185, 220, 1)',
   },
   light: {
     bg: '#f8fafc',
@@ -55,6 +66,11 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     legendLabel: '#334155',
     swatchStroke: 'rgba(15, 23, 42, 0.25)',
     nodeGlow: 'drop-shadow(0 0 0.5px var(--bead-color))',
+    beadEmptyStroke: 'rgba(100, 116, 139, 0.5)',
+    beadEmptyFill: 'transparent',
+    beadNodeEmptyFill: 'transparent',
+    beadNodeEmptyStroke: 'rgba(71, 85, 105, 0.75)',
+    beadNodeEmptyGlow: 'transparent',
   },
 };
 
@@ -82,7 +98,11 @@ const STRIP_SELECTORS = [
 
 /**
  * Стили, которые в приложении приходят из внешних CSS-файлов и теряются при
- * сериализации SVG. Цвета бусин не включены — они уже инлайн (`fill`).
+ * сериализации SVG. Цвета закрашенных бусин не включены — они уже инлайн
+ * (`fill`). Незакрашенные (`bead--empty`) — исключение: их вид целиком
+ * держится на CSS-переменных из BeadView.css, поэтому без явного правила тут
+ * они схлопывались бы в дефолтный чёрный `fill`/`stroke` — особенно заметно
+ * у плотно расставленных бисерин цепочки-подвески (сливались в чёрное пятно).
  * Цвета осей/оси зеркала зависят от темы холста (`pal`).
  */
 const buildExportStyle = (pal: ExportPalette): string => `
@@ -93,6 +113,16 @@ const buildExportStyle = (pal: ExportPalette): string => `
 }
 .bead--type-node .bead__body {
   filter: ${pal.nodeGlow};
+}
+.bead--empty .bead__body, .bead--empty .pendant-bead__body {
+  stroke: ${pal.beadEmptyStroke};
+  stroke-width: 1px;
+  fill: ${pal.beadEmptyFill};
+}
+.bead--type-node.bead--empty .bead__body {
+  fill: ${pal.beadNodeEmptyFill};
+  stroke: ${pal.beadNodeEmptyStroke};
+  filter: drop-shadow(0 0 8px ${pal.beadNodeEmptyGlow});
 }
 .canvas__axis-text {
   fill: ${pal.axisText};

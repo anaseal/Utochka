@@ -3,16 +3,19 @@ import { useGrid } from './useGrid';
 import { useDrawing } from './useDrawing';
 import { usePendants } from './usePendants';
 import { usePendantChains } from './usePendantChains';
+import { useThreads } from './useThreads';
 import { usePersistedState } from './usePersistedState';
 import { BEAD_THEME } from '../config/theme';
-import { BottomEdgeDecor, GridConfig } from '../types/bead';
+import { BottomEdgeDecor, EdgeExtension, GridConfig } from '../types/bead';
 import { PendantPlacement, PendantChain } from '../types/pendant';
+import { Thread } from '../types/thread';
 import { PENDANT_TEMPLATES_BY_ID } from '../data/pendantTemplates';
 import { clampSpan, resolveSpanCount } from '../utils/spans';
 import { clamp } from '../utils/clamp';
 import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
 import { shiftDesignMapColumns } from '../utils/regrid';
 import { mirrorBeadId } from '../utils/mirror';
+import { fillMissingMirror } from '../utils/symmetrize';
 import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
 import { chainBeadId } from '../utils/pendantChain';
 import {
@@ -34,6 +37,11 @@ const isBottomEdgeDecor = (v: unknown): v is BottomEdgeDecor =>
   typeof v === 'object' && v !== null &&
   typeof (v as BottomEdgeDecor).enabled === 'boolean' &&
   typeof (v as BottomEdgeDecor).span === 'number';
+
+const isEdgeExtension = (v: unknown): v is EdgeExtension =>
+  typeof v === 'object' && v !== null &&
+  typeof (v as EdgeExtension).left === 'boolean' &&
+  typeof (v as EdgeExtension).right === 'boolean';
 
 const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
   if (typeof v !== 'object' || v === null) return false;
@@ -93,6 +101,13 @@ const isPendantChains = (v: unknown): v is PendantChain[] =>
     typeof c.endCol === 'number' &&
     typeof c.colorMap === 'object' && c.colorMap !== null);
 
+const isThreads = (v: unknown): v is Thread[] =>
+  Array.isArray(v) && v.every(t =>
+    typeof t === 'object' && t !== null &&
+    typeof (t as Thread).id === 'string' &&
+    Array.isArray((t as Thread).beadIds) &&
+    (t as Thread).beadIds.every(id => typeof id === 'string'));
+
 // Всё силяночное состояние и обработчики, вынесенные из App.tsx, чтобы
 // хостить вторую независимую технику (крестик) без дублирования ~400 строк.
 export const useSilyankaProject = (palette: readonly string[]) => {
@@ -118,6 +133,11 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     { enabled: false, span: BEAD_THEME.gridDefaults.beadsInSpan },
     isBottomEdgeDecor,
   );
+  const [edgeExtension, setEdgeExtension] = usePersistedState<EdgeExtension>(
+    'silyanka:edgeExtension',
+    { left: true, right: true },
+    isEdgeExtension,
+  );
 
   const [pendantPlacements, setPendantPlacements] = usePersistedState<PendantPlacement[]>(
     'silyanka:pendantPlacements', [], isPendantPlacements,
@@ -127,10 +147,16 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     'silyanka:pendantChains', [], isPendantChains,
   );
 
-  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor);
-  const drawingControls = useDrawing(
-    palette[0], palette, pendantPlacements, setPendantPlacements, pendantChains, setPendantChains, 'silyanka',
+  const [threads, setThreads] = usePersistedState<Thread[]>(
+    'silyanka:threads', [], isThreads,
   );
+
+  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension);
+  const drawingControls = useDrawing(
+    palette[0], palette, pendantPlacements, setPendantPlacements,
+    pendantChains, setPendantChains, threads, setThreads, 'silyanka',
+  );
+  const threadControls = useThreads(threads, drawingControls.applyPatch);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
@@ -232,13 +258,13 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       const next = { ...prev, ...patch };
       if (mirrorMode) {
         for (const [id, color] of Object.entries(patch)) {
-          const m = mirrorBeadId(id, gridSize.width, internalTop, internalBottom);
+          const m = mirrorBeadId(id, gridSize.width, internalTop, internalBottom, edgeExtension.left, edgeExtension.right);
           if (m !== null && m !== id && stampCtx.beadIds.has(m)) next[m] = color;
         }
       }
       return next;
     });
-  }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom, stampAnchorEdge]);
+  }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom, stampAnchorEdge, edgeExtension]);
 
   // Общий обработчик результата resizeWidthRelative/resizeWidthAbsolute:
   // сдвиг designMap в Mirror Mode, снятие подвесок с исчезнувших/сдвинутых
@@ -248,7 +274,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     const { newWidth, mirrorDelta } = result;
     if (wasMirror) {
       drawingControls.remapDesignMap(map =>
-        shiftDesignMapColumns(map, mirrorDelta, newWidth),
+        shiftDesignMapColumns(map, mirrorDelta, newWidth, edgeExtension.left, edgeExtension.right),
       );
       // Подвески сдвигаем вместе с рисунком, иначе их col отвяжется от нод.
       setPendantPlacements(prev => prev
@@ -345,6 +371,14 @@ export const useSilyankaProject = (palette: readonly string[]) => {
 
   const updateBottomEdgeSpan = (delta: number) => {
     setBottomEdgeDecor(prev => ({ ...prev, span: clampSpan(prev.span + delta) }));
+  };
+
+  const toggleExtendLeftEdge = () => {
+    setEdgeExtension(prev => ({ ...prev, left: !prev.left }));
+  };
+
+  const toggleExtendRightEdge = () => {
+    setEdgeExtension(prev => ({ ...prev, right: !prev.right }));
   };
 
   const updateRowSpan = (spanRowIndex: number, delta: number) => {
@@ -444,10 +478,21 @@ export const useSilyankaProject = (palette: readonly string[]) => {
 
   const handleFloodFill = useCallback((startId: string) => {
     const mirrorId = mirrorMode
-      ? mirrorBeadId(startId, gridSize.width, internalTop, internalBottom)
+      ? mirrorBeadId(startId, gridSize.width, internalTop, internalBottom, edgeExtension.left, edgeExtension.right)
       : null;
     applyUnifiedFloodFill(startId, mirrorId !== startId ? mirrorId : null);
-  }, [applyUnifiedFloodFill, mirrorMode, gridSize.width, internalTop, internalBottom]);
+  }, [applyUnifiedFloodFill, mirrorMode, gridSize.width, internalTop, internalBottom, edgeExtension]);
+
+  // Ретроактивная симметризация: дозаполняет отсутствующую зеркальную половину
+  // Design Map по текущей геометрии — полезно, если узор начали без Mirror
+  // Mode или включили его на середине работы. Уже закрашенные (в т.ч.
+  // конфликтующие) зеркальные пары не трогает, см. symmetrize.ts.
+  const makeSymmetric = useCallback(() => {
+    drawingControls.remapDesignMap(map => fillMissingMirror(
+      map,
+      id => mirrorBeadId(id, gridSize.width, internalTop, internalBottom, edgeExtension.left, edgeExtension.right),
+    ));
+  }, [drawingControls, gridSize.width, internalTop, internalBottom, edgeExtension]);
 
   const handlePendantPaint = useCallback((placementId: string, beadIndex: number) => {
     if (drawingControls.activeTool !== 'flood-fill') {
@@ -524,8 +569,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
 
   return {
     gridSize, rowSpanOverrides, mirrorMode, setMirrorMode, decorBands, bottomEdgeDecor,
+    edgeExtension, toggleExtendLeftEdge, toggleExtendRightEdge,
     pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, chainControls, chainPendingStart, setChainPendingStart,
+    threads, threadControls,
     beads, drawingControls, pendantControls,
     sidebarOpen, setSidebarOpen, hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
     stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewPatch,
@@ -537,6 +584,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     toggleBottomEdgeEnabled, updateBottomEdgeSpan, updateRowSpan,
     updateDecorBand, handleDecorDrop, handleClearDecor,
     handleFloodFill, handlePendantPaint, handleChainPaint, handleChainNodeClick, resetEdge,
+    makeSymmetric,
   };
 };
 
