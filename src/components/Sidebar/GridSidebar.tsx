@@ -47,6 +47,8 @@ interface SilyankaGridSidebarProps {
   onTaperDepthReset: () => void;
   taperRowsLinked: boolean;
   onToggleTaperRowsLinked: () => void;
+  onResetAll: () => void;
+  resetAllDisabled: boolean;
 }
 
 interface CrossWeaveGridSidebarProps {
@@ -59,6 +61,8 @@ interface CrossWeaveGridSidebarProps {
   onSetWidth?: (v: number) => void;
   onSetHeight?: (v: number) => void;
   onSetSpacing?: (v: number) => void;
+  onResetAll: () => void;
+  resetAllDisabled: boolean;
 }
 
 type GridSidebarProps = SharedGridSidebarProps & (
@@ -289,6 +293,17 @@ export const GridSidebar = (props: GridSidebarProps) => {
             </section>
           </>
         )}
+      </div>
+
+      <div className="sidebar__footer">
+        <button
+          type="button"
+          className="sidebar__clear"
+          onClick={silyankaProps ? silyankaProps.onResetAll : crossWeaveProps!.onResetAll}
+          disabled={silyankaProps ? silyankaProps.resetAllDisabled : crossWeaveProps!.resetAllDisabled}
+        >
+          Reset all
+        </button>
       </div>
     </aside>
   );

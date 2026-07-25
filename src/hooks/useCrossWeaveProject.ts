@@ -218,6 +218,25 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
     });
   };
 
+  // «Reset all» панели Grid — та же роль, что и у силянки (см.
+  // useSilyankaProject.resetGridAll), но состав меньше: у CrossWeave нет
+  // edges/taper/decor в этой панели.
+  const gridIsDefault = (
+    gridSize.width === CROSS_WEAVE_THEME.gridDefaults.initialWidth &&
+    gridSize.height === CROSS_WEAVE_THEME.gridDefaults.initialHeight &&
+    gridSize.pitchX === CROSS_WEAVE_THEME.gridDefaults.spacing &&
+    gridSize.pitchY === CROSS_WEAVE_THEME.gridDefaults.spacing
+  );
+
+  const resetGridAll = () => {
+    setGridSize({
+      width: CROSS_WEAVE_THEME.gridDefaults.initialWidth,
+      height: CROSS_WEAVE_THEME.gridDefaults.initialHeight,
+      pitchX: CROSS_WEAVE_THEME.gridDefaults.spacing,
+      pitchY: CROSS_WEAVE_THEME.gridDefaults.spacing,
+    });
+  };
+
   return {
     gridSize, beads, drawingControls, rawWidth,
     threads, threadControls, activeThreadStrand, setActiveThreadStrand,
@@ -225,7 +244,7 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
     mirrorMode, setMirrorMode,
     updateDimension, setWidthAbsolute, setHeightAbsolute,
     updateSpacing, setSpacingAbsolute,
-    handleFloodFill, makeSymmetric,
+    handleFloodFill, makeSymmetric, resetGridAll, gridIsDefault,
   };
 };
 

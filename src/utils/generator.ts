@@ -48,8 +48,18 @@ export const generateSilyankaGrid = (
   const getYStep = (r: number): number =>
     (getInternalCount(r) + 1) * (spacing * verticalCompression);
 
-  // Промежуточный декор: шаг между декор-рядами полосы (тот же, что у пролётов)
-  const decorRowStep = spacing * verticalCompression;
+  // Промежуточный декор: шаг между декор-рядами полосы. В отличие от обычных
+  // пролётов сетки (где соседние ряды всегда разнесены ещё и по X на stepX/2,
+  // что само по себе не даёт бисеринам наложиться), бисерины полосы стоят
+  // строго друг под другом по одному X — единственный запас между ними это
+  // сам decorRowStep. При spacing*verticalCompression меньше диаметра бисерины
+  // (spanRadius*2) соседние ряды полосы физически наезжают друг на друга —
+  // поэтому шаг не может быть меньше минимального пиксельного пролёта между
+  // бисеринами (тот же принцип, что и pitch в pendantChain.ts).
+  const decorRowStep = Math.max(
+    spacing * verticalCompression,
+    BEAD_THEME.sizes.spanRadius * 2 + 2
+  );
   // Число декор-рядов полосы после узлового ряда r (0 — полосы нет)
   const getDecorRows = (r: number): number => {
     const n = decorBands[r];

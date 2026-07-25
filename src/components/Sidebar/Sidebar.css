@@ -70,22 +70,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  border-radius: 4px;
+  border: none;
+  border-radius: 6px;
   background: transparent;
-  border: 1px solid rgba(248, 113, 113, 0.35);
-  color: #f87171;
-  font-size: 11px;
-  line-height: 1;
+  color: #64748b;
   cursor: pointer;
-  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
+  transition: color var(--transition-speed) ease, background var(--transition-speed) ease;
 }
 
 .sidebar__section-clear:hover:not(:disabled) {
-  background: #3a2230;
-  border-color: #f87171;
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sidebar__section-clear:disabled {
@@ -131,18 +129,19 @@
   margin: 14px 14px 0;
   padding: 8px 12px;
   background: var(--color-canvas);
-  border: 1px solid rgba(248, 113, 113, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  color: #f87171;
+  color: #94a3b8;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
+  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
 .sidebar__clear:hover:not(:disabled) {
-  border-color: #f87171;
-  background: #3a2230;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
 }
 
 .sidebar__clear:disabled {

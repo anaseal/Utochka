@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { RotateCcw } from 'lucide-react';
 import { Bead } from '../../types/bead';
 import { PendantPlacement, PendantTemplate, PendantChain } from '../../types/pendant';
 import { BEAD_THEME } from '../../config/theme';
@@ -284,7 +285,7 @@ export const PendantsSidebar = ({
                   aria-label="Clear Pendants"
                   title="Clear Pendants"
                 >
-                  ×
+                  <RotateCcw size={13} />
                 </button>
               </div>
               <p className="sidebar__section-desc">Drag a template onto a bottom-row node</p>
@@ -329,7 +330,7 @@ export const PendantsSidebar = ({
                   aria-label="Clear Chains"
                   title="Clear Chains"
                 >
-                  ×
+                  <RotateCcw size={13} />
                 </button>
               </div>
               <p className="sidebar__section-desc">
@@ -383,7 +384,7 @@ export const PendantsSidebar = ({
                   aria-label="Clear Decor"
                   title="Clear Decor"
                 >
-                  ×
+                  <RotateCcw size={13} />
                 </button>
               </div>
               <p className="sidebar__section-desc">Drag a band onto a gap between rows</p>

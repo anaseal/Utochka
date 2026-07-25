@@ -377,6 +377,8 @@ function App() {
             onTaperDepthReset: silyanka.resetTaperDepth,
             taperRowsLinked: silyanka.taperRowsLinked,
             onToggleTaperRowsLinked: silyanka.toggleTaperRowsLinked,
+            onResetAll: silyanka.resetGridAll,
+            resetAllDisabled: silyanka.gridIsDefault,
           }}
         />
       ) : (
@@ -393,6 +395,8 @@ function App() {
             onSetWidth: crossWeave.setWidthAbsolute,
             onSetHeight: crossWeave.setHeightAbsolute,
             onSetSpacing: crossWeave.setSpacingAbsolute,
+            onResetAll: crossWeave.resetGridAll,
+            resetAllDisabled: crossWeave.gridIsDefault,
           }}
         />
       )}

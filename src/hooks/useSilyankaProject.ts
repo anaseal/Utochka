@@ -660,6 +660,38 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setChainPendingStart(null);
   }, [chainPendingStart, chainControls]);
 
+  // «Reset all» панели Grid — возвращает геометрию (не рисунок/декор/подвески,
+  // у тех свой Reset all в Pendants & Decor) к дефолтам первого запуска.
+  const gridIsDefault = (
+    gridSize.width === BEAD_THEME.gridDefaults.initialWidth &&
+    gridSize.height === BEAD_THEME.gridDefaults.initialHeight &&
+    gridSize.spacing === BEAD_THEME.gridDefaults.spacing &&
+    gridSize.topSpan === BEAD_THEME.gridDefaults.beadsInSpan &&
+    gridSize.bottomSpan === BEAD_THEME.gridDefaults.beadsInSpan &&
+    Object.keys(rowSpanOverrides).length === 0 &&
+    taper.top.rows === 0 && taper.bottom.rows === 0 && taper.depth === 0 &&
+    !taperRowsLinked &&
+    topEdgeEnabled &&
+    !bottomEdgeDecor.enabled && bottomEdgeDecor.span === BEAD_THEME.gridDefaults.beadsInSpan &&
+    edgeExtension.left && edgeExtension.right
+  );
+
+  const resetGridAll = () => {
+    setGridSize({
+      width: BEAD_THEME.gridDefaults.initialWidth,
+      height: BEAD_THEME.gridDefaults.initialHeight,
+      spacing: BEAD_THEME.gridDefaults.spacing,
+      topSpan: BEAD_THEME.gridDefaults.beadsInSpan,
+      bottomSpan: BEAD_THEME.gridDefaults.beadsInSpan,
+    });
+    setRowSpanOverrides({});
+    setTaper({ top: { rows: 0 }, bottom: { rows: 0 }, depth: 0 });
+    setTaperRowsLinked(false);
+    setTopEdgeEnabled(true);
+    setBottomEdgeDecor({ enabled: false, span: BEAD_THEME.gridDefaults.beadsInSpan });
+    setEdgeExtension({ left: true, right: true });
+  };
+
   const resetEdge = (edge: 'top' | 'bottom') => {
     const isTop = edge === 'top';
     setGridSize(prev => ({
@@ -699,7 +731,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     toggleBottomEdgeEnabled, updateBottomEdgeSpan, updateRowSpan,
     updateDecorBand, handleDecorDrop, handleClearDecor,
     handleFloodFill, handlePendantPaint, handleChainPaint, handleChainNodeClick, resetEdge,
-    makeSymmetric,
+    makeSymmetric, resetGridAll, gridIsDefault,
   };
 };
 
