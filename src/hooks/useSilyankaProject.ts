@@ -397,15 +397,16 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   };
 
   const toggleTaperRowsLinked = () => {
-    setTaperRowsLinked(prev => {
-      const next = !prev;
-      // Включение синка сразу выравнивает стороны, иначе «синхронно» вводит в
-      // заблуждение, пока обе стороны не станут равны следующим изменением.
-      if (next) {
-        setTaper(t => ({ ...t, bottom: { ...t.top } }));
-      }
-      return next;
-    });
+    // Побочный эффект (setTaper) — здесь, в обработчике, а не внутри апдейтера
+    // setTaperRowsLinked: React (StrictMode) может вызвать апдейтер дважды,
+    // и setState изнутри чужого апдейтера — источник трудноуловимых багов.
+    const turningOn = !taperRowsLinked;
+    setTaperRowsLinked(turningOn);
+    // Включение синка сразу выравнивает стороны, иначе «синхронно» вводит в
+    // заблуждение, пока обе стороны не станут равны следующим изменением.
+    if (turningOn) {
+      setTaper(prev => ({ ...prev, bottom: { ...prev.top } }));
+    }
   };
 
   const updateTaperDepth = (delta: number) => {

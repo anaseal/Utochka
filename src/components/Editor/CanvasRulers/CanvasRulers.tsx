@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Bead } from '../../../types/bead';
 import { resolveSpanCount } from '../../../utils/spans';
+import { buildColumnAxis } from '../../../utils/columnAxis';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import './CanvasRulers.css';
 
@@ -102,48 +103,21 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     return result.sort((a, b) => a.logicalIndex.row - b.logicalIndex.row);
   }, [nodes]);
 
+  // Ряд 1 (нечётный) обычно даёт колонки 0..width-2 (см. spec.md, «Диапазон
+  // колонок нечётных рядов») — крайние два узла в подсчёт линейки не входят,
+  // чтобы число колонок совпадало с шириной. При активном Taper с ненулевым
+  // depth срез держится по всему полотну — крайние колонки могут не
+  // существовать ни в одном ряду, поэтому buildColumnAxis достраивает их
+  // позиции экстраполяцией (см. spec.md, «Линейка и Taper», и columnAxis.ts).
   const colAxesNodes = useMemo(() => {
-    // Ряд 1 (нечётный) обычно даёт колонки 0..width-2 (см. spec.md, «Диапазон
-    // колонок нечётных рядов») — крайние два узла в подсчёт линейки не входят,
-    // чтобы число колонок совпадало с шириной. x нечётного ряда зависит только
-    // от col (общие stepX/offset для всех нечётных рядов, см. generator.ts).
-    const byCol = new Map<number, number>();
-    nodes.forEach(n => {
-      if (n.logicalIndex.row % 2 !== 0 && n.logicalIndex.col >= 0 && n.logicalIndex.col <= width - 2) {
-        if (!byCol.has(n.logicalIndex.col)) byCol.set(n.logicalIndex.col, n.x);
-      }
-    });
-    const knownCols = [...byCol.keys()].sort((a, b) => a - b);
-    if (knownCols.length === 0) return [];
-
-    // При активном Taper с ненулевым depth срез держится по всему полотну
-    // (см. spec.md) — крайние колонки могут не существовать НИ В ОДНОМ ряду,
-    // и без этого шага линейка начиналась бы не с «1», а с той колонки, что
-    // реально уцелела (см. spec.md, «съезжающая» нумерация). Линейка обязана
-    // отражать номинальную ширину (Width), а не то, что осталось после
-    // сужения, поэтому достраиваем позиции недостающих колонок экстраполяцией
-    // общего шага (derived из любых двух уцелевших) — x(col) линеен по col
-    // одинаково для всех нечётных рядов.
-    let stepX = 0;
-    for (let i = 1; i < knownCols.length && stepX === 0; i++) {
-      const dc = knownCols[i] - knownCols[0];
-      stepX = (byCol.get(knownCols[i])! - byCol.get(knownCols[0])!) / dc;
-    }
-    // Меньше двух различных x — экстраполировать нечем (все живые узлы в
-    // одной точке или единственная колонка на всё полотно); показываем
-    // только то, что реально уцелело, вместо мусорных наложенных подписей.
-    if (stepX === 0) {
-      return knownCols.map(c => ({ id: `col-${c}`, x: byCol.get(c)!, logicalIndex: { col: c } }));
-    }
-
-    const anchorCol = knownCols[0];
-    const anchorX = byCol.get(anchorCol)!;
-    const result: { id: string; x: number; logicalIndex: { col: number } }[] = [];
-    for (let c = 0; c <= width - 2; c++) {
-      const x = byCol.has(c) ? byCol.get(c)! : anchorX + (c - anchorCol) * stepX;
-      result.push({ id: `col-${c}`, x, logicalIndex: { col: c } });
-    }
-    return result;
+    const points = nodes
+      .filter(n => n.logicalIndex.row % 2 !== 0)
+      .map(n => ({ col: n.logicalIndex.col, x: n.x }));
+    return buildColumnAxis(points, width).map(({ col, x }) => ({
+      id: `col-${col}`,
+      x,
+      logicalIndex: { col },
+    }));
   }, [nodes, width]);
 
   const baselineX = -axisMarginX;
