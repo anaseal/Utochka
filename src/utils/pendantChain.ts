@@ -35,13 +35,29 @@ export const expandChainRun = (fromId: string, toId: string): string[] | null =>
   return run;
 };
 
+// Шаг между соседними бисеринами (минимальный шаг без наложения — та же
+// формула, что даёт minBeadPitch в generator.ts). Бисерины цепочки всегда
+// лежат друг от друга и от узлов-креплений ровно на этом расстоянии — иначе
+// цепочка визуально «не касается» узла или соседней бисерины.
+const CHAIN_PITCH = BEAD_THEME.sizes.spanRadius * 2 + 2;
+
+// Доля «лишней» длины нити сверх хорды (расстояния между узлами) — источник
+// провиса, см. pendantChainDefaults в theme.ts.
+const slackRatioFor = (distance: number): number => {
+  const { slackCoef, slackMin, slackMax } = BEAD_THEME.pendantChainDefaults;
+  if (distance <= 0) return slackMax;
+  const ratio = slackCoef / Math.sqrt(distance);
+  return Math.min(slackMax, Math.max(slackMin, ratio));
+};
+
 // Число бисерин в цепочке зависит от расстояния между узлами-креплениями:
-// шаг между соседними бисеринами держится примерно постоянным (минимальный шаг
-// без наложения — та же формула, что даёт minBeadPitch в generator.ts), поэтому
-// далёкие друг от друга узлы дают более длинную цепочку.
+// далёкие друг от друга узлы дают более длинную цепочку. Считается из
+// «нужной» длины нити (хорда + запас на провис), поделённой на pitch —
+// то же значение, что задаёт итоговую длину дуги в computeChainBeadPositions,
+// поэтому число бисерин и их фактический шаг всегда согласованы.
 export const getChainBeadCount = (distance: number): number => {
-  const pitch = BEAD_THEME.sizes.spanRadius * 2 + 2;
-  return Math.max(1, Math.round(distance / pitch) - 1);
+  const strandLength = distance * (1 + slackRatioFor(distance));
+  return Math.max(1, Math.round(strandLength / CHAIN_PITCH) - 1);
 };
 
 export interface ChainBeadPosition {
@@ -54,21 +70,26 @@ export const chainBeadCountBetween = (
   end: ChainBeadPosition,
 ): number => getChainBeadCount(Math.hypot(end.x - start.x, end.y - start.y));
 
-// Глубина провиса в середине дуги: sagScale · distance^sagExponent.
-// Не линейно от расстояния (в отличие от прежней версии) — при sagExponent < 1
-// отношение sag/distance убывает с ростом distance, поэтому короткая цепочка
-// (мало бисерин, например между 3 нодами) может провисать глубоко
-// относительно своей длины, а длинная (между 50 нодами) — уже нет: линейный
-// рост выглядел бы неестественно растянутым на большом расстоянии.
-const sagDepthFor = (distance: number): number => {
-  const { sagScale, sagExponent } = BEAD_THEME.pendantChainDefaults;
-  return sagScale * Math.pow(distance, sagExponent);
+// Половинный угол дуги θ, для которой хорда стягивает дугу длины k·хорда:
+// из геометрии окружности L = 2Rθ, D = 2R·sinθ ⇒ θ/sinθ = L/D = k.
+// θ/sinθ монотонно растёт на (0, π), поэтому решаем бисекцией.
+const solveHalfAngle = (k: number): number => {
+  if (k <= 1) return 0;
+  let lo = 1e-6;
+  let hi = Math.PI - 1e-6;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (mid / Math.sin(mid) < k) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
 };
 
-// Полукруглый провис между двумя узлами: бисерины расходятся от узлов к
-// середине по sin-профилю (как generateArcSpan в generator.ts), но глубина
-// провиса зависит от расстояния нелинейно (см. sagDepthFor) — тут это
-// отдельная подвеска произвольной длины, а не тонкая кромка между соседями.
+// Бисерины цепочки лежат на круговой дуге между узлами: длина дуги (pitch ×
+// число промежутков) всегда чуть больше хорды на slackRatio (см. выше),
+// поэтому дуга и провис получаются из одной и той же геометрии окружности,
+// а не задаются независимо — это гарантирует, что соседние бисерины (и
+// крайние бисерины с узлами-креплениями) всегда на расстоянии ровно pitch
+// друг от друга по дуге, т.е. визуально касаются.
 export const computeChainBeadPositions = (
   start: ChainBeadPosition,
   end: ChainBeadPosition,
@@ -77,14 +98,38 @@ export const computeChainBeadPositions = (
   const dy = end.y - start.y;
   const distance = Math.hypot(dx, dy);
   const count = getChainBeadCount(distance);
-  const sagDepth = sagDepthFor(distance);
   const positions: ChainBeadPosition[] = [];
+  if (distance <= 0) {
+    for (let i = 1; i <= count; i++) positions.push({ x: start.x, y: start.y });
+    return positions;
+  }
+
+  const strandLength = CHAIN_PITCH * (count + 1);
+  const halfAngle = solveHalfAngle(strandLength / distance);
+  const ux = dx / distance;
+  const uy = dy / distance;
+  // Перпендикуляр к хорде, направленный «вниз» по экрану (+y) — провис
+  // цепочки-подвески всегда идёт от узлов вниз, а не в произвольную сторону.
+  let vx = -uy;
+  let vy = ux;
+  if (vy < 0) { vx = -vx; vy = -vy; }
+
+  if (halfAngle === 0) {
+    for (let i = 1; i <= count; i++) {
+      const t = i / (count + 1);
+      positions.push({ x: start.x + t * dx, y: start.y + t * dy });
+    }
+    return positions;
+  }
+
+  const radius = distance / (2 * Math.sin(halfAngle));
+  const sagDepth = radius * (1 - Math.cos(halfAngle));
   for (let i = 1; i <= count; i++) {
-    const t = i / (count + 1);
-    positions.push({
-      x: start.x + t * dx,
-      y: start.y + t * dy + sagDepth * Math.sin(Math.PI * t),
-    });
+    const s = i / (count + 1);
+    const phi = halfAngle * (2 * s - 1);
+    const u = distance / 2 + radius * Math.sin(phi);
+    const v = sagDepth - radius + radius * Math.cos(phi);
+    positions.push({ x: start.x + ux * u + vx * v, y: start.y + uy * u + vy * v });
   }
   return positions;
 };
