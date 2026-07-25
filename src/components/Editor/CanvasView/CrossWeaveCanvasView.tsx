@@ -197,8 +197,14 @@ export const CrossWeaveCanvasView = ({
     return { id: nearestId as string, pos: nearestPos };
   }, [beadPositionIndex]);
 
+  // См. CanvasView.tsx — линейный перебор в findNearestThreadAnchor не нужен
+  // чаще одного раза за кадр.
+  const lastHoverSearchRef = useRef(0);
   const handleThreadPointerMove = useCallback((e: React.PointerEvent) => {
     if (activeTool !== 'thread' || !threadTrace || touchGesture.isMultiTouch()) return;
+    const now = performance.now();
+    if (now - lastHoverSearchRef.current < 16) return;
+    lastHoverSearchRef.current = now;
     const beadPoint = toBeadCoords(e.clientX, e.clientY);
     if (!beadPoint) return;
     const nearest = findNearestThreadAnchor(beadPoint);
@@ -209,22 +215,32 @@ export const CrossWeaveCanvasView = ({
     setThreadCursor(null);
   }, []);
 
-  const colorStats = useMemo(
-    () => Array.from(computeColorStats(beads, designMap, defaultColorForCrossWeave).entries()),
-    [beads, designMap],
-  );
+  // См. CanvasView.tsx — во время мазка (isDrawing) designMap меняется на
+  // каждую бисерину, полный пересчёт статистики на каждую из них был бы
+  // лишним; отдаём закешированное значение и досчитываем один раз по
+  // завершении мазка.
+  const colorStatsRef = useRef<[string, number][]>([]);
+  const colorStats = useMemo(() => {
+    if (isDrawing) return colorStatsRef.current;
+    const result = Array.from(computeColorStats(beads, designMap, defaultColorForCrossWeave).entries());
+    colorStatsRef.current = result;
+    return result;
+  }, [beads, designMap, isDrawing]);
 
   const totalCount = beads.length;
 
+  const colorHighlightedBeadIdsRef = useRef<Set<string> | null>(null);
   const colorHighlightedBeadIds = useMemo(() => {
     if (!highlightedColor) return null;
+    if (isDrawing) return colorHighlightedBeadIdsRef.current;
     const ids = new Set<string>();
     beads.forEach((b) => {
       const effective = designMap[b.id] || defaultColorForCrossWeave();
       if (effective === highlightedColor) ids.add(b.id);
     });
+    colorHighlightedBeadIdsRef.current = ids;
     return ids;
-  }, [highlightedColor, beads, designMap]);
+  }, [highlightedColor, beads, designMap, isDrawing]);
 
   // Границы для обрезки PNG по узору при экспорте (координаты корневого
   // <svg>, с учётом translate(offsetX, offsetY)) — впритык к закрашенным

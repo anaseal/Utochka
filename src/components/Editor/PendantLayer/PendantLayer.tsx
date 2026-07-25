@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantPlacement, PendantTemplate, PendantTemplateBead } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
@@ -31,7 +31,10 @@ const beadBottom = (bead: PendantTemplateBead): number => {
   return bead.dy + half;
 };
 
-export const PendantLayer = ({
+// memo: без него слой пересобирал бы JSX всех подвесок на каждый рендер
+// CanvasView (в т.ч. на каждую покрашенную бисерину основной сетки), хотя
+// сами подвески в это время не меняются.
+export const PendantLayer = memo(({
   placements,
   templates,
   bottomNodes,
@@ -240,4 +243,6 @@ export const PendantLayer = ({
       })}
     </g>
   );
-};
+});
+
+PendantLayer.displayName = 'PendantLayer';

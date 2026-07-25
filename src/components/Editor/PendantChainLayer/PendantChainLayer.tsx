@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantChain } from '../../../types/pendant';
 import { computeChainBeadPositions, chainBeadId } from '../../../utils/pendantChain';
@@ -19,7 +19,9 @@ interface PendantChainLayerProps {
 
 const ID_SEP = '::';
 
-export const PendantChainLayer = ({
+// memo: см. PendantLayer.tsx — тот же смысл, цепочки-подвески не должны
+// пересобираться на каждую покрашенную бисерину основной сетки.
+export const PendantChainLayer = memo(({
   chains,
   bottomNodes,
   isDrawing,
@@ -149,4 +151,6 @@ export const PendantChainLayer = ({
       })}
     </g>
   );
-};
+});
+
+PendantChainLayer.displayName = 'PendantChainLayer';

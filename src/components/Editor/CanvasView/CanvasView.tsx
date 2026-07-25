@@ -339,7 +339,13 @@ export const CanvasView = ({
       .filter((v): v is { chain: PendantChain; count: number } => v !== null);
   }, [pendantChains, bottomNodes]);
 
+  // Пока идёт мазок карандашом/ластиком (isDrawing), designMap меняется на
+  // каждую задетую бисерину — честный пересчёт статистики был бы полным
+  // проходом по всем бисеринам на каждую из них. Отдаём последнее посчитанное
+  // значение во время мазка и досчитываем один раз сразу по его завершении.
+  const colorStatsRef = useRef<[string, number][]>([]);
   const colorStats = useMemo(() => {
+    if (isDrawing) return colorStatsRef.current;
     const stats = computeColorStats(beads, designMap, (bead) => defaultColorFor(bead.type));
     validPendantPlacements.forEach((p) => {
       const template = pendantTemplates[p.templateId];
@@ -354,8 +360,10 @@ export const CanvasView = ({
         stats.set(color, (stats.get(color) || 0) + 1);
       }
     });
-    return Array.from(stats.entries());
-  }, [beads, designMap, validPendantPlacements, pendantTemplates, validPendantChains]);
+    const result = Array.from(stats.entries());
+    colorStatsRef.current = result;
+    return result;
+  }, [beads, designMap, validPendantPlacements, pendantTemplates, validPendantChains, isDrawing]);
 
   const totalCount = useMemo(() => {
     const pendantBeadCount = validPendantPlacements.reduce(
@@ -366,15 +374,18 @@ export const CanvasView = ({
     return beads.length + pendantBeadCount + chainBeadCount;
   }, [beads.length, validPendantPlacements, pendantTemplates, validPendantChains]);
 
+  const colorHighlightedBeadIdsRef = useRef<Set<string> | null>(null);
   const colorHighlightedBeadIds = useMemo(() => {
     if (!highlightedColor) return null;
+    if (isDrawing) return colorHighlightedBeadIdsRef.current;
     const ids = new Set<string>();
     beads.forEach((b) => {
       const effective = designMap[b.id] || defaultColorFor(b.type);
       if (effective === highlightedColor) ids.add(b.id);
     });
+    colorHighlightedBeadIdsRef.current = ids;
     return ids;
-  }, [highlightedColor, beads, designMap]);
+  }, [highlightedColor, beads, designMap, isDrawing]);
 
   const highlightedNodeIds = useMemo(() => {
     if (hoveredRow === null) return null;
@@ -642,9 +653,25 @@ export const CanvasView = ({
     }
   }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover]);
 
+  // Линейный перебор всех бисерин в findNearestNode/findNearestThreadAnchor
+  // не нужен чаще одного раза за кадр — pointermove может сыпаться выше
+  // частоты обновления экрана (высокополлинговые мыши/перья), и без throttle
+  // на большом полотне это лишняя нагрузка при каждом наведении штампа/нитки.
+  // Не применяется к rect-драгу выделения ниже — там нет поиска ближайшей
+  // бусины, только арифметика, throttle сделал бы рамку менее отзывчивой без
+  // выигрыша в производительности.
+  const lastHoverSearchRef = useRef(0);
+  const shouldThrottleHoverSearch = useCallback(() => {
+    const now = performance.now();
+    if (now - lastHoverSearchRef.current < 16) return true;
+    lastHoverSearchRef.current = now;
+    return false;
+  }, []);
+
   const handleStampContainerPointerMove = useCallback((e: React.PointerEvent) => {
     if (activeTool === 'thread') {
       if (!threadTrace || touchGesture.isMultiTouch()) return;
+      if (shouldThrottleHoverSearch()) return;
       const beadPoint = toBeadCoords(e.clientX, e.clientY);
       if (!beadPoint) return;
       const nearest = findNearestThreadAnchor(beadPoint);
@@ -655,6 +682,7 @@ export const CanvasView = ({
     const drag = stampDragRef.current;
     if (drag) {
       if (drag.mode === 'movePreview') {
+        if (shouldThrottleHoverSearch()) return;
         const beadPoint = toBeadCoords(e.clientX, e.clientY);
         const nearest = beadPoint ? findNearestNode(beadPoint) : null;
         onStampHover(nearest?.id ?? null);
@@ -681,11 +709,12 @@ export const CanvasView = ({
       return;
     }
     if (stampPattern) {
+      if (shouldThrottleHoverSearch()) return;
       const beadPoint = toBeadCoords(e.clientX, e.clientY);
       const nearest = beadPoint ? findNearestNode(beadPoint) : null;
       onStampHover(nearest?.id ?? null);
     }
-  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover, touchGesture.isMultiTouch, threadTrace, findNearestThreadAnchor]);
+  }, [activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover, touchGesture.isMultiTouch, threadTrace, findNearestThreadAnchor, shouldThrottleHoverSearch]);
 
   const handleStampContainerPointerUp = useCallback((e: React.PointerEvent) => {
     if (activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;

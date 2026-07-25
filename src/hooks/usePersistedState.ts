@@ -1,4 +1,12 @@
-import { useEffect, useState, Dispatch, SetStateAction } from 'react';
+import { useEffect, useRef, useState, Dispatch, SetStateAction } from 'react';
+
+// Задержка перед фактической записью в localStorage — состояния вроде
+// designMap меняются на каждую задетую бисерину при протяжке кисти;
+// синхронный JSON.stringify+setItem на каждую из них блокировал main thread
+// и вызывал подвисания при рисовании (тот же паттерн уже чинили точечно для
+// pinch-zoom в useTouchPanZoom). Дебаунс схлопывает быстрый поток изменений
+// в одну запись через паузу после последнего.
+const PERSIST_DEBOUNCE_MS = 300;
 
 export function usePersistedState<T>(
   key: string,
@@ -17,10 +25,16 @@ export function usePersistedState<T>(
     }
   });
 
+  const latestStateRef = useRef(state);
+  latestStateRef.current = state;
+
   useEffect(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(state));
-    } catch {}
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(latestStateRef.current));
+      } catch {}
+    }, PERSIST_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [key, state]);
 
   return [state, setState];

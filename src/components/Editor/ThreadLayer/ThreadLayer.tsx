@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import { Thread } from '../../../types/thread';
 import { ThreadAnchor } from '../../../utils/beadPositions';
 import { buildThreadPathD } from '../../../utils/threadPath';
@@ -60,7 +60,11 @@ const resolvePoints = (
   return points;
 };
 
-export const ThreadLayer = ({
+// memo: см. PendantLayer.tsx — нитки не должны пересобираться на каждую
+// покрашенную бисерину основной сетки (liveCursor/liveTrace всё равно
+// продолжают обновлять слой в реальном времени, пока активен инструмент
+// «нитка» — они меняются как проп).
+export const ThreadLayer = memo(({
   threads,
   positionIndex,
   liveTrace,
@@ -226,4 +230,6 @@ export const ThreadLayer = ({
       )}
     </g>
   );
-};
+});
+
+ThreadLayer.displayName = 'ThreadLayer';

@@ -251,9 +251,9 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     mirrorMode, gridSize.width,
   );
 
-  const bottomNodes = beads.filter(
+  const bottomNodes = useMemo(() => beads.filter(
     b => b.type === 'NODE' && b.logicalIndex.row === 2 * gridSize.height,
-  );
+  ), [beads, gridSize.height]);
 
   const internalTop = topEdgeEnabled
     ? Math.max(0, resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2)
