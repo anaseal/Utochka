@@ -7,6 +7,7 @@ import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { CrossWeaveCanvasView } from './components/Editor/CanvasView/CrossWeaveCanvasView';
 import { Header, Technique } from './components/Editor/Header/Header';
 import { PendantsSidebar } from './components/Sidebar/PendantsSidebar';
+import { GridSidebar } from './components/Sidebar/GridSidebar';
 import { ReferenceWindow } from './components/Editor/ReferenceWindow/ReferenceWindow';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
 import { DrawingTool } from './hooks/useDrawing';
@@ -232,10 +233,15 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [technique, silyanka, crossWeave]);
 
-  const sidebarOpen = technique === 'silyanka' && silyanka.sidebarOpen;
+  // Панели «Pendants & Decor» и «Grid» делят один и тот же правый слот
+  // (см. Sidebar.css, .sidebar — оба fixed/right:0) и поэтому взаимоисключают
+  // друг друга: null | одна из двух, а не два независимых булевых стейта.
+  const [activeSidebar, setActiveSidebar] = useState<'pendants' | 'grid' | null>(null);
+  const togglePendantsSidebar = () => setActiveSidebar(s => (s === 'pendants' ? null : 'pendants'));
+  const toggleGridSidebar = () => setActiveSidebar(s => (s === 'grid' ? null : 'grid'));
 
   return (
-    <main className={`editor${sidebarOpen ? ' editor--sidebar-open' : ''}`}>
+    <main className={`editor${activeSidebar !== null ? ' editor--sidebar-open' : ''}`}>
       {technique === 'silyanka' ? (
         <Header
           technique="silyanka"
@@ -263,38 +269,23 @@ function App() {
           onToggleReferenceWindow={() => setReferenceOpen(o => !o)}
           threads={silyanka.threads}
           onClearAllThreads={silyanka.threadControls.clearAllThreads}
+          gridSidebarOpen={activeSidebar === 'grid'}
+          onToggleGridSidebar={toggleGridSidebar}
           silyankaProps={{
-            // Линейка на холсте — источник правды: чётный ряд её колонок на 1 меньше
-            // gridSize.width, а ряд её строк на 1 больше gridSize.height (см. spec.md,
-            // «Ширина/высота в хедере vs. линейка»). Хедер показывает и принимает числа
-            // линейки, поэтому здесь ±1 — единственное место преобразования.
-            gridWidth: silyanka.gridSize.width - 1,
-            gridHeight: silyanka.gridSize.height + 1,
-            topSpan: silyanka.gridSize.topSpan,
-            bottomSpan: silyanka.gridSize.bottomSpan,
-            onWidthChange: (delta) => silyanka.updateDimension('width', delta),
-            onHeightChange: (delta) => silyanka.updateDimension('height', delta),
-            onTopSpanChange: silyanka.updateTopSpan,
-            onBottomSpanChange: silyanka.updateBottomSpan,
-            onTopEdgeReset: () => silyanka.resetEdge('top'),
-            onBottomEdgeReset: () => silyanka.resetEdge('bottom'),
             mirrorMode: silyanka.mirrorMode,
             setMirrorMode: silyanka.setMirrorMode,
             onMakeSymmetric: silyanka.makeSymmetric,
             canMakeSymmetric: Object.keys(silyanka.drawingControls.designMap).length > 0,
-            spacing: silyanka.gridSize.spacing,
-            onSpacingChange: silyanka.updateSpacing,
-            sidebarOpen: silyanka.sidebarOpen,
-            onToggleSidebar: () => silyanka.setSidebarOpen(o => !o),
-            onSetWidth: (v) => silyanka.setWidthAbsolute(v + 1),
-            onSetHeight: (v) => silyanka.setHeightAbsolute(v - 1),
-            onSetTopSpan: silyanka.setTopSpanAbsolute,
-            onSetBottomSpan: silyanka.setBottomSpanAbsolute,
-            onSetSpacing: silyanka.setSpacingAbsolute,
+            sidebarOpen: activeSidebar === 'pendants',
+            onToggleSidebar: togglePendantsSidebar,
             hasStampPattern: silyanka.stampPattern !== null,
             stampAnchorEdge: silyanka.stampAnchorEdge,
             onToggleStampAnchorEdge: silyanka.toggleStampAnchorEdge,
             onCancelStampPattern: cancelStampPattern,
+            activeThreadColor: silyanka.activeThreadColor,
+            activeThreadOpacity: silyanka.activeThreadOpacity,
+            onThreadColorChange: silyanka.setActiveThreadColor,
+            onThreadOpacityChange: silyanka.setActiveThreadOpacity,
           }}
         />
       ) : (
@@ -324,9 +315,75 @@ function App() {
           onToggleReferenceWindow={() => setReferenceOpen(o => !o)}
           threads={crossWeave.threads}
           onClearAllThreads={crossWeave.threadControls.clearAllThreads}
+          gridSidebarOpen={activeSidebar === 'grid'}
+          onToggleGridSidebar={toggleGridSidebar}
           crossWeaveProps={{
             activeThreadStrand: crossWeave.activeThreadStrand,
             onSelectThreadStrand: crossWeave.setActiveThreadStrand,
+            activeThreadColor: crossWeave.activeThreadColor,
+            activeThreadOpacity: crossWeave.activeThreadOpacity,
+            onThreadColorChange: crossWeave.setActiveThreadColor,
+            onThreadOpacityChange: crossWeave.setActiveThreadOpacity,
+            mirrorMode: crossWeave.mirrorMode,
+            setMirrorMode: crossWeave.setMirrorMode,
+            onMakeSymmetric: crossWeave.makeSymmetric,
+            canMakeSymmetric: Object.keys(crossWeave.drawingControls.designMap).length > 0,
+          }}
+        />
+      )}
+
+      {technique === 'silyanka' ? (
+        <GridSidebar
+          technique="silyanka"
+          open={activeSidebar === 'grid'}
+          silyankaProps={{
+            // Линейка на холсте — источник правды: чётный ряд её колонок на 1 меньше
+            // gridSize.width, а ряд её строк на 1 больше gridSize.height (см. spec.md,
+            // «Ширина/высота в панели Сетка vs. линейка»). Панель показывает и принимает
+            // числа линейки, поэтому здесь ±1 — единственное место преобразования.
+            gridWidth: silyanka.gridSize.width - 1,
+            gridHeight: silyanka.gridSize.height + 1,
+            spacing: silyanka.gridSize.spacing,
+            topSpan: silyanka.gridSize.topSpan,
+            bottomSpan: silyanka.gridSize.bottomSpan,
+            onWidthChange: (delta) => silyanka.updateDimension('width', delta),
+            onHeightChange: (delta) => silyanka.updateDimension('height', delta),
+            onSpacingChange: silyanka.updateSpacing,
+            onSetWidth: (v) => silyanka.setWidthAbsolute(v + 1),
+            onSetHeight: (v) => silyanka.setHeightAbsolute(v - 1),
+            onSetSpacing: silyanka.setSpacingAbsolute,
+            onTopSpanChange: silyanka.updateTopSpan,
+            onBottomSpanChange: silyanka.updateBottomSpan,
+            onSetTopSpan: silyanka.setTopSpanAbsolute,
+            onSetBottomSpan: silyanka.setBottomSpanAbsolute,
+            onTopEdgeReset: () => silyanka.resetEdge('top'),
+            onBottomEdgeReset: () => silyanka.resetEdge('bottom'),
+            topEdgeEnabled: silyanka.topEdgeEnabled,
+            onTopEdgeToggle: silyanka.toggleTopEdgeEnabled,
+            bottomEdgeEnabled: silyanka.bottomEdgeDecor.enabled,
+            onBottomEdgeToggle: silyanka.toggleBottomEdgeEnabled,
+            hasPendants: silyanka.pendantPlacements.length > 0,
+            extendLeftEdge: silyanka.edgeExtension.left,
+            extendRightEdge: silyanka.edgeExtension.right,
+            onToggleExtendLeftEdge: silyanka.toggleExtendLeftEdge,
+            onToggleExtendRightEdge: silyanka.toggleExtendRightEdge,
+            taper: silyanka.taper,
+            taperRowsMax: silyanka.gridSize.height + 1,
+            onTaperRowsChange: silyanka.updateTaperRows,
+            onSetTaperRows: silyanka.setTaperRowsAbsolute,
+            onTaperSideReset: silyanka.resetTaperSide,
+            onTaperDepthChange: silyanka.updateTaperDepth,
+            onSetTaperDepth: silyanka.setTaperDepthAbsolute,
+            onTaperDepthReset: silyanka.resetTaperDepth,
+            taperRowsLinked: silyanka.taperRowsLinked,
+            onToggleTaperRowsLinked: silyanka.toggleTaperRowsLinked,
+          }}
+        />
+      ) : (
+        <GridSidebar
+          technique="crossWeave"
+          open={activeSidebar === 'grid'}
+          crossWeaveProps={{
             gridWidth: crossWeave.gridSize.width,
             gridHeight: crossWeave.gridSize.height,
             spacing: crossWeave.gridSize.pitchX,
@@ -336,10 +393,6 @@ function App() {
             onSetWidth: crossWeave.setWidthAbsolute,
             onSetHeight: crossWeave.setHeightAbsolute,
             onSetSpacing: crossWeave.setSpacingAbsolute,
-            mirrorMode: crossWeave.mirrorMode,
-            setMirrorMode: crossWeave.setMirrorMode,
-            onMakeSymmetric: crossWeave.makeSymmetric,
-            canMakeSymmetric: Object.keys(crossWeave.drawingControls.designMap).length > 0,
           }}
         />
       )}
@@ -376,10 +429,13 @@ function App() {
           onAddThread={silyanka.threadControls.addThread}
           onRerouteThreadEnd={silyanka.threadControls.rerouteThreadEnd}
           onRemoveThread={silyanka.threadControls.removeThread}
+          activeThreadColor={silyanka.activeThreadColor}
+          activeThreadOpacity={silyanka.activeThreadOpacity}
           chainPendingStart={silyanka.chainPendingStart}
           onChainNodeClick={silyanka.handleChainNodeClick}
           canvasSvgRef={silyanka.canvasSvgRef}
           onFloodFill={silyanka.handleFloodFill}
+          topEdgeEnabled={silyanka.topEdgeEnabled}
           bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
           bottomEdgeSpan={silyanka.bottomEdgeDecor.span}
           onBottomEdgeSpanChange={silyanka.updateBottomEdgeSpan}
@@ -415,13 +471,15 @@ function App() {
           onRerouteThreadEnd={crossWeave.threadControls.rerouteThreadEnd}
           onRemoveThread={crossWeave.threadControls.removeThread}
           activeThreadStrand={crossWeave.activeThreadStrand}
+          activeThreadColor={crossWeave.activeThreadColor}
+          activeThreadOpacity={crossWeave.activeThreadOpacity}
           applyPatch={crossWeave.drawingControls.applyPatch}
         />
       )}
 
       {technique === 'silyanka' && (
         <PendantsSidebar
-          open={silyanka.sidebarOpen}
+          open={activeSidebar === 'pendants'}
           templates={PENDANT_TEMPLATES}
           placements={silyanka.pendantPlacements}
           onHoveredColChange={silyanka.setHoveredCol}
@@ -437,11 +495,6 @@ function App() {
           onClearDecor={silyanka.handleClearDecor}
           onHoveredRowChange={silyanka.setHoveredRow}
           bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
-          onBottomEdgeToggle={silyanka.toggleBottomEdgeEnabled}
-          extendLeftEdge={silyanka.edgeExtension.left}
-          extendRightEdge={silyanka.edgeExtension.right}
-          onToggleExtendLeftEdge={silyanka.toggleExtendLeftEdge}
-          onToggleExtendRightEdge={silyanka.toggleExtendRightEdge}
           pendantChains={silyanka.pendantChains}
           chainToolActive={silyanka.drawingControls.activeTool === 'pendant-chain'}
           onToggleChainTool={() => setSilyankaTool(

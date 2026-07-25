@@ -1,7 +1,7 @@
 /* FILE: src\components\Editor\CanvasView\CrossWeaveCanvasView.tsx */
 import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { CrossWeaveBead } from '../../../types/crossWeaveBead';
-import { Thread } from '../../../types/thread';
+import { Thread, threadEndBeadId } from '../../../types/thread';
 import { CrossWeaveBeadView } from '../BeadView/CrossWeaveBeadView';
 import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
@@ -9,6 +9,7 @@ import { CanvasChrome } from './CanvasChrome';
 import { ThreadTraceControls } from './ThreadTraceControls';
 import { ThreadLayer, ThreadTrace } from '../ThreadLayer/ThreadLayer';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../../../config/crossWeaveTheme';
+import { BEAD_THEME } from '../../../config/theme';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportScheme';
 import { mirrorCrossWeaveBeadId } from '../../../utils/crossWeaveMirror';
@@ -19,6 +20,7 @@ import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeColorStats } from '../../../utils/colorStats';
 import { swapColorInMap } from '../../../utils/colorSwap';
+import { findBeadsAlongSegment } from '../../../utils/threadGeometry';
 import './CanvasView.css';
 
 interface CrossWeaveCanvasViewProps {
@@ -41,13 +43,18 @@ interface CrossWeaveCanvasViewProps {
   rawWidth: number;
   onFloodFill: (id: string) => void;
   threads: Thread[];
-  onAddThread: (beadIds: string[], strand?: 1 | 2) => void;
+  onAddThread: (beadIds: string[], options?: { strand?: 1 | 2; color?: string; opacity?: number }) => void;
   onRerouteThreadEnd: (threadId: string, end: 'start' | 'end', traceBeadIds: string[]) => void;
   onRemoveThread: (id: string) => void;
   // Крестик физически плетётся двумя нитками одновременно — новая нитка
   // помечается текущим выбором (см. Header → ThreadMenu). У силянки такого
   // выбора нет (одна нитка), поэтому проп только здесь.
   activeThreadStrand: 1 | 2;
+  // «Кисть» ТЕКУЩЕЙ выбранной нити (activeThreadStrand) — своя пара на
+  // каждую из двух ниток (см. useCrossWeaveProject.ts), сюда приходит уже
+  // разрешённое под activeThreadStrand значение.
+  activeThreadColor: string;
+  activeThreadOpacity: number;
   applyPatch: (
     designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
     pendantsFn: null,
@@ -81,6 +88,8 @@ export const CrossWeaveCanvasView = ({
   onRerouteThreadEnd,
   onRemoveThread,
   activeThreadStrand,
+  activeThreadColor,
+  activeThreadOpacity,
   applyPatch,
 }: CrossWeaveCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -92,6 +101,15 @@ export const CrossWeaveCanvasView = ({
   // к ближайшей бусине в hitboxRadius, иначе сырые координаты) + id-магнит
   // для «резиновой» линии и крестика отмены последней точки.
   const [threadCursor, setThreadCursor] = useState<{ pos: { x: number; y: number }; magnetId: string | null } | null>(null);
+  // См. CanvasView.tsx — различает клик и драг на ручке конца нитки, чтобы
+  // можно было начать новую нить с той же бусины, где закончилась предыдущая.
+  const threadHandleDragRef = useRef<{
+    threadId: string;
+    end: 'start' | 'end';
+    startClient: { x: number; y: number };
+    pointerId: number;
+    dragging: boolean;
+  } | null>(null);
   useEffect(() => {
     if (activeTool !== 'thread') {
       setThreadTrace(null);
@@ -131,6 +149,7 @@ export const CrossWeaveCanvasView = ({
   // нитки) — переключение на панораму/zoom, см. CanvasView.tsx.
   const cancelActiveStroke = useCallback(() => {
     stopDrawing();
+    threadHandleDragRef.current = null;
     setThreadTrace(null);
     setThreadCursor(null);
   }, [stopDrawing]);
@@ -253,8 +272,7 @@ export const CrossWeaveCanvasView = ({
   const beginThreadReroute = useCallback((threadId: string, end: 'start' | 'end') => {
     const thread = threads.find(t => t.id === threadId);
     if (!thread) return;
-    const anchorId = end === 'start' ? thread.beadIds[0] : thread.beadIds[thread.beadIds.length - 1];
-    setThreadTrace({ beadIds: [anchorId], rerouting: { threadId, end } });
+    setThreadTrace({ beadIds: [threadEndBeadId(thread, end)], rerouting: { threadId, end } });
   }, [threads]);
 
   // Коммит — по двойному клику (см. onDoubleClick на <main> ниже), а не по
@@ -268,16 +286,19 @@ export const CrossWeaveCanvasView = ({
           onRerouteThreadEnd(prev.rerouting.threadId, prev.rerouting.end, prev.beadIds.slice(1));
         }
       } else if (prev.beadIds.length >= 2) {
-        onAddThread(prev.beadIds, activeThreadStrand);
+        onAddThread(prev.beadIds, { strand: activeThreadStrand, color: activeThreadColor, opacity: activeThreadOpacity });
       }
       return null;
     });
     setThreadCursor(null);
-  }, [onAddThread, onRerouteThreadEnd, activeThreadStrand]);
+  }, [onAddThread, onRerouteThreadEnd, activeThreadStrand, activeThreadColor, activeThreadOpacity]);
 
   // См. CanvasView.tsx — единая точка входа для трассировки: повторный клик
   // по уже последней точке трассировки завершает нитку (коммит при ≥2
   // точках, иначе черновик отбрасывается) вместо молчаливого игнорирования.
+  // Цепочек-подвесок у crossWeave нет, поэтому геометрическое автозаполнение
+  // (findBeadsAlongSegment, utils/threadGeometry.ts) применяется напрямую,
+  // без промежуточной проверки на expandChainRun (см. CanvasView.tsx для силянки).
   const handleThreadPoint = useCallback((id: string) => {
     if (threadTrace && threadTrace.beadIds[threadTrace.beadIds.length - 1] === id) {
       commitThreadTrace();
@@ -285,10 +306,49 @@ export const CrossWeaveCanvasView = ({
     }
     setThreadTrace(prev => {
       if (!prev) return { beadIds: [id], rerouting: null };
-      if (prev.beadIds[prev.beadIds.length - 1] === id) return prev;
-      return { ...prev, beadIds: [...prev.beadIds, id] };
+      const lastId = prev.beadIds[prev.beadIds.length - 1];
+      if (lastId === id) return prev;
+      const between = findBeadsAlongSegment(
+        beadPositionIndex, lastId, id, new Set(prev.beadIds), CROSS_WEAVE_THEME.sizes.hitboxRadius,
+      );
+      return { ...prev, beadIds: [...prev.beadIds, ...between, id] };
     });
-  }, [threadTrace, commitThreadTrace]);
+  }, [threadTrace, commitThreadTrace, beadPositionIndex]);
+
+  // См. CanvasView.tsx — различает клик и драг на ручке конца нитки: клик
+  // уходит в handleThreadPoint как обычная точка (может начать нить 2 с той
+  // же бусины), драг за порогом смещения запускает перепрокладку.
+  const handleThreadHandlePointerDown = useCallback((e: React.PointerEvent, threadId: string, end: 'start' | 'end') => {
+    threadHandleDragRef.current = {
+      threadId, end, startClient: { x: e.clientX, y: e.clientY }, pointerId: e.pointerId, dragging: false,
+    };
+  }, []);
+
+  const handleThreadHandlePointerMove = useCallback((e: React.PointerEvent) => {
+    const drag = threadHandleDragRef.current;
+    if (!drag || drag.dragging || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startClient.x;
+    const dy = e.clientY - drag.startClient.y;
+    const { handleDragThreshold, handleDragThresholdTouch } = BEAD_THEME.threadDefaults;
+    const threshold = e.pointerType === 'touch' ? handleDragThresholdTouch : handleDragThreshold;
+    if (Math.hypot(dx, dy) > threshold) {
+      drag.dragging = true;
+      beginThreadReroute(drag.threadId, drag.end);
+    }
+  }, [beginThreadReroute]);
+
+  const handleThreadHandlePointerUp = useCallback((e: React.PointerEvent) => {
+    const drag = threadHandleDragRef.current;
+    threadHandleDragRef.current = null;
+    if (!drag || drag.pointerId !== e.pointerId || drag.dragging) return;
+    const thread = threads.find(t => t.id === drag.threadId);
+    if (!thread) return;
+    handleThreadPoint(threadEndBeadId(thread, drag.end));
+  }, [threads, handleThreadPoint]);
+
+  const handleThreadHandlePointerCancel = useCallback(() => {
+    threadHandleDragRef.current = null;
+  }, []);
 
   // См. CanvasView.tsx — «шаг назад» по крестику на последней точке трассировки.
   const removeLastTracePoint = useCallback(() => {
@@ -333,6 +393,17 @@ export const CrossWeaveCanvasView = ({
       applyPaint(id);
     }
   }, [activeTool, applyPaint, onFloodFill, handleThreadPoint]);
+
+  // Цвет незавершённой трассировки (превью-пунктир/точка старта, ThreadLayer):
+  // для новой нитки — текущая кисть выбранной нити (activeThreadColor/
+  // Opacity/Strand), для перепрокладки конца — color/opacity/strand самой
+  // перепрокладываемой нитки (их не меняет, см. beginThreadReroute) —
+  // иначе превью всегда рисовалось бы цветом нити 1, даже когда ведут нить 2.
+  const liveTraceSource = threadTrace
+    ? (threadTrace.rerouting
+      ? threads.find(t => t.id === threadTrace.rerouting?.threadId)
+      : { color: activeThreadColor, opacity: activeThreadOpacity, strand: activeThreadStrand })
+    : undefined;
 
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
@@ -422,8 +493,12 @@ export const CrossWeaveCanvasView = ({
                 positionIndex={beadPositionIndex}
                 liveTrace={threadTrace}
                 liveCursor={threadCursor}
+                liveTraceSource={liveTraceSource}
                 interactive={activeTool === 'thread'}
-                onBeginReroute={beginThreadReroute}
+                onHandlePointerDown={handleThreadHandlePointerDown}
+                onHandlePointerMove={handleThreadHandlePointerMove}
+                onHandlePointerUp={handleThreadHandlePointerUp}
+                onHandlePointerCancel={handleThreadHandlePointerCancel}
                 onRemove={onRemoveThread}
                 onRemoveLastTracePoint={removeLastTracePoint}
               />

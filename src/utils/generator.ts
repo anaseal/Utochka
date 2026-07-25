@@ -1,7 +1,9 @@
-import { Bead } from '../types/bead';
+import { Bead, Taper } from '../types/bead';
 import { BEAD_THEME } from '../config/theme';
 import { resolveSpanCount } from './spans';
 import { encode } from './beadId';
+import { getColumnRange } from './columnRange';
+import { getTaperColumnCut } from './taper';
 
 type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
@@ -16,7 +18,9 @@ export const generateSilyankaGrid = (
   bottomEdgeEnabled: boolean = false,
   bottomEdgeSpan: number = 3,
   extendLeftEdge: boolean = true,
-  extendRightEdge: boolean = true
+  extendRightEdge: boolean = true,
+  topEdgeEnabled: boolean = true,
+  taper: Taper = { top: { rows: 0 }, bottom: { rows: 0 }, depth: 0 }
 ): Bead[] => {
   const beads: Bead[] = [];
   const {
@@ -25,17 +29,18 @@ export const generateSilyankaGrid = (
     edgeArcHeight
   } = BEAD_THEME.gridDefaults;
 
-  // Верхняя горизонтальная цепочка (r=0) — отдельный per-row override с ключом -1
+  // Верхняя горизонтальная цепочка (r=0) — отдельный per-row override с ключом -1;
+  // может быть выключена целиком (topEdgeEnabled), как и нижняя (bottomEdgeEnabled).
   const topEdgeCount = resolveSpanCount(-1, topSpan, bottomSpan, rowSpanOverrides);
-  const internalTop = Math.max(0, topEdgeCount - 2);
+  const internalTop = topEdgeEnabled ? Math.max(0, topEdgeCount - 2) : 0;
   // Нижняя горизонтальная цепочка — независима от rowSpanOverrides/topSpan/bottomSpan
   const internalBottom = bottomEdgeEnabled ? Math.max(0, bottomEdgeSpan - 2) : 0;
-  const minBeadPitch = BEAD_THEME.sizes.spanRadius * 2 + 2; // минимальный шаг без перекрытия ≈ 14px
-  const stepX = Math.max(
-    spacing * horizontalStepMultiplier,
-    (internalTop + 1) * minBeadPitch,
-    (internalBottom + 1) * minBeadPitch
-  );
+  // Node-шаг определяется ТОЛЬКО базовым spacing: верхняя/нижняя цепочка не
+  // раздвигает сетку (spacing — источник истины, см. spec.md). Как следствие,
+  // включение/выключение цепочки не меняет плотность сетки. Компромисс: при
+  // большом числе бисерин в цепочке и малом spacing её центральные бисерины
+  // визуально сближаются (дуга их частично разносит), но плотность стабильна.
+  const stepX = spacing * horizontalStepMultiplier;
 
   const getInternalCount = (r: number): number =>
     Math.max(0, resolveSpanCount(r, topSpan, bottomSpan, rowSpanOverrides) - 2);
@@ -62,8 +67,25 @@ export const generateSilyankaGrid = (
   // отключение возвращает исходную (без расширения) границу с этой стороны
   // (см. spec.md).
   const isShiftedRow = (r: number): boolean => r % 2 !== 0;
-  const minC = (r: number): number => (isShiftedRow(r) && extendLeftEdge ? -1 : 0);
-  const maxC = (r: number): number => (isShiftedRow(r) && !extendRightEdge ? width - 2 : width - 1);
+  const minC = (r: number): number =>
+    getColumnRange(r, width, extendLeftEdge, extendRightEdge).minC;
+  const maxC = (r: number): number =>
+    getColumnRange(r, width, extendLeftEdge, extendRightEdge).maxC;
+
+  // Сужение концов (Taper): сколько колонок срезать с каждой стороны ряда r.
+  // getTaperColumnCut принимает minC(r) — целевая линия среза дробная (в
+  // половинках колонки), и без учёта минимальной колонки ряда целочисленный
+  // срез не попадает на неё одинаково у чётных/нечётных рядов (см. taper.ts).
+  // Клэмп per-row (не по глобальному bounding box) гарантирует ≥1 колонку в
+  // каждом ряду — острый кончик вместо разрыва полотна (см. spec.md).
+  const kByRow: number[] = [];
+  for (let r = 0; r <= 2 * height; r++) {
+    const raw = getTaperColumnCut(taper, r, height, minC(r));
+    const count = maxC(r) - minC(r) + 1;
+    kByRow.push(Math.max(0, Math.min(raw, Math.floor((count - 1) / 2))));
+  }
+  const nodeSurvives = (r: number, c: number): boolean =>
+    c >= minC(r) + kByRow[r] && c <= maxC(r) - kByRow[r];
 
   const nodeGrid: SpanCoords[][] = []; // nodeGrid[r][c - minC(r)]
   // decorGrid[r] — декор-ряды (сверху вниз) полосы между узловым рядом r и r+1
@@ -155,6 +177,10 @@ export const generateSilyankaGrid = (
       const c = arrIdx + rowMinC;
       const currentNode = nodeGrid[r][arrIdx];
 
+      // Taper: узел, срезанный сужением, не рисуется — вместе с ним отпадают
+      // и все исходящие из него topLink/vertEdge (см. spec.md).
+      if (!nodeSurvives(r, c)) continue;
+
       beads.push({
         id: encode({ kind: 'node', r, c }),
         x: currentNode.x,
@@ -163,7 +189,7 @@ export const generateSilyankaGrid = (
         logicalIndex: { row: r, col: c }
       });
 
-      if (r === 0 && c < width - 1) {
+      if (r === 0 && c < maxC(0) && topEdgeEnabled && nodeSurvives(0, c + 1)) {
         generateArcSpan(currentNode, nodeAt(0, c + 1)!, internalTop, i => encode({ kind: 'topLink', c, i }), r, c, edgeArcHeight, -1);
       }
 
@@ -175,7 +201,7 @@ export const generateSilyankaGrid = (
 
         neighborCs.forEach((nc, sideIdx) => {
           const nextNode = nodeAt(r + 1, nc);
-          if (nextNode) {
+          if (nextNode && nodeSurvives(r + 1, nc)) {
             const side = sideIdx === 0 ? 'left' : 'right';
             generateSpan(edgeStartNode, nextNode, currentCount, i => encode({ kind: 'vertEdge', r, c, side, i }), r, c);
           }
@@ -189,6 +215,7 @@ export const generateSilyankaGrid = (
       band.forEach((decorRow, k) => {
         decorRow.forEach((coord, arrIdx) => {
           const c = arrIdx + rowMinC;
+          if (!nodeSurvives(r, c)) return;
           beads.push({
             id: encode({ kind: 'decor', r, k: k + 1, c }),
             x: coord.x,
@@ -204,9 +231,12 @@ export const generateSilyankaGrid = (
   if (bottomEdgeEnabled) {
     const lastR = 2 * height;
     const lastRow = nodeGrid[lastR];
+    const lastRowMinC = minC(lastR);
 
     for (let arrIdx = 0; arrIdx < lastRow.length - 1; arrIdx++) {
-      generateArcSpan(lastRow[arrIdx], lastRow[arrIdx + 1], internalBottom, i => encode({ kind: 'bottomLink', c: arrIdx, i }), lastR, arrIdx, edgeArcHeight, 1);
+      const c = arrIdx + lastRowMinC;
+      if (!nodeSurvives(lastR, c) || !nodeSurvives(lastR, c + 1)) continue;
+      generateArcSpan(lastRow[arrIdx], lastRow[arrIdx + 1], internalBottom, i => encode({ kind: 'bottomLink', c, i }), lastR, c, edgeArcHeight, 1);
     }
   }
 

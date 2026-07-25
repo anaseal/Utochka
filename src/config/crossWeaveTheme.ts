@@ -20,13 +20,13 @@ export const CROSS_WEAVE_THEME = {
     // spacing = pitchX = pitchY: расстояние между соседними овалами внутри
     // ряда (pitchX) и между рядами одинаковой ориентации (pitchY —
     // генератор сам делит его пополам на шаг между соседними рядами).
-    spacing: 30,
+    spacing: 28,
   },
 
   constraints: {
-    minSpacing: 28,
+    minSpacing: 24,
     maxSpacing: 40,
-    spacingStep: 2,
+    spacingStep: 1,
   },
 };
 

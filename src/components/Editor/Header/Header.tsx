@@ -1,29 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  MoreHorizontal, RotateCcw, FlipHorizontal, PaintBucket, Stamp, Pencil,
+  MoreHorizontal, FlipHorizontal, PaintBucket, Stamp, Pencil,
   ArrowUpToLine, ArrowDownToLine, X, Image, Download, Upload, Share2, Palette,
-  Check,
+  Check, SlidersHorizontal, Trash2,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
 import {
   EraserIcon, EyedropperIcon, PendantIcon, SilyankaIcon, CrossWeaveIcon, MakeSymmetricIcon, ThreadIcon,
 } from './icons';
+import { Stepper } from '../../common/Stepper';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { Thread } from '../../../types/thread';
 import { StampAnchorEdge } from '../../../utils/stamp';
-import { APP_CONSTRAINTS, BEAD_THEME } from '../../../config/theme';
-import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
+import { APP_CONSTRAINTS, BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS } from '../../../config/theme';
+import { ThreadStyleFields } from './ThreadStyleFields';
 
-// Цвета-образцы для ThreadMenu (крестик) — независимы от --thread-color/-2
-// в CanvasView.css (те завязаны на тёмную/светлую тему холста, а хедер вне
-// этого скоупа), но подобраны в тон: тёплый лён для нитки 1, акцентный cyan
-// (уже использован у Stamp/Mirror) — для нитки 2, чтобы две нитки было легко
-// различить на глаз.
-const THREAD_STRAND_COLORS: Record<1 | 2, string> = {
-  1: '#e2d6bb',
-  2: '#22d3ee',
-};
 
 export type Technique = 'silyanka' | 'crossWeave';
 
@@ -53,48 +45,32 @@ interface SharedHeaderProps {
   onToggleReferenceWindow: () => void;
   threads: Thread[];
   onClearAllThreads: () => void;
+  // Технико-независимая панель «Сетка» (Width/Height/Spacing/Edges/Edge
+  // Extension/Bottom Chain) — см. src/components/Sidebar/GridSidebar.tsx.
+  gridSidebarOpen: boolean;
+  onToggleGridSidebar: () => void;
 }
 
 interface SilyankaHeaderProps {
-  gridWidth: number;
-  gridHeight: number;
-  topSpan: number;
-  bottomSpan: number;
-  onWidthChange: (delta: number) => void;
-  onHeightChange: (delta: number) => void;
-  onTopSpanChange: (delta: number) => void;
-  onBottomSpanChange: (delta: number) => void;
-  onTopEdgeReset: () => void;
-  onBottomEdgeReset: () => void;
   mirrorMode: boolean;
   setMirrorMode: (v: boolean) => void;
   onMakeSymmetric: () => void;
   canMakeSymmetric: boolean;
-  spacing: number;
-  onSpacingChange: (delta: number) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  onSetWidth?: (v: number) => void;
-  onSetHeight?: (v: number) => void;
-  onSetTopSpan?: (v: number) => void;
-  onSetBottomSpan?: (v: number) => void;
-  onSetSpacing?: (v: number) => void;
   hasStampPattern: boolean;
   stampAnchorEdge: StampAnchorEdge;
   onToggleStampAnchorEdge: () => void;
   onCancelStampPattern: () => void;
+  // «Кисть» нитки — цвет/прозрачность, которыми ляжет следующая нитка
+  // (см. ThreadStyleButton ниже, useSilyankaProject.ts).
+  activeThreadColor: string;
+  activeThreadOpacity: number;
+  onThreadColorChange: (color: string) => void;
+  onThreadOpacityChange: (opacity: number) => void;
 }
 
 interface CrossWeaveHeaderProps {
-  gridWidth: number;
-  gridHeight: number;
-  spacing: number;
-  onWidthChange: (delta: number) => void;
-  onHeightChange: (delta: number) => void;
-  onSpacingChange: (delta: number) => void;
-  onSetWidth?: (v: number) => void;
-  onSetHeight?: (v: number) => void;
-  onSetSpacing?: (v: number) => void;
   mirrorMode: boolean;
   setMirrorMode: (v: boolean) => void;
   onMakeSymmetric: () => void;
@@ -103,123 +79,18 @@ interface CrossWeaveHeaderProps {
   // spec.md, «Нитка») — выбор, какой из двух метить новые нитки.
   activeThreadStrand: 1 | 2;
   onSelectThreadStrand: (strand: 1 | 2) => void;
+  // «Кисть» ТЕКУЩЕЙ выбранной нити (activeThreadStrand) — своя пара цвета/
+  // прозрачности на каждую из двух ниток (см. useCrossWeaveProject.ts).
+  activeThreadColor: string;
+  activeThreadOpacity: number;
+  onThreadColorChange: (color: string) => void;
+  onThreadOpacityChange: (opacity: number) => void;
 }
 
 type HeaderProps = SharedHeaderProps & (
   | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; crossWeaveProps?: undefined }
   | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveHeaderProps; silyankaProps?: undefined }
 );
-
-type StepperVariant = 'bar' | 'overflow';
-
-const Stepper = ({
-  label,
-  value,
-  onDelta,
-  onReset,
-  variant = 'bar',
-  onSet,
-  inputValue,
-  min,
-  max,
-}: {
-  label: React.ReactNode;
-  value: React.ReactNode;
-  onDelta: (sign: -1 | 1) => void;
-  onReset?: () => void;
-  variant?: StepperVariant;
-  onSet?: (value: number) => void;
-  inputValue?: number;
-  min?: number;
-  max?: number;
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const editable = onSet !== undefined && inputValue !== undefined;
-
-  useEffect(() => {
-    if (editing) inputRef.current?.select();
-  }, [editing]);
-
-  const startEdit = () => {
-    if (!editable) return;
-    setDraft(String(inputValue));
-    setEditing(true);
-  };
-
-  const confirm = () => {
-    if (!onSet) return;
-    const parsed = parseFloat(draft);
-    if (!isNaN(parsed)) {
-      let val = Math.round(parsed);
-      if (min !== undefined) val = Math.max(min, val);
-      if (max !== undefined) val = Math.min(max, val);
-      onSet(val);
-    }
-    setEditing(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') { e.preventDefault(); confirm(); }
-    if (e.key === 'Escape') setEditing(false);
-  };
-
-  const wrapperClass = variant === 'overflow' ? 'header__overflow-row' : 'grid-controls__group';
-  const labelClass = variant === 'overflow' ? 'header__overflow-label' : 'grid-controls__label';
-
-  const valueEl = editing ? (
-    <input
-      ref={inputRef}
-      className="grid-controls__input"
-      value={draft}
-      onChange={e => setDraft(e.target.value)}
-      onBlur={confirm}
-      onKeyDown={handleKeyDown}
-      type="text"
-      inputMode="numeric"
-    />
-  ) : (
-    <span
-      className={`grid-controls__value${editable ? ' grid-controls__value--editable' : ''}`}
-      onClick={editable ? startEdit : undefined}
-      title={editable ? 'Click to edit' : undefined}
-    >
-      {value}
-    </span>
-  );
-
-  const actions = (
-    <div className="grid-controls__actions">
-      <button onClick={() => onDelta(-1)} className="grid-controls__btn">−</button>
-      {valueEl}
-      <button onClick={() => onDelta(1)} className="grid-controls__btn">+</button>
-    </div>
-  );
-
-  const reset = onReset && (
-    <button
-      type="button"
-      onClick={onReset}
-      className="grid-controls__reset"
-      title="Reset to default"
-      aria-label="Reset to default"
-    >
-      <RotateCcw size={13} />
-    </button>
-  );
-
-  return (
-    <div className={wrapperClass}>
-      <span className={labelClass}>{label}</span>
-      {variant === 'overflow' ? (
-        <>{reset}{actions}</>
-      ) : (
-        <>{actions}{reset}</>
-      )}
-    </div>
-  );
-};
 
 // Единая кнопка Mirror Mode раскрывает мини-попап с двумя связанными
 // зеркальными операциями — переключателем режима и одноразовым действием
@@ -303,6 +174,7 @@ const MirrorMenu = ({
 // инструмент. Та же логика открытия/закрытия, что у MirrorMenu.
 const ThreadMenu = ({
   activeTool, setActiveTool, activeThreadStrand, onSelectThreadStrand, threads, onClearAllThreads,
+  activeThreadColor, activeThreadOpacity, onThreadColorChange, onThreadOpacityChange,
 }: {
   activeTool: DrawingTool;
   setActiveTool: (tool: DrawingTool) => void;
@@ -310,6 +182,10 @@ const ThreadMenu = ({
   onSelectThreadStrand: (strand: 1 | 2) => void;
   threads: Thread[];
   onClearAllThreads: () => void;
+  activeThreadColor: string;
+  activeThreadOpacity: number;
+  onThreadColorChange: (color: string) => void;
+  onThreadOpacityChange: (opacity: number) => void;
 }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -378,7 +254,7 @@ const ThreadMenu = ({
                 className="mirror-menu__item-icon"
                 style={{
                   width: 10, height: 10, borderRadius: '50%', display: 'inline-block',
-                  background: THREAD_STRAND_COLORS[strand],
+                  background: THREAD_STRAND_DEFAULT_COLORS[strand],
                 }}
               />
               <span className="mirror-menu__item-label">Thread {strand}</span>
@@ -387,6 +263,101 @@ const ThreadMenu = ({
               )}
             </button>
           ))}
+          <div className="mirror-menu__divider" />
+          <ThreadStyleFields
+            color={activeThreadColor}
+            opacity={activeThreadOpacity}
+            onColorChange={onThreadColorChange}
+            onOpacityChange={onThreadOpacityChange}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Кнопка «Нитка» у силянки (простой тоггл, в отличие от ThreadMenu у
+// crossWeave — там уже попап на выбор нити) — добавляем второй маленький
+// бейдж-триггер (цветной кружок, противоположный угол от «очистить все»),
+// открывающий тот же ThreadStyleFields, что и у crossWeave. Та же логика
+// открытия/закрытия по клику снаружи и Escape, что у MirrorMenu/ThreadMenu.
+const ThreadStyleButton = ({
+  activeTool, setActiveTool, threads, onClearAllThreads,
+  activeThreadColor, activeThreadOpacity, onThreadColorChange, onThreadOpacityChange,
+}: {
+  activeTool: DrawingTool;
+  setActiveTool: (tool: DrawingTool) => void;
+  threads: Thread[];
+  onClearAllThreads: () => void;
+  activeThreadColor: string;
+  activeThreadOpacity: number;
+  onThreadColorChange: (color: string) => void;
+  onThreadOpacityChange: (opacity: number) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="tool-btn-group" ref={ref}>
+      <button
+        onClick={() => setActiveTool(activeTool === 'thread' ? 'pencil' : 'thread')}
+        className={`tool-btn ${activeTool === 'thread' ? 'tool-btn--active' : ''}`}
+        title="Thread (T)"
+        aria-pressed={activeTool === 'thread'}
+      >
+        <ThreadIcon size={14} />
+      </button>
+
+      {activeTool === 'thread' && threads.length > 0 && (
+        <button
+          onClick={onClearAllThreads}
+          className="tool-btn-group__badge tool-btn-group__badge--cancel"
+          title="Clear all threads"
+        >
+          <X size={9} />
+        </button>
+      )}
+
+      {activeTool === 'thread' && (
+        <button
+          ref={triggerRef}
+          onClick={() => setOpen(o => !o)}
+          className="tool-btn-group__badge tool-btn-group__badge--swatch"
+          style={{ '--color-value': activeThreadColor } as React.CSSProperties}
+          title="Thread color"
+          aria-haspopup="menu"
+          aria-expanded={open}
+        />
+      )}
+
+      {open && (
+        <div className="mirror-menu__panel" role="menu">
+          <ThreadStyleFields
+            color={activeThreadColor}
+            opacity={activeThreadOpacity}
+            onColorChange={onThreadColorChange}
+            onOpacityChange={onThreadOpacityChange}
+          />
         </div>
       )}
     </div>
@@ -402,6 +373,7 @@ export const Header = (props: HeaderProps) => {
     technique, onTechniqueChange,
     referenceWindowOpen, onToggleReferenceWindow,
     threads, onClearAllThreads,
+    gridSidebarOpen, onToggleGridSidebar,
   } = props;
 
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
@@ -649,26 +621,16 @@ export const Header = (props: HeaderProps) => {
           </button>
 
           {silyankaProps && (
-            <div className="tool-btn-group">
-              <button
-                onClick={() => setActiveTool(activeTool === 'thread' ? 'pencil' : 'thread')}
-                className={`tool-btn ${activeTool === 'thread' ? 'tool-btn--active' : ''}`}
-                title="Thread (T)"
-                aria-pressed={activeTool === 'thread'}
-              >
-                <ThreadIcon size={14} />
-              </button>
-
-              {activeTool === 'thread' && threads.length > 0 && (
-                <button
-                  onClick={onClearAllThreads}
-                  className="tool-btn-group__badge tool-btn-group__badge--cancel"
-                  title="Clear all threads"
-                >
-                  <X size={9} />
-                </button>
-              )}
-            </div>
+            <ThreadStyleButton
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              threads={threads}
+              onClearAllThreads={onClearAllThreads}
+              activeThreadColor={silyankaProps.activeThreadColor}
+              activeThreadOpacity={silyankaProps.activeThreadOpacity}
+              onThreadColorChange={silyankaProps.onThreadColorChange}
+              onThreadOpacityChange={silyankaProps.onThreadOpacityChange}
+            />
           )}
 
           {crossWeaveProps && (
@@ -679,6 +641,10 @@ export const Header = (props: HeaderProps) => {
               onSelectThreadStrand={crossWeaveProps.onSelectThreadStrand}
               threads={threads}
               onClearAllThreads={onClearAllThreads}
+              activeThreadColor={crossWeaveProps.activeThreadColor}
+              activeThreadOpacity={crossWeaveProps.activeThreadOpacity}
+              onThreadColorChange={crossWeaveProps.onThreadColorChange}
+              onThreadOpacityChange={crossWeaveProps.onThreadOpacityChange}
             />
           )}
 
@@ -759,75 +725,18 @@ export const Header = (props: HeaderProps) => {
               />
             </>
           )}
-
-          {/* Дубль Reference-кнопки — видна только на ≤767.98px, занимает
-              пустующий 6-й слот сетки 2×3 (у tool-group 5 иконок = 3+2).
-              На остальных ширинах скрыта, там остаётся только "жёсткая" копия
-              ниже (после toolbar) — тот же приём дублирования, что уже
-              используется для Width/Height в overflow-панели. */}
-          <button
-            onClick={onToggleReferenceWindow}
-            className={`tool-btn tool-btn--reference-grid ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
-            title="Reference image"
-            aria-pressed={referenceWindowOpen}
-          >
-            <Image size={14} />
-          </button>
         </div>
-
-        <div className="header__divider header__divider--collapsible" />
-
-        <div className="grid-controls grid-controls--collapsible grid-controls--stacked">
-          <Stepper
-            label="Width"
-            value={silyankaProps ? silyankaProps.gridWidth : crossWeaveProps!.gridWidth}
-            onDelta={silyankaProps ? silyankaProps.onWidthChange : crossWeaveProps!.onWidthChange}
-            onSet={silyankaProps ? silyankaProps.onSetWidth : crossWeaveProps!.onSetWidth}
-            inputValue={silyankaProps ? silyankaProps.gridWidth : crossWeaveProps!.gridWidth}
-            min={1}
-          />
-          <Stepper
-            label="Height"
-            value={silyankaProps ? silyankaProps.gridHeight : crossWeaveProps!.gridHeight}
-            onDelta={silyankaProps ? silyankaProps.onHeightChange : crossWeaveProps!.onHeightChange}
-            onSet={silyankaProps ? silyankaProps.onSetHeight : crossWeaveProps!.onSetHeight}
-            inputValue={silyankaProps ? silyankaProps.gridHeight : crossWeaveProps!.gridHeight}
-            min={silyankaProps ? 2 : 1}
-          />
-        </div>
-
-        {silyankaProps && (
-          <>
-            <div className="header__divider header__divider--collapsible" />
-
-            <div className="grid-controls grid-controls--collapsible grid-controls--stacked">
-              <Stepper
-                label={<span className="grid-controls__label-stacked">Top<br />Edge</span>}
-                value={silyankaProps.topSpan}
-                onDelta={silyankaProps.onTopSpanChange}
-                onReset={silyankaProps.onTopEdgeReset}
-                onSet={silyankaProps.onSetTopSpan}
-                inputValue={silyankaProps.topSpan}
-                min={3}
-                max={10}
-              />
-              <Stepper
-                label={<span className="grid-controls__label-stacked">Bottom<br />Edge</span>}
-                value={silyankaProps.bottomSpan}
-                onDelta={silyankaProps.onBottomSpanChange}
-                onReset={silyankaProps.onBottomEdgeReset}
-                onSet={silyankaProps.onSetBottomSpan}
-                inputValue={silyankaProps.bottomSpan}
-                min={3}
-                max={10}
-              />
-            </div>
-          </>
-        )}
 
         <div className="header__divider header__divider--zoom-adjacent" />
 
-        <div className="grid-controls grid-controls--stacked grid-controls--collapsible-mobile">
+        {/* Без grid-controls--stacked: этот класс задаёт .grid-controls__label
+            { min-width: 4.4em } — выравнивание нужно было для пары Width/Height,
+            но та переехала в GridSidebar, а для одиночного Zoom этот min-width
+            просто раздувал подпись "ZOOM" шире нужного.
+            grid-controls--vertical-zoom: подпись "ZOOM" сверху, ряд −/значение/+
+            под ней — вместо бок о бок, экономит горизонтальное место и читается
+            как единый вертикальный блок, а не растянутая строка. */}
+        <div className="grid-controls grid-controls--collapsible-mobile grid-controls--vertical-zoom">
           <Stepper
             label="Zoom"
             value={`${Math.round(zoom * 100)}%`}
@@ -837,40 +746,17 @@ export const Header = (props: HeaderProps) => {
             min={APP_CONSTRAINTS.minZoom * 100}
             max={APP_CONSTRAINTS.maxZoom * 100}
           />
-          {silyankaProps && (
-            <Stepper
-              label="Spacing"
-              value={silyankaProps.spacing}
-              onDelta={(s) => silyankaProps.onSpacingChange(s * BEAD_THEME.constraints.spacingStep)}
-              onSet={silyankaProps.onSetSpacing}
-              inputValue={silyankaProps.spacing}
-              min={BEAD_THEME.constraints.minSpacing}
-              max={BEAD_THEME.constraints.maxSpacing}
-            />
-          )}
-          {crossWeaveProps && (
-            <Stepper
-              label="Spacing"
-              value={crossWeaveProps.spacing}
-              onDelta={(s) => crossWeaveProps.onSpacingChange(s * CROSS_WEAVE_THEME.constraints.spacingStep)}
-              onSet={crossWeaveProps.onSetSpacing}
-              inputValue={crossWeaveProps.spacing}
-              min={CROSS_WEAVE_THEME.constraints.minSpacing}
-              max={CROSS_WEAVE_THEME.constraints.maxSpacing}
-            />
-          )}
         </div>
 
-        {/* Раньше рендерился только для silyankaProps — на ≤767.98px сюда
-            переезжают Zoom/Spacing/Save-Load-Share (см. .header__overflow-mobile-extra
-            в Header.css), которые нужны в обеих техниках, поэтому триггер и панель
-            теперь общие, а не silyanka-only. */}
+        {/* На ≤767.98px сюда переезжают Zoom/Save-Load-Share (см.
+            .header__overflow-mobile-extra в Header.css) — Width/Height/Spacing/Edges
+            переехали в панель «Сетка» (GridSidebar) и здесь больше не дублируются. */}
         <div className="header__overflow" ref={overflowRef}>
           <button
             ref={overflowTriggerRef}
             type="button"
             className="header__overflow-trigger"
-            aria-label="Grid settings"
+            aria-label="More settings"
             aria-haspopup="menu"
             aria-expanded={overflowOpen}
             onClick={() => setOverflowOpen(o => !o)}
@@ -879,22 +765,7 @@ export const Header = (props: HeaderProps) => {
           </button>
           {overflowOpen && (
             <div className="header__overflow-panel" role="menu">
-              {silyankaProps && (
-                <>
-                  <Stepper variant="overflow" label="Width" value={silyankaProps.gridWidth} onDelta={silyankaProps.onWidthChange} onSet={silyankaProps.onSetWidth} inputValue={silyankaProps.gridWidth} min={1} />
-                  <Stepper variant="overflow" label="Height" value={silyankaProps.gridHeight} onDelta={silyankaProps.onHeightChange} onSet={silyankaProps.onSetHeight} inputValue={silyankaProps.gridHeight} min={2} />
-                  <Stepper variant="overflow" label="Top Edge" value={silyankaProps.topSpan} onDelta={silyankaProps.onTopSpanChange} onReset={silyankaProps.onTopEdgeReset} onSet={silyankaProps.onSetTopSpan} inputValue={silyankaProps.topSpan} min={3} max={10} />
-                  <Stepper variant="overflow" label="Bottom Edge" value={silyankaProps.bottomSpan} onDelta={silyankaProps.onBottomSpanChange} onReset={silyankaProps.onBottomEdgeReset} onSet={silyankaProps.onSetBottomSpan} inputValue={silyankaProps.bottomSpan} min={3} max={10} />
-                </>
-              )}
-              {crossWeaveProps && (
-                <>
-                  <Stepper variant="overflow" label="Width" value={crossWeaveProps.gridWidth} onDelta={crossWeaveProps.onWidthChange} onSet={crossWeaveProps.onSetWidth} inputValue={crossWeaveProps.gridWidth} min={1} />
-                  <Stepper variant="overflow" label="Height" value={crossWeaveProps.gridHeight} onDelta={crossWeaveProps.onHeightChange} onSet={crossWeaveProps.onSetHeight} inputValue={crossWeaveProps.gridHeight} min={1} />
-                </>
-              )}
-
-              {/* ≤767.98px: дубли Zoom/Spacing/Save-Load-Share, скрытых из основной
+              {/* ≤767.98px: дубли Zoom/Save-Load-Share, скрытых из основной
                   строки хедера на этом брейкпоинте (см. Header.css). На более широких
                   экранах эти оригиналы и так видны в строке — блок скрыт. */}
               <div className="header__overflow-mobile-extra">
@@ -908,30 +779,6 @@ export const Header = (props: HeaderProps) => {
                   min={APP_CONSTRAINTS.minZoom * 100}
                   max={APP_CONSTRAINTS.maxZoom * 100}
                 />
-                {silyankaProps && (
-                  <Stepper
-                    variant="overflow"
-                    label="Spacing"
-                    value={silyankaProps.spacing}
-                    onDelta={(s) => silyankaProps.onSpacingChange(s * BEAD_THEME.constraints.spacingStep)}
-                    onSet={silyankaProps.onSetSpacing}
-                    inputValue={silyankaProps.spacing}
-                    min={BEAD_THEME.constraints.minSpacing}
-                    max={BEAD_THEME.constraints.maxSpacing}
-                  />
-                )}
-                {crossWeaveProps && (
-                  <Stepper
-                    variant="overflow"
-                    label="Spacing"
-                    value={crossWeaveProps.spacing}
-                    onDelta={(s) => crossWeaveProps.onSpacingChange(s * CROSS_WEAVE_THEME.constraints.spacingStep)}
-                    onSet={crossWeaveProps.onSetSpacing}
-                    inputValue={crossWeaveProps.spacing}
-                    min={CROSS_WEAVE_THEME.constraints.minSpacing}
-                    max={CROSS_WEAVE_THEME.constraints.maxSpacing}
-                  />
-                )}
                 <div className="header__overflow-row">
                   <span className="header__overflow-label">Save / Load / Share</span>
                   <div className="grid-controls__actions">
@@ -953,55 +800,87 @@ export const Header = (props: HeaderProps) => {
 
         <div className="header__divider" />
 
-        <div className="grid-controls">
-          <div className="grid-controls__toolbar">
-            <div className="grid-controls__actions-row">
-              <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
-              <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
-              <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">CLEAR</button>
+        {/* На ≤767.98px тулбар Undo/Redo/Clear и иконки Reference/Pendant/
+            Grid Settings не помещаются в одну строку хедера и обрезаются за
+            краем экрана (нет ни переноса, ни скролла у .header__nav) — эта
+            обёртка сворачивает их в 2 внутренних ряда (тот же приём, что уже
+            даёт двухрядность .tool-group), не трогая раскладку на десктопе/
+            планшете (display: contents там "растворяет" обёртку). */}
+        <div className="header__end-group">
+          <div className="grid-controls">
+            <div className="grid-controls__toolbar">
+              <div className="grid-controls__actions-row">
+                <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
+                <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
+                <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">
+                  <Trash2 size={12} className="grid-controls__btn-reset-icon" />
+                  <span className="grid-controls__btn-reset-label">CLEAR</span>
+                </button>
+              </div>
+              {/* Полноразмерный разделитель (как .header__divider), а не border
+                  на кнопке Save — border-left внутри маленькой 24px-кнопки
+                  визуально терялся рядом с бордером самой таблетки. Виден
+                  только на десктопе/планшете (>1024px) — на ≤1024px тулбар
+                  становится двухэтажным и ряды разделяет border-top (см. медиа-
+                  запрос ниже), там этот разделитель скрыт. */}
+              <span className="grid-controls__toolbar-divider" aria-hidden="true" />
+              <div className="grid-controls__actions-row grid-controls__actions-row--files">
+                <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
+                  <Download size={14} />
+                </button>
+                <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
+                  <Upload size={14} />
+                </button>
+                <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
+                  <Share2 size={14} />
+                </button>
+              </div>
+              <input
+                ref={loadInputRef}
+                type="file"
+                accept="application/json"
+                className="header__file-input"
+                onChange={handleLoadInputChange}
+              />
             </div>
-            <div className="grid-controls__actions-row grid-controls__actions-row--files">
-              <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
-                <Download size={14} />
+          </div>
+
+          <div className="header__divider header__divider--end-adjacent" />
+
+          {/* Стоит отдельно от .tool-group: та на ≤1024px зафиксирована по ширине
+              и переносится в 2 строки (3+3 silyanka, 3+2 crossWeave) — седьмой/
+              шестой элемент внутри неё проваливался бы в одинокую 3-ю строку. */}
+          <div className="header__end-icons">
+            <button
+              onClick={onToggleReferenceWindow}
+              className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
+              title="Reference image"
+              aria-pressed={referenceWindowOpen}
+            >
+              <Image size={14} />
+            </button>
+
+            {silyankaProps && (
+              <button
+                onClick={silyankaProps.onToggleSidebar}
+                className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
+                title="Pendant library"
+                aria-pressed={silyankaProps.sidebarOpen}
+              >
+                <PendantIcon size={22} />
               </button>
-              <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
-                <Upload size={14} />
-              </button>
-              <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
-                <Share2 size={14} />
-              </button>
-            </div>
-            <input
-              ref={loadInputRef}
-              type="file"
-              accept="application/json"
-              className="header__file-input"
-              onChange={handleLoadInputChange}
-            />
+            )}
+
+            <button
+              onClick={onToggleGridSidebar}
+              className={`tool-btn tool-btn--lg ${gridSidebarOpen ? 'tool-btn--active' : ''}`}
+              title="Grid settings"
+              aria-pressed={gridSidebarOpen}
+            >
+              <SlidersHorizontal size={20} />
+            </button>
           </div>
         </div>
-
-        <div className="header__divider" />
-
-        <button
-          onClick={onToggleReferenceWindow}
-          className={`tool-btn tool-btn--reference-standalone ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
-          title="Reference image"
-          aria-pressed={referenceWindowOpen}
-        >
-          <Image size={14} />
-        </button>
-
-        {silyankaProps && (
-          <button
-            onClick={silyankaProps.onToggleSidebar}
-            className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
-            title="Pendant library"
-            aria-pressed={silyankaProps.sidebarOpen}
-          >
-            <PendantIcon size={22} />
-          </button>
-        )}
       </nav>
     </header>
   );

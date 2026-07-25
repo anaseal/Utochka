@@ -3,11 +3,14 @@
 // остался по центру относительно новой оси симметрии. Чистая функция.
 
 import { decode, encode } from './beadId';
+import { getColumnRange } from './columnRange';
 
 // Новый ID со сдвигом колонки на shift; null — если бисерина выходит за сетку.
 // Декор-полосы regrid не обрабатывает (сдвиг колонок актуален только для
 // mirror-resize по ширине, которым декор не пользуется) — decode вернёт
 // структуру, но explicit-ветки для неё здесь нет, и она отбрасывается.
+// Сужение концов (Taper) здесь не учитывается — оно применяется позиционным
+// срезом в generator.ts, а обрезанные бусины отсеются проверкой существования.
 const shiftId = (
   id: string,
   shift: number,
@@ -22,16 +25,17 @@ const shiftId = (
     case 'node':
     case 'vertEdge': {
       const c = ref.c + shift;
-      const isOdd = ref.r % 2 !== 0;
-      const minC = isOdd && extendLeft ? -1 : 0;
-      const maxC = isOdd && !extendRight ? newW - 2 : newW - 1;
+      const { minC, maxC } = getColumnRange(ref.r, newW, extendLeft, extendRight);
       if (c < minC || c > maxC) return null;
       return encode({ ...ref, c });
     }
     case 'topLink':
     case 'bottomLink': {
+      // Обе кромки лежат на чётных рядах (r=0 и r=2·height) — одинаковый
+      // диапазон колонок; кромка на 1 колонку у́же узлов (c=0..width-2).
       const c = ref.c + shift;
-      if (c < 0 || c > newW - 2) return null;
+      const { minC, maxC } = getColumnRange(0, newW, extendLeft, extendRight);
+      if (c < minC || c > maxC - 1) return null;
       return encode({ ...ref, c });
     }
     case 'decor':

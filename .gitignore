@@ -31,3 +31,4 @@ dist-ssr
 .eslintcache
 claude.md
 .claude/
+.playwright-mcp/

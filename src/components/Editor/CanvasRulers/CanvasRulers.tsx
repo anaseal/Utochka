@@ -13,6 +13,7 @@ interface CanvasRulersProps {
   hoveredRow: number | null;
   mirrorMode: boolean;
   width: number;
+  topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
   bottomEdgeSpan: number;
   onBottomEdgeSpanChange: (delta: number) => void;
@@ -67,7 +68,7 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded, gutterShiftX }: CanvasRulersProps) => {
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded, gutterShiftX }: CanvasRulersProps) => {
   // На ≤767.98px шрифт подписей мельче (CanvasRulers.css), а margin чуть
   // больше — левее для номеров рядов (baselineX=-axisMarginX, text-anchor
   // end — больше margin = левее), выше для номеров колонн (baselineY=
@@ -85,24 +86,65 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     return map;
   }, [nodes]);
 
-  const rowAxesNodes = useMemo(
-    () =>
-      nodes
-        .filter(n => n.logicalIndex.col === 0 && n.logicalIndex.row % 2 === 0)
-        .sort((a, b) => a.logicalIndex.row - b.logicalIndex.row),
-    [nodes]
-  );
+  // Один узел на чётный ряд — координата Y для номера строки. Раньше строго
+  // col===0, но при активном Taper (сужение концов, см. spec.md) у крайних
+  // рядов колонки 0 может не быть вовсе — берём первый попавшийся узел ряда,
+  // для позиционирования подписи важен только его y.
+  const rowAxesNodes = useMemo(() => {
+    const seen = new Set<number>();
+    const result: typeof nodes = [];
+    for (const n of nodes) {
+      if (n.logicalIndex.row % 2 === 0 && !seen.has(n.logicalIndex.row)) {
+        seen.add(n.logicalIndex.row);
+        result.push(n);
+      }
+    }
+    return result.sort((a, b) => a.logicalIndex.row - b.logicalIndex.row);
+  }, [nodes]);
 
-  const colAxesNodes = useMemo(
-    () =>
-      nodes
-        // Ряд 1 теперь на 2 узла шире (c=-1..width-1, см. spec.md) — крайние
-        // два в подсчёт линейки не входят, чтобы отображаемое число колонок
-        // не менялось.
-        .filter(n => n.logicalIndex.row === 1 && n.logicalIndex.col >= 0 && n.logicalIndex.col <= width - 2)
-        .sort((a, b) => a.logicalIndex.col - b.logicalIndex.col),
-    [nodes, width]
-  );
+  const colAxesNodes = useMemo(() => {
+    // Ряд 1 (нечётный) обычно даёт колонки 0..width-2 (см. spec.md, «Диапазон
+    // колонок нечётных рядов») — крайние два узла в подсчёт линейки не входят,
+    // чтобы число колонок совпадало с шириной. x нечётного ряда зависит только
+    // от col (общие stepX/offset для всех нечётных рядов, см. generator.ts).
+    const byCol = new Map<number, number>();
+    nodes.forEach(n => {
+      if (n.logicalIndex.row % 2 !== 0 && n.logicalIndex.col >= 0 && n.logicalIndex.col <= width - 2) {
+        if (!byCol.has(n.logicalIndex.col)) byCol.set(n.logicalIndex.col, n.x);
+      }
+    });
+    const knownCols = [...byCol.keys()].sort((a, b) => a - b);
+    if (knownCols.length === 0) return [];
+
+    // При активном Taper с ненулевым depth срез держится по всему полотну
+    // (см. spec.md) — крайние колонки могут не существовать НИ В ОДНОМ ряду,
+    // и без этого шага линейка начиналась бы не с «1», а с той колонки, что
+    // реально уцелела (см. spec.md, «съезжающая» нумерация). Линейка обязана
+    // отражать номинальную ширину (Width), а не то, что осталось после
+    // сужения, поэтому достраиваем позиции недостающих колонок экстраполяцией
+    // общего шага (derived из любых двух уцелевших) — x(col) линеен по col
+    // одинаково для всех нечётных рядов.
+    let stepX = 0;
+    for (let i = 1; i < knownCols.length && stepX === 0; i++) {
+      const dc = knownCols[i] - knownCols[0];
+      stepX = (byCol.get(knownCols[i])! - byCol.get(knownCols[0])!) / dc;
+    }
+    // Меньше двух различных x — экстраполировать нечем (все живые узлы в
+    // одной точке или единственная колонка на всё полотно); показываем
+    // только то, что реально уцелело, вместо мусорных наложенных подписей.
+    if (stepX === 0) {
+      return knownCols.map(c => ({ id: `col-${c}`, x: byCol.get(c)!, logicalIndex: { col: c } }));
+    }
+
+    const anchorCol = knownCols[0];
+    const anchorX = byCol.get(anchorCol)!;
+    const result: { id: string; x: number; logicalIndex: { col: number } }[] = [];
+    for (let c = 0; c <= width - 2; c++) {
+      const x = byCol.has(c) ? byCol.get(c)! : anchorX + (c - anchorCol) * stepX;
+      result.push({ id: `col-${c}`, x, logicalIndex: { col: c } });
+    }
+    return result;
+  }, [nodes, width]);
 
   const baselineX = -axisMarginX;
   const baselineY = -axisMarginY;
@@ -131,11 +173,12 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
       return { r, midY, count, isOverridden, isBottom };
     });
 
-    // Верхняя горизонтальная грань (r=-1) — отдельный override.
+    // Верхняя горизонтальная грань (r=-1) — отдельный override. Скрывается
+    // вместе с выключенной верхней цепочкой (Top Chain), как и r=-2 у Bottom Chain.
     // Используем минимальный gap между соседними рядами как базовый шаг —
     // он не растягивается декор-полосами и даёт стабильный отступ.
     const firstRowY = rowYMap.get(0);
-    if (firstRowY !== undefined) {
+    if (topEdgeEnabled && firstRowY !== undefined) {
       controls.unshift({
         r: -1,
         midY: firstRowY - minGap / 2,
@@ -160,7 +203,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     }
 
     return controls;
-  }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange]);
+  }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange]);
 
   const ctrlCenterX = baselineX - 60;
 
@@ -240,7 +283,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
         </g>
       </g>
 
-      {colAxesNodes.map((node, i) => (
+      {colAxesNodes.map((node) => (
         <text
           key={`idx-col-${node.id}`}
           x={node.x}
@@ -248,7 +291,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
           textAnchor="middle"
           className="canvas__axis-text"
         >
-          {i + 1}
+          {node.logicalIndex.col + 1}
         </text>
       ))}
     </g>

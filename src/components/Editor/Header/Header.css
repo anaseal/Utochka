@@ -156,31 +156,16 @@
   color: #22d3ee;
 }
 
-.grid-controls { display: flex; gap: 0.625rem; }
-
-/* Двухэтажные пары (Width/Height, Top/Bottom Edge): второй контрол уходит под первый,
-   вместо того чтобы делить ширину по горизонтали */
-.grid-controls--stacked {
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.2rem;
-}
-.grid-controls--stacked .grid-controls__label {
-  display: inline-block;
-  min-width: 4.4em;
-  text-align: right;
-}
-
-.grid-controls__group { display: flex; align-items: center; gap: 0.375rem; }
-.grid-controls__label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
-.grid-controls__label-stacked { line-height: 1.05; text-align: right; display: inline-block; }
-.grid-controls__actions {
-  display: flex;
-  align-items: center;
-  background: rgba(15, 23, 42, 0.6);
-  border-radius: 8px;
-  padding: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+/* .grid-controls (обёртка и Zoom, и этого тулбара, см. Header.tsx) — flex-
+   дети .header__nav имеют flex-shrink:1 по умолчанию: когда сумма всех
+   блоков хедера превышает доступную ширину, браузер сжимает КАЖДЫЙ
+   flex-item пропорционально, включая эту обёртку — а её содержимое
+   (нерастягиваемый текст "CLEAR"/"100%") сжатую ширину не уменьшает,
+   а просто вылезает за границы уже сжатой "таблетки". flex-shrink:0
+   исключает эту обёртку из сжатия — тот же приём, что уже применён к
+   .tool-group/.mirror-menu/.palette-widget и другим блокам хедера. */
+.header__nav .grid-controls {
+  flex-shrink: 0;
 }
 
 /* Undo/Redo/Clear/Save/Load/Share — визуально та же "таблетка", что и
@@ -190,10 +175,24 @@
 .grid-controls__toolbar {
   display: flex;
   align-items: center;
+  gap: 4px;
   background: rgba(15, 23, 42, 0.6);
   border-radius: 8px;
-  padding: 2px;
+  padding: 3px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+/* Полноразмерный разделитель Undo/Redo/Clear | Save/Load/Share — та же
+   геометрия, что у .header__divider (тонкая линия во всю высоту таблетки),
+   а не border на кнопке: border-left внутри маленькой 24px-кнопки визуально
+   терялся рядом с бордером самой таблетки и с border-left самой CLEAR.
+   Виден только на десктопе/планшете (>1024px) — на ≤1024px тулбар становится
+   двухэтажным и ряды разделяет border-top (см. медиа-запрос ниже). */
+.grid-controls__toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 1px 0;
+  background-color: rgba(255, 255, 255, 0.16);
+  flex-shrink: 0;
 }
 /* На десктопе оба ряда — просто разметочная обёртка, не влияющая на layout
    (display: contents "растворяет" её, кнопки — прямые flex-дети .grid-controls__toolbar,
@@ -201,21 +200,9 @@
    Save/Load/Share снизу) включается только в брейкпоинте ≤1024px ниже —
    тот же приём, что уже используют .grid-controls--stacked для Width/Height. */
 .grid-controls__actions-row { display: contents; }
-.grid-controls__btn {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: #f1f5f9;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-}
-.grid-controls__btn:hover { background: rgba(255, 255, 255, 0.1); }
-.grid-controls__btn:disabled { opacity: 0.3; cursor: default; }
-.grid-controls__btn:disabled:hover { background: transparent; }
+/* Базовый .grid-controls__btn (иконка-кнопка внутри "таблетки") определён в
+   common/Stepper.css — Stepper использует его для −/+, здесь он же переиспользуется
+   для Undo/Redo/CLEAR/Save/Load/Share. */
 .grid-controls__btn--reset {
   width: auto;
   padding: 0 8px;
@@ -230,52 +217,40 @@
   color: #22d3ee;
   background: transparent;
 }
-.grid-controls__reset {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
+/* На ≥720px CLEAR вплотную прилегает и к Redo, и к разделителю после неё —
+   одного border-left мало. margin-left без margin-right давал перекос
+   (большой зазор слева, ноль справа перед .grid-controls__toolbar-divider) —
+   отступ должен быть с обеих сторон. */
+@media (min-width: 720px) {
+  .grid-controls__btn--reset {
+    margin: 0 6px;
+  }
+}
+/* Иконка-версия CLEAR (см. Header.tsx) — видна только ≤767.98px, когда
+   текстовая кнопка не помещается в один ряд с Undo/Redo (см. брейкпоинт ниже).
+   На десктопе/планшете виден текстовый label, иконка скрыта. */
+.grid-controls__btn-reset-icon { display: none; }
+
+/* ZOOM: подпись сверху, ряд −/значение/+ под ней — компактнее, чем бок о
+   бок, и не завязано на .grid-controls--stacked (та рассчитана на
+   выравнивание пары подписей Width/Height, для одиночного Zoom лишняя).
+   Рамку/фон переносим с .grid-controls__actions на весь .grid-controls__group —
+   иначе подпись повисает отдельно НАД рамкой, которая обрамляет только
+   −/значение/+, и вся конструкция читается как два несвязанных элемента,
+   а не один контрол. */
+.grid-controls--vertical-zoom .grid-controls__group {
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.grid-controls--vertical-zoom .grid-controls__actions {
   background: transparent;
   border: none;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
-}
-.grid-controls__reset:hover { color: #f1f5f9; background: rgba(255, 255, 255, 0.08); }
-.grid-controls__value {
-  min-width: 30px;
-  text-align: center;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  color: #22d3ee;
-}
-.grid-controls__value--editable {
-  cursor: text;
-  border-bottom: 1px dashed transparent;
-  transition: border-color 0.15s;
-}
-.grid-controls__value--editable:hover {
-  border-bottom-color: rgba(34, 211, 238, 0.5);
-}
-.grid-controls__input {
-  width: 36px;
-  text-align: center;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  color: #22d3ee;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #22d3ee;
-  outline: none;
   padding: 0;
-  -moz-appearance: textfield;
-}
-.grid-controls__input::-webkit-outer-spin-button,
-.grid-controls__input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
 }
 
 /* Обёртка pencil/eraser/flood-fill/stamp/mirror: на десктопе — просто
@@ -284,6 +259,14 @@
    по 3 — тот же приём, что уже даёт компактность
    Undo/Redo/Clear/Save/Load/Share (.grid-controls__toolbar), см. блок ниже. */
 .tool-group { display: contents; }
+
+/* Обёртка тулбара Undo/Redo/Clear + иконок Reference/Pendant/Grid Settings:
+   на десктопе/планшете — просто разметочная обёртка (display: contents
+   "растворяет" её и .header__end-icons, все элементы — прямые flex-дети
+   .header__nav, как раньше). На ≤767.98px сворачивается в 2 ряда — см.
+   брейкпоинт ниже, там же живёт .tool-group. */
+.header__end-group { display: contents; }
+.header__end-icons { display: contents; }
 
 .tool-btn {
   width: 1.625rem;
@@ -301,15 +284,6 @@
   opacity: 0.6;
 }
 
-/* Дубль Reference-кнопки внутри tool-group — виден только на ≤767.98px
-   (занимает пустующий 6-й слот 2×3-сетки), на остальных ширинах остаётся
-   только основная копия после toolbar (.tool-btn--reference-standalone).
-   Это правило должно идти ПОСЛЕ .tool-btn выше: у обоих селекторов
-   одинаковая специфичность (один класс), и при равенстве специфичности
-   побеждает то, что позже в файле — если поставить это правило раньше
-   .tool-btn (как было раньше), его display:none перебивается display:flex
-   из .tool-btn, и дубль виснет видимым на всех ширинах. */
-.tool-btn--reference-grid { display: none; }
 .tool-btn:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.2); }
 .tool-btn--lg { width: 2.25rem; height: 2.25rem; }
 .tool-btn--active {
@@ -369,6 +343,14 @@
   background-color: #f87171;
 }
 
+/* Триггер попапа цвета/прозрачности нитки (ThreadStyleButton/ThreadMenu) —
+   дефолтный угол (right/bottom), background красится текущим activeThreadColor
+   через CSS-переменную, как и другие динамические swatch (см. --color-value
+   у palette__color/trigger-swatch выше). */
+.tool-btn-group__badge--swatch {
+  background-color: var(--color-value);
+}
+
 /* Попап кнопки Mirror Mode: сама кнопка (.tool-btn) переключает режим по
    тултипу, но клик открывает мини-меню с этим тумблером ещё раз + связанным
    одноразовым действием "Сделать симметричным" — та же визуальная схема,
@@ -412,6 +394,15 @@
 .mirror-menu__item--active .mirror-menu__item-icon { opacity: 1; }
 .mirror-menu__item:disabled { opacity: 0.35; cursor: default; }
 .mirror-menu__item:disabled:hover { background: transparent; }
+
+/* Разделитель перед ThreadStyleFields в ThreadMenu (crossWeave) — цвет/
+   прозрачность применяются к другой сущности (кисти), чем пункты выше
+   (выбор нити), визуально отделяем. */
+.mirror-menu__divider {
+  height: 1px;
+  margin: 3px 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
 
 /* Переключатель Silyanka / CrossWeave: сегментированный pill с иконкой + подписью,
    вместо непрозрачной одиночной кнопки-иконки, которая была нечитаема при 15px. */
@@ -465,19 +456,15 @@
   pointer-events: none;
 }
 
-/* Mini-desktop breakpoint (<1280px): move grid-controls (Width/Height/Top/Bottom Edge/Spacing) into overflow menu */
+/* Триггер "⋯" — вся его панель существует только ради мобильного дубля
+   Zoom/Save-Load-Share (см. .header__overflow-mobile-extra и брейкпоинт
+   ≤767.98px ниже, где и оригиналы этой пары скрываются из основной строки).
+   Width/Height/Spacing/Edges переехали в панель «Сетка» (GridSidebar) и
+   больше не коллапсируют сюда — раньше триггер появлялся уже на ≤1279.98px
+   ради них, теперь в этом не было бы смысла. */
 .header__overflow { position: relative; display: none; }
 
-/* Дубли Zoom/Spacing/Save-Load-Share внутри overflow-панели — видны только
-   на ≤767.98px (см. блок ниже), когда их оригиналы скрыты из основной строки. */
 .header__overflow-mobile-extra { display: none; }
-
-@media (max-width: 1279.98px) {
-  .grid-controls--collapsible,
-  .header__divider--collapsible { display: none; }
-
-  .header__overflow { display: block; }
-}
 
 .header__overflow-trigger {
   width: 28px;
@@ -508,47 +495,23 @@
   flex-direction: column;
   gap: 6px;
 }
-.header__overflow-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px;
-}
-.header__overflow-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  font-size: 10px;
-  font-weight: 800;
-  color: #64748b;
-  text-transform: uppercase;
-}
+/* .header__overflow-row/.header__overflow-label — определены в common/Stepper.css
+   (используются только вариантом Stepper variant="overflow"). */
 
 /* Tablet и уже (≤1024px): чуть плотнее + крупнее тач-зоны кнопок.
-   На самой границе 1024px хедер (в отличие от canvas/sidebar/stats) уже
-   свернул Width/Height/Top-Bottom Edge в overflow-меню (см. брейкпоинт
-   1279.98px выше), но одной этой экономии не хватает — оставшийся ряд
-   (technique-switch с подписями + двухрядная палитра + инструменты +
-   Zoom/Spacing + undo/redo/save/share) шире 1024px, поэтому здесь же
-   убираем текстовые подписи переключателя техники (иконка остаётся,
-   title сохраняет доступность) и уплотняем отступы дальше.
    Раньше у правила была нижняя граница `min-width: 768px` — на 767px и уже
    компактность резко пропадала и хедер откатывался к десктопному виду
    (подписи техники возвращались, кнопки увеличивались), хотя места стало
    ещё меньше. Убрали нижнюю границу, чтобы сжатие сохранялось на все
    ширины ≤1024px, а не только в узком tablet-диапазоне 768–1024.
 
-   Расчёт по факту показал, что реальная (не резиновая — ни один элемент
-   тут не масштабируется от viewport) ширина `.header__nav` после всех
-   сокращений выше — около 837px, поэтому обрезание начиналось уже
-   на ~850px, а не только заметно ниже 768px. Блок ниже добавляет ещё один
-   слой сжатия (палитра, technique-switch, tool-group, grid-controls__btn),
-   чтобы суммарная ширина упала примерно до ~727px — это даёт запас и на
-   границе 1024px, и на нижней границе диапазона 768px. */
+   После переезда Width/Height/Spacing/Top-Bottom Edge в панель «Сетка»
+   (GridSidebar) хедеру стало заметно свободнее, чем раньше — отступы/gap
+   ниже сознательно ослаблены относительно прежней, более тесной раскладки
+   (см. header__nav gap, .tool-group, .grid-controls__toolbar). */
 @media (max-width: 1024px) {
   .header__nav {
-    gap: 0.375rem;
+    gap: 0.5rem;
     padding: 0.4rem 0.5rem;
   }
   .palette__divider { margin: 0 0.05rem; }
@@ -580,25 +543,50 @@
   .grid-controls__toolbar {
     flex-direction: column;
     align-items: stretch;
-    padding: 1px;
+    gap: 0;
+    padding: 3px;
   }
   .grid-controls__actions-row {
     display: flex;
     align-items: center;
+    gap: 3px;
   }
-  .grid-controls__actions-row + .grid-controls__actions-row {
+  /* align-items: stretch на .grid-controls__toolbar растягивает оба ряда
+     по ширине более широкого (обычно верхнего — из-за текста CLEAR). Ряд,
+     чьи кнопки этой ширины не занимают (обычно нижний, Save/Load/Share),
+     без этого правила просто прижимался бы к левому краю, оставляя
+     "хвост" пустого места справа — и его последняя кнопка не совпадала
+     по правому краю с CLEAR/последней кнопкой другого ряда. margin-left:
+     auto у последнего элемента поглощает этот хвост, прижимая последнюю
+     кнопку каждого ряда к общему правому краю. */
+  .grid-controls__actions-row > :last-child {
+    margin-left: auto;
+  }
+  /* ~ (общий), а не + (соседний) — между двумя .grid-controls__actions-row
+     в разметке теперь лежит .grid-controls__toolbar-divider (см. Header.tsx),
+     и он остаётся в DOM даже будучи скрытым ниже, так что второй ряд больше
+     не идёт для + строго следом за первым. */
+  .grid-controls__actions-row ~ .grid-controls__actions-row {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  /* На этой ширине ряды и так разделены border-top выше — вертикальная
+     линия-разделитель (десктопный вариант, см. базовые стили) здесь не нужна. */
+  .grid-controls__toolbar-divider {
+    display: none;
   }
 
   /* pencil/eraser/flood-fill/stamp/mirror (.tool-group): тот же приём —
-     2 ряда по 3 вместо одного длинного ряда из 5 кнопок вплотную. */
+     2 ряда по 3 вместо одного длинного ряда (5 иконок у RAW, 6 у silyanka).
+     Reference-кнопка сюда намеренно не входит — при 6/7 элементах она
+     проваливалась бы в одинокую 3-ю строку, поэтому стоит отдельно в
+     header__nav, после тулбара Undo/Redo/Clear/Save/Load/Share. */
   .tool-group {
     display: flex;
     flex-wrap: wrap;
     flex-shrink: 0;
     align-content: center;
-    width: 80px;
-    gap: 3px 4px;
+    width: 88px;
+    gap: 4px 6px;
   }
 }
 
@@ -606,15 +594,14 @@
    уже упирается в ~727px по сумме всех блоков, а тут доступно от ~465px.
    Высота хедера (--palette-height, index.css) на этом брейкпоинте НЕ растёт —
    .header__nav переносить в 2 строки нельзя (пробовали: палитра, tool-group
-   и Zoom/Spacing и так уже двухрядные сами по себе, перенос nav поверх них
-   даёт 4 визуальных яруса вместо 2 и требует увеличения хедера). Вместо этого:
-   1) Zoom/Spacing и Save/Load/Share уходят в overflow-меню (⋯), рядом с
-      Width/Height/Top/Bottom Edge, которые там уже лежат;
+   и Zoom и так уже двухрядные сами по себе, перенос nav поверх них
+   даёт лишние визуальные ярусы и требует увеличения хедера). Вместо этого:
+   1) Zoom и Save/Load/Share уходят в overflow-меню (⋯);
    2) там, где элементы стояли бок о бок, — точечная 2-ярусная раскладка
       (technique-switch, кастомный пикер+пипетка, Undo/Redo+CLEAR), которая
-      остаётся внутри уже существующей высоты строки, как у палитры/tool-group;
-   3) Reference-кнопка переезжает в пустующий слот сетки tool-group.
-   Undo/Redo/Clear остаются на виду в основной строке — часто используемые команды. */
+      остаётся внутри уже существующей высоты строки, как у палитры/tool-group.
+   Undo/Redo/Clear и Reference остаются на виду в основной строке — часто
+   используемые команды. */
 @media (max-width: 767.98px) {
   /* На маленьких экранах кольца technique-switch мельче — тоньше обводка,
      чтобы кольца не сливались в сплошные пятна. CSS stroke-width переопределяет
@@ -623,7 +610,13 @@
   .silyanka-icon__rings { stroke-width: 0.3; }
   .cross-weave-icon__rings { stroke-width: 0.5; }
 
-  .grid-controls--collapsible-mobile,
+  /* .grid-controls.grid-controls--collapsible-mobile (а не просто класс) —
+     без второго .grid-controls специфичность совпадала бы с безусловным
+     .grid-controls { display: flex } из common/Stepper.css, и победитель
+     зависел бы от порядка импорта CSS (Stepper.css физически позже в бандле,
+     т.к. Header.tsx импортирует Stepper уже после './Header.css'), из-за
+     чего этот display:none проигрывал и Zoom дублировался и в строке, и в overflow. */
+  .grid-controls.grid-controls--collapsible-mobile,
   .header__divider--zoom-adjacent,
   .grid-controls__actions-row--files {
     display: none;
@@ -632,6 +625,8 @@
   .header__divider--palette-tools {
     display: block;
   }
+
+  .header__overflow { display: block; }
 
   .header__overflow-mobile-extra {
     display: flex;
@@ -683,50 +678,35 @@
     gap: 4px;
   }
 
-  /* Undo/Redo сверху, CLEAR — отдельной строкой под ними (Save/Load/Share
-     уже скрыты выше как .grid-controls__actions-row--files). Grid, а не
-     flex-wrap + flex-basis:100% — у последнего ширина строки берётся из
-     .grid-controls__toolbar (align-items:stretch, ≤1024px), посчитанной ещё
-     по НЕразбитой строке Undo+Redo+CLEAR, и не сжимается при переносе —
-     CLEAR растягивался на всю эту ширину, а Undo/Redo повисали слева с
-     пустотой справа. Grid с auto-колонками считает размер по реальному
-     наименьшему контенту и центрируется сам.
-     Колонки — minmax(0,1fr), а не auto: с auto-колонками сама grid-дорожка
-     была узкой (по ширине Undo+Redo) и justify-content:center центрировал
-     именно её, а не CLEAR — CLEAR (grid-column:1/-1, width:auto → stretch)
-     мог тянуться только в пределах этой узкой дорожки и либо обрезался, либо
-     вылезал за её границы текстом. С 1fr-колонками дорожка растягивается на
-     всю ширину тулбара, CLEAR (width:100%) заполняет и центрируется в ней
-     сам по себе, а Undo/Redo центрируются в своих половинах через
-     justify-items вместо justify-content. */
-  .grid-controls__toolbar {
-    padding: 4px;
-  }
-  .grid-controls__actions-row:not(.grid-controls__actions-row--files) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    justify-items: center;
-    gap: 4px;
-  }
+  /* CLEAR сворачивается в иконку (Trash2, см. .grid-controls__btn-reset-icon/
+     -label в Header.tsx) и остаётся в одном ряду с Undo/Redo — раньше
+     текстовая кнопка CLEAR не помещалась в ряд и уезжала на отдельную строку
+     ниже (grid из 2 рядов), из-за чего весь тулбар вырастал до ~70px и
+     пробивал фиксированную высоту хедера (--palette-height: 84px, index.css)
+     на узких экранах — то, из-за чего хедер выглядел «слишком высоким».
+     Save/Load/Share по-прежнему скрыты выше как .grid-controls__actions-row--files. */
   .grid-controls__btn--reset {
-    grid-column: 1 / -1;
-    width: 100%;
-    /* На отдельной строке рамка слева (унаследованная от однорядной раскладки,
-       где она отделяла CLEAR от Undo/Redo) висит без пары — заменяем на
-       верхнюю, отделяющую CLEAR от ряда Undo/Redo над ним. */
-    border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin-top: 2px;
-    padding-top: 4px;
+    width: 26px;
+    padding: 0;
   }
+  .grid-controls__btn-reset-icon { display: inline-flex; }
+  .grid-controls__btn-reset-label { display: none; }
 
-  /* Reference-кнопка переезжает в пустующий 6-й слот сетки tool-group
-     (см. .tool-btn--reference-grid/.tool-btn--reference-standalone в Header.tsx). */
-  .tool-btn--reference-standalone {
-    display: none;
-  }
-  .tool-btn--reference-grid {
+  /* Undo/Redo/Clear в один ряд, Reference/Pendant/Grid Settings — во второй
+     под ним (тот же приём двухрядности, что у .tool-group выше). Вертикальный
+     .header__divider между ними в столбик не годится — скрываем, ряды и так
+     разделены отступом. */
+  .header__end-group {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .header__divider--end-adjacent { display: none; }
+  .header__end-icons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 }
 
@@ -735,7 +715,7 @@
    блок, ~150–180px из-за двух рядов кружков). Вместо дальнейшего уменьшения
    кружков до нечитаемого размера — палитра прячется под иконку-триггер
    (.palette-widget__trigger) и раскрывается попапом, тем же паттерном, что
-   .header__overflow уже использует для Width/Height/Zoom/Spacing. Остальные
+   .header__overflow уже использует для Zoom/Save-Load-Share. Остальные
    правила здесь — точечное дожатие оставшихся в строке блоков (tool-group,
    toolbar, sidebar-кнопка), чтобы уложиться в бюджет 320px. */
 @media (max-width: 479.98px) {
@@ -780,23 +760,10 @@
   .tool-btn { width: 1.25rem; height: 1.25rem; }
 
   .grid-controls__toolbar { padding: 2px; }
+  /* Затрагивает и CLEAR (тоже .grid-controls__btn) — на этой ширине она
+     схлопывается до того же квадрата 22px, что и Undo/Redo/иконка Reset
+     (см. .grid-controls__btn-reset-icon в ≤767.98px выше). */
   .grid-controls__btn { width: 22px; height: 22px; }
-
-  /* CLEAR (2-й ряд грида Undo/Redo/Clear, см. ≤767.98px выше) с меньшими
-     22px-кнопками визуально повис слишком далеко от Undo/Redo — тот же
-     отступ (row-gap 4px + border-top/margin-top/padding-top у reset)
-     рассчитывался под более крупные 26px-кнопки. Здесь плотнее. */
-  .grid-controls__actions-row:not(.grid-controls__actions-row--files) {
-    gap: 2px;
-  }
-  .grid-controls__btn--reset {
-    /* Повторяем width:100% из ≤767.98px — иначе .grid-controls__btn{width:22px}
-       чуть выше в этом же блоке (та же специфичность, но позже по каскаду)
-       перебивает его и CLEAR снова сжимается до узкой недоцентрированной кнопки. */
-    width: 100%;
-    margin-top: 0;
-    padding-top: 2px;
-  }
 
   .header__overflow-trigger { width: 24px; height: 24px; }
 

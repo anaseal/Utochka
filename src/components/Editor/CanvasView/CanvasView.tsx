@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { PendantPlacement, PendantTemplate, PendantChain } from '../../../types/pendant';
-import { Thread } from '../../../types/thread';
+import { Thread, threadEndBeadId } from '../../../types/thread';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BeadGrid } from './BeadGrid';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
@@ -17,6 +17,7 @@ import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
 import { chainBeadCountBetween, computeChainBeadPositions, expandChainRun } from '../../../utils/pendantChain';
 import { buildBeadPositionIndex } from '../../../utils/beadPositions';
+import { findBeadsAlongSegment } from '../../../utils/threadGeometry';
 import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
@@ -75,12 +76,17 @@ interface CanvasViewProps {
   onPaintChainBead: (placementId: string, beadIndex: number) => void;
   onRemoveChain: (placementId: string) => void;
   threads: Thread[];
-  onAddThread: (beadIds: string[]) => void;
+  onAddThread: (beadIds: string[], options?: { color?: string; opacity?: number }) => void;
   onRerouteThreadEnd: (threadId: string, end: 'start' | 'end', traceBeadIds: string[]) => void;
   onRemoveThread: (id: string) => void;
+  // «Кисть» нитки — цвет/прозрачность, которыми ляжет следующая нитка (см.
+  // Header.tsx → ThreadStyleButton, useSilyankaProject.ts).
+  activeThreadColor: string;
+  activeThreadOpacity: number;
   chainPendingStart: number | null;
   onChainNodeClick: (col: number) => void;
   canvasSvgRef: React.RefObject<SVGSVGElement | null>;
+  topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
   bottomEdgeSpan: number;
   onBottomEdgeSpanChange: (delta: number) => void;
@@ -135,9 +141,12 @@ export const CanvasView = ({
   onAddThread,
   onRerouteThreadEnd,
   onRemoveThread,
+  activeThreadColor,
+  activeThreadOpacity,
   chainPendingStart,
   onChainNodeClick,
   canvasSvgRef,
+  topEdgeEnabled,
   bottomEdgeEnabled,
   bottomEdgeSpan,
   onBottomEdgeSpanChange,
@@ -176,6 +185,20 @@ export const CanvasView = ({
   // «резиновой» линии за курсором, и для определения, когда показать
   // крестик поверх последней точки трассировки (см. ThreadLayer).
   const [threadCursor, setThreadCursor] = useState<{ pos: { x: number; y: number }; magnetId: string | null } | null>(null);
+  // Ожидание решения «клик или драг» на ручке конца нитки (ThreadLayer) —
+  // pointerDown только сеет этот ref, само beginThreadReroute откладывается
+  // до превышения порога смещения на pointerMove (см. handleThreadHandlePointerMove
+  // ниже); если порог не превышен к pointerUp — это был обычный клик по
+  // бусине-якорю, и он уходит в handleThreadPoint как любой другой клик
+  // (иначе нельзя было бы начать новую нить с той же бусины, где закончилась
+  // предыдущая — ручка всегда перехватывала бы клик первой).
+  const threadHandleDragRef = useRef<{
+    threadId: string;
+    end: 'start' | 'end';
+    startClient: { x: number; y: number };
+    pointerId: number;
+    dragging: boolean;
+  } | null>(null);
   // Уход с инструмента «нитка» посреди незавершённой протяжки (например,
   // горячей клавишей) не должен оставлять висящий пунктирный превью-путь.
   useEffect(() => {
@@ -238,6 +261,7 @@ export const CanvasView = ({
   const cancelActiveStroke = useCallback(() => {
     stopDrawing();
     stampDragRef.current = null;
+    threadHandleDragRef.current = null;
     setSelectionRect(null);
     setThreadTrace(null);
     setThreadCursor(null);
@@ -382,8 +406,7 @@ export const CanvasView = ({
   const beginThreadReroute = useCallback((threadId: string, end: 'start' | 'end') => {
     const thread = threads.find(t => t.id === threadId);
     if (!thread) return;
-    const anchorId = end === 'start' ? thread.beadIds[0] : thread.beadIds[thread.beadIds.length - 1];
-    setThreadTrace({ beadIds: [anchorId], rerouting: { threadId, end } });
+    setThreadTrace({ beadIds: [threadEndBeadId(thread, end)], rerouting: { threadId, end } });
   }, [threads]);
 
   // Коммит трассировки нитки — по двойному клику (onDoubleClick на <main>
@@ -398,12 +421,12 @@ export const CanvasView = ({
           onRerouteThreadEnd(prev.rerouting.threadId, prev.rerouting.end, prev.beadIds.slice(1));
         }
       } else if (prev.beadIds.length >= 2) {
-        onAddThread(prev.beadIds);
+        onAddThread(prev.beadIds, { color: activeThreadColor, opacity: activeThreadOpacity });
       }
       return null;
     });
     setThreadCursor(null);
-  }, [onAddThread, onRerouteThreadEnd]);
+  }, [onAddThread, onRerouteThreadEnd, activeThreadColor, activeThreadOpacity]);
 
   // Единая точка входа для трассировки нитки: каждый явный клик по бусине
   // зовёт эту функцию. Повторный клик по уже последней точке трассировки не
@@ -420,6 +443,14 @@ export const CanvasView = ({
   // другую бисерину ТОЙ ЖЕ цепочки (например, с первой сразу на последнюю),
   // путь достраивается через все промежуточные — нитка физически не может
   // миновать бисерины, уже нанизанные друг за другом (см. expandChainRun).
+  // Если это не прыжок внутри одной цепочки — пробуем геометрию
+  // (findBeadsAlongSegment, utils/threadGeometry.ts): любая бусина любого
+  // слоя, которая физически лежит на прямой между двумя кликами, тоже
+  // должна попасть в путь, как будто по ней кликнули отдельно. expandChainRun
+  // проверяется первым и имеет приоритет — бусины одной цепочки лежат на
+  // провисающей дуге (computeChainBeadPositions), а не на прямой, поэтому
+  // чисто геометрическая проверка могла бы потерять внутренние бусины
+  // длинной провисшей цепочки.
   const handleThreadPoint = useCallback((id: string) => {
     if (threadTrace && threadTrace.beadIds[threadTrace.beadIds.length - 1] === id) {
       commitThreadTrace();
@@ -429,10 +460,55 @@ export const CanvasView = ({
       if (!prev) return { beadIds: [id], rerouting: null };
       const lastId = prev.beadIds[prev.beadIds.length - 1];
       if (lastId === id) return prev;
-      const run = expandChainRun(lastId, id);
-      return { ...prev, beadIds: [...prev.beadIds, ...(run ?? [id])] };
+      const chainRun = expandChainRun(lastId, id);
+      if (chainRun) return { ...prev, beadIds: [...prev.beadIds, ...chainRun] };
+      const between = findBeadsAlongSegment(
+        beadPositionIndex, lastId, id, new Set(prev.beadIds), BEAD_THEME.sizes.hitboxRadius,
+      );
+      return { ...prev, beadIds: [...prev.beadIds, ...between, id] };
     });
-  }, [threadTrace, commitThreadTrace]);
+  }, [threadTrace, commitThreadTrace, beadPositionIndex]);
+
+  // Различает клик и драг на ручке конца нитки (ThreadLayer): pointerDown
+  // только сеет threadHandleDragRef, само перепрокладывание (beginThreadReroute)
+  // откладывается до тех пор, пока смещение от точки нажатия не превысит
+  // порог (handleThreadHandlePointerMove) — иначе обычный клик по бусине,
+  // которая случайно оказалась концом нитки, всегда бы перехватывался
+  // ручкой, и начать вторую нить с той же бусины было бы невозможно.
+  const handleThreadHandlePointerDown = useCallback((e: React.PointerEvent, threadId: string, end: 'start' | 'end') => {
+    threadHandleDragRef.current = {
+      threadId, end, startClient: { x: e.clientX, y: e.clientY }, pointerId: e.pointerId, dragging: false,
+    };
+  }, []);
+
+  const handleThreadHandlePointerMove = useCallback((e: React.PointerEvent) => {
+    const drag = threadHandleDragRef.current;
+    if (!drag || drag.dragging || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startClient.x;
+    const dy = e.clientY - drag.startClient.y;
+    const { handleDragThreshold, handleDragThresholdTouch } = BEAD_THEME.threadDefaults;
+    const threshold = e.pointerType === 'touch' ? handleDragThresholdTouch : handleDragThreshold;
+    if (Math.hypot(dx, dy) > threshold) {
+      drag.dragging = true;
+      beginThreadReroute(drag.threadId, drag.end);
+    }
+  }, [beginThreadReroute]);
+
+  // Отпускание без превышения порога — обычный клик по бусине-якорю: уходит
+  // в handleThreadPoint как любой другой клик по бусине (начнёт нить 2, если
+  // трассировки нет, иначе добавит точку/закоммитит по обычным правилам).
+  const handleThreadHandlePointerUp = useCallback((e: React.PointerEvent) => {
+    const drag = threadHandleDragRef.current;
+    threadHandleDragRef.current = null;
+    if (!drag || drag.pointerId !== e.pointerId || drag.dragging) return;
+    const thread = threads.find(t => t.id === drag.threadId);
+    if (!thread) return;
+    handleThreadPoint(threadEndBeadId(thread, drag.end));
+  }, [threads, handleThreadPoint]);
+
+  const handleThreadHandlePointerCancel = useCallback(() => {
+    threadHandleDragRef.current = null;
+  }, []);
 
   // Отменяет последнюю точку трассировки (крестик на её месте в ThreadLayer,
   // см. threadCursor.magnetId) — трассировка не прерывается, просто «шаг
@@ -659,6 +735,15 @@ export const CanvasView = ({
     });
   }, [canvasSvgRef, colorStats, totalCount, canvasTheme]);
 
+  // Цвет незавершённой трассировки (ThreadLayer → liveTraceSource): для
+  // перепрокладки конца — color/opacity самой перепрокладываемой нитки (её
+  // не меняет коммит), для новой нитки — текущая кисть.
+  const liveTraceSource = threadTrace
+    ? (threadTrace.rerouting
+      ? threads.find(t => t.id === threadTrace.rerouting?.threadId)
+      : { color: activeThreadColor, opacity: activeThreadOpacity })
+    : undefined;
+
   return (
     <main
       data-canvas-theme={canvasTheme}
@@ -731,6 +816,7 @@ export const CanvasView = ({
                   hoveredRow={hoveredRow}
                   mirrorMode={mirrorMode}
                   width={width}
+                  topEdgeEnabled={topEdgeEnabled}
                   bottomEdgeEnabled={bottomEdgeEnabled}
                   bottomEdgeSpan={bottomEdgeSpan}
                   onBottomEdgeSpanChange={onBottomEdgeSpanChange}
@@ -779,8 +865,12 @@ export const CanvasView = ({
                   positionIndex={beadPositionIndex}
                   liveTrace={threadTrace}
                   liveCursor={threadCursor}
+                  liveTraceSource={liveTraceSource}
                   interactive={activeTool === 'thread'}
-                  onBeginReroute={beginThreadReroute}
+                  onHandlePointerDown={handleThreadHandlePointerDown}
+                  onHandlePointerMove={handleThreadHandlePointerMove}
+                  onHandlePointerUp={handleThreadHandlePointerUp}
+                  onHandlePointerCancel={handleThreadHandlePointerCancel}
                   onRemove={onRemoveThread}
                   onRemoveLastTracePoint={removeLastTracePoint}
                 />

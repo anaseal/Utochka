@@ -1,0 +1,30 @@
+.thread-style-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+}
+
+.thread-style-fields__color {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+/* Нативный вид <input type="color"> сильно разнится по браузерам — убираем
+   внутренние отступы/рамку у swatch-части, чтобы он занимал всю кнопку. */
+.thread-style-fields__color::-webkit-color-swatch-wrapper { padding: 0; }
+.thread-style-fields__color::-webkit-color-swatch { border: none; border-radius: 5px; }
+.thread-style-fields__color::-moz-color-swatch { border: none; border-radius: 5px; }
+
+.thread-style-fields__opacity {
+  flex: 1;
+  min-width: 70px;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}

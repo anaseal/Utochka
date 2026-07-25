@@ -14,7 +14,7 @@ export const BEAD_THEME = {
   },
 
   gridDefaults: {
-    spacing: 65,
+    spacing: 55,
     beadsInSpan: 3,
     initialWidth: 70,
     initialHeight: 8,
@@ -62,6 +62,11 @@ export const BEAD_THEME = {
   // размер ручек концов, т.к. он завязан на общий hitboxRadius сетки.
   threadDefaults: {
     handleRadiusFactor: 0.7, // от hitboxRadius
+    // Порог смещения (screen-space), отличающий драг ручки конца нитки
+    // (перепрокладка) от обычного клика по той же бусине (см. STAMP_DRAG_THRESHOLD
+    // в CanvasView.tsx — тот же приём, независимая пара констант).
+    handleDragThreshold: 4,
+    handleDragThresholdTouch: 10,
   },
 
   ui: {
@@ -71,6 +76,17 @@ export const BEAD_THEME = {
 
 export const defaultColorFor = (type: BeadType): string =>
   type === 'NODE' ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault;
+
+// Дефолты «кисти» нитки (см. useSilyankaProject/useCrossWeaveProject —
+// activeThreadColor/activeThreadOpacity, персистятся отдельно от истории
+// Undo/Redo, как activeColor для рисования) — общий источник для хуков и
+// Header.tsx (образцы-точки в ThreadMenu), чтобы не дублировать hex в двух
+// местах. Значения подобраны в тон прежним --thread-color/-2 (CanvasView.css).
+export const THREAD_STRAND_DEFAULT_COLORS: Record<1 | 2, string> = {
+  1: '#e2d6bb',
+  2: '#22d3ee',
+};
+export const DEFAULT_THREAD_OPACITY = 0.85;
 
 // Zoom — общее понятие для обеих техник (Silyanka и CrossWeave), не силяночное,
 // поэтому вынесен из BEAD_THEME.constraints в отдельный объект.

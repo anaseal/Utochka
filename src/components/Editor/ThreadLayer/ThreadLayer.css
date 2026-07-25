@@ -15,7 +15,7 @@
 
 .thread-layer__preview {
   fill: none;
-  stroke: var(--thread-color);
+  stroke: var(--thread-color-effective, var(--thread-color));
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-dasharray: 4 4;
@@ -24,7 +24,7 @@
 }
 
 .thread-layer__start-dot {
-  fill: var(--thread-color);
+  fill: var(--thread-color-effective, var(--thread-color));
   pointer-events: none;
 }
 

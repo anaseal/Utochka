@@ -1,0 +1,115 @@
+.grid-sidebar__steppers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+/* Лейбл остаётся слева, а -/значение/+ (и reset, если есть) прижимаются
+   к правому краю панели — margin-left: auto на .grid-controls__actions
+   выталкивает её и всё, что после (reset), в конец строки. */
+.grid-sidebar__steppers .grid-controls__actions {
+  margin-left: auto;
+}
+
+.grid-sidebar__taper-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* Тумблер синхронизации Top/Bottom Rows секции Taper — рядом с лейблом
+   «Rows», выровнен как кнопка-сброс (см. .sidebar__section-clear). */
+.grid-sidebar__link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.grid-sidebar__link-btn:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+}
+
+.grid-sidebar__link-btn[aria-pressed="true"] {
+  color: #22d3ee;
+}
+
+.bottom-chain-control {
+  flex-shrink: 0;
+  padding: 0 14px 14px;
+}
+
+.bottom-chain-control__toggle {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
+  flex-shrink: 0;
+}
+
+.bottom-chain-control__toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #64748b;
+  transition: transform var(--transition-speed) ease, background var(--transition-speed) ease;
+}
+
+.bottom-chain-control__toggle--active {
+  background: rgba(34, 211, 238, 0.25);
+  border-color: #22d3ee;
+}
+
+.bottom-chain-control__toggle--active::after {
+  transform: translateX(14px);
+  background: #22d3ee;
+}
+
+.bottom-chain-control__toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bottom-chain-control__hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.edge-extension-control {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.edge-extension-control__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edge-extension-control__label {
+  font-size: 12px;
+  color: #94a3b8;
+}

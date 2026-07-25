@@ -124,7 +124,8 @@ export const useDrawing = (
     const hasDesign = Object.keys(designMap).length > 0;
     const hasPendantColors = pendantPlacements.some(p => Object.keys(p.colorMap).length > 0);
     const hasChainColors = pendantChains.some(c => Object.keys(c.colorMap).length > 0);
-    if (!hasDesign && !hasPendantColors && !hasChainColors) return;
+    const hasThreads = threads.length > 0;
+    if (!hasDesign && !hasPendantColors && !hasChainColors && !hasThreads) return;
     pushSnapshot({ designMap, pendants: pendantPlacements, chains: pendantChains, threads });
     if (hasDesign) setDesignMap({});
     if (hasPendantColors) {
@@ -137,7 +138,8 @@ export const useDrawing = (
         Object.keys(c.colorMap).length === 0 ? c : { ...c, colorMap: {} }
       )));
     }
-  }, [designMap, pendantPlacements, pendantChains, threads, pushSnapshot, setPendantPlacements, setPendantChains]);
+    if (hasThreads) setThreads([]);
+  }, [designMap, pendantPlacements, pendantChains, threads, pushSnapshot, setPendantPlacements, setPendantChains, setThreads]);
 
   // Управляемая трансформация Design Map (например, пересчёт при смене ширины).
   // Снимок сохраняется в историю — результат можно отменить через Undo.

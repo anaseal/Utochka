@@ -21,6 +21,7 @@ interface BeadGridProps {
   hoveredRow: number | null;
   mirrorMode: boolean;
   width: number;
+  topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
   bottomEdgeSpan: number;
   onBottomEdgeSpanChange: (delta: number) => void;
@@ -49,6 +50,7 @@ export const BeadGrid = memo(({
   hoveredRow,
   mirrorMode,
   width,
+  topEdgeEnabled,
   bottomEdgeEnabled,
   bottomEdgeSpan,
   onBottomEdgeSpanChange,
@@ -66,6 +68,7 @@ export const BeadGrid = memo(({
         hoveredRow={hoveredRow}
         mirrorMode={mirrorMode}
         width={width}
+        topEdgeEnabled={topEdgeEnabled}
         bottomEdgeEnabled={bottomEdgeEnabled}
         bottomEdgeSpan={bottomEdgeSpan}
         onBottomEdgeSpanChange={onBottomEdgeSpanChange}

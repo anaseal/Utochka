@@ -5,8 +5,8 @@ import { usePendants } from './usePendants';
 import { usePendantChains } from './usePendantChains';
 import { useThreads } from './useThreads';
 import { usePersistedState } from './usePersistedState';
-import { BEAD_THEME } from '../config/theme';
-import { BottomEdgeDecor, EdgeExtension, GridConfig } from '../types/bead';
+import { BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
+import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper, TaperSide } from '../types/bead';
 import { PendantPlacement, PendantChain } from '../types/pendant';
 import { Thread } from '../types/thread';
 import { PENDANT_TEMPLATES_BY_ID } from '../data/pendantTemplates';
@@ -42,6 +42,29 @@ const isEdgeExtension = (v: unknown): v is EdgeExtension =>
   typeof v === 'object' && v !== null &&
   typeof (v as EdgeExtension).left === 'boolean' &&
   typeof (v as EdgeExtension).right === 'boolean';
+
+const isTaperSide = (v: unknown): v is TaperSide =>
+  typeof v === 'object' && v !== null &&
+  typeof (v as TaperSide).rows === 'number';
+
+const isTaper = (v: unknown): v is Taper =>
+  typeof v === 'object' && v !== null &&
+  isTaperSide((v as Taper).top) && isTaperSide((v as Taper).bottom) &&
+  typeof (v as Taper).depth === 'number';
+
+// rows — сколько узловых рядов половины может занимать скос (+1, чтобы можно
+// было свести конец в точку). depth — общий для top/bottom пол ширины (в
+// половинках колонки, см. types/bead.ts) — специально не клэмпится к ширине:
+// срез позиционный (см. generator.ts), инсет сам клэмпится до половины
+// ширины полотна на каждой Y, так что сверхбольшой depth просто рано
+// «дорезает» клин до нуля, не ломая геометрию.
+const taperRowsMax = (height: number): number => height + 1;
+
+const clampTaperSide = (side: TaperSide, height: number): TaperSide => ({
+  rows: Math.max(0, Math.min(side.rows, taperRowsMax(height))),
+});
+
+const clampTaperDepth = (depth: number): number => Math.max(0, depth);
 
 const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
   if (typeof v !== 'object' || v === null) return false;
@@ -108,6 +131,10 @@ const isThreads = (v: unknown): v is Thread[] =>
     Array.isArray((t as Thread).beadIds) &&
     (t as Thread).beadIds.every(id => typeof id === 'string'));
 
+const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+const isOpacity = (v: unknown): v is number => typeof v === 'number' && v >= 0 && v <= 1;
+
 // Всё силяночное состояние и обработчики, вынесенные из App.tsx, чтобы
 // хостить вторую независимую технику (крестик) без дублирования ~400 строк.
 export const useSilyankaProject = (palette: readonly string[]) => {
@@ -138,6 +165,21 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     { left: true, right: true },
     isEdgeExtension,
   );
+  // По умолчанию включена — в отличие от Bottom Chain, верхняя цепочка была
+  // частью геометрии всегда, тумблер лишь позволяет её убрать.
+  const [topEdgeEnabled, setTopEdgeEnabled] = usePersistedState<boolean>(
+    'silyanka:topEdgeEnabled', true, (v): v is boolean => typeof v === 'boolean',
+  );
+  const [taper, setTaper] = usePersistedState<Taper>(
+    'silyanka:taper',
+    { top: { rows: 0 }, bottom: { rows: 0 }, depth: 0 },
+    isTaper,
+  );
+  // Синхронизация Rows между top/bottom — по умолчанию выключена, каждая
+  // сторона независима (см. spec.md, «Сужение концов»).
+  const [taperRowsLinked, setTaperRowsLinked] = usePersistedState<boolean>(
+    'silyanka:taperRowsLinked', false, (v): v is boolean => typeof v === 'boolean',
+  );
 
   const [pendantPlacements, setPendantPlacements] = usePersistedState<PendantPlacement[]>(
     'silyanka:pendantPlacements', [], isPendantPlacements,
@@ -151,14 +193,24 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     'silyanka:threads', [], isThreads,
   );
 
-  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension);
+  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension, topEdgeEnabled, taper);
   const drawingControls = useDrawing(
     palette[0], palette, pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, threads, setThreads, 'silyanka',
   );
   const threadControls = useThreads(threads, drawingControls.applyPatch);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // «Кисть» нитки — цвет/прозрачность, которыми ляжет СЛЕДУЮЩАЯ прокладываемая
+  // нитка (аналог activeColor для рисования бусин, см. Header.tsx →
+  // ThreadStyleButton). Не часть Undo/Redo — как и activeColor, обычный
+  // usePersistedState, не через drawingControls.applyPatch.
+  const [activeThreadColor, setActiveThreadColor] = usePersistedState<string>(
+    'silyanka:activeThreadColor', THREAD_STRAND_DEFAULT_COLORS[1], isHexColor,
+  );
+  const [activeThreadOpacity, setActiveThreadOpacity] = usePersistedState<number>(
+    'silyanka:activeThreadOpacity', DEFAULT_THREAD_OPACITY, isOpacity,
+  );
+
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   // Незавершённый выбор узла-начала цепочки (инструмент 'pendant-chain') —
@@ -203,10 +255,9 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     b => b.type === 'NODE' && b.logicalIndex.row === 2 * gridSize.height,
   );
 
-  const internalTop = Math.max(
-    0,
-    resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2,
-  );
+  const internalTop = topEdgeEnabled
+    ? Math.max(0, resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2)
+    : 0;
 
   const internalBottom = Math.max(0, bottomEdgeDecor.span - 2);
 
@@ -293,12 +344,18 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setGridSize(prev => ({ ...prev, width: newWidth }));
   };
 
-  // При уменьшении высоты убираем декор-полосы с исчезнувших рядов.
+  // При уменьшении высоты убираем декор-полосы с исчезнувших рядов и
+  // подрезаем Taper.rows под новый максимум (см. clampTaperSide).
   const applyHeight = (newH: number) => {
     if (newH === gridSize.height) return;
     if (newH < gridSize.height) {
       setDecorBands(prev => pruneRowsBelow(prev, 2 * newH));
     }
+    setTaper(prev => ({
+      ...prev,
+      top: clampTaperSide(prev.top, newH),
+      bottom: clampTaperSide(prev.bottom, newH),
+    }));
     setGridSize(prev => ({ ...prev, height: newH }));
   };
 
@@ -330,6 +387,31 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     applySpanEdge('bottomSpan', clampSpan(gridSize.bottomSpan + delta));
   };
 
+  const updateTaperRows = (edge: 'top' | 'bottom', delta: number) => {
+    setTaper(prev => {
+      const nextSide = clampTaperSide({ rows: prev[edge].rows + delta }, gridSize.height);
+      return taperRowsLinked
+        ? { ...prev, top: nextSide, bottom: nextSide }
+        : { ...prev, [edge]: nextSide };
+    });
+  };
+
+  const toggleTaperRowsLinked = () => {
+    setTaperRowsLinked(prev => {
+      const next = !prev;
+      // Включение синка сразу выравнивает стороны, иначе «синхронно» вводит в
+      // заблуждение, пока обе стороны не станут равны следующим изменением.
+      if (next) {
+        setTaper(t => ({ ...t, bottom: { ...t.top } }));
+      }
+      return next;
+    });
+  };
+
+  const updateTaperDepth = (delta: number) => {
+    setTaper(prev => ({ ...prev, depth: clampTaperDepth(prev.depth + delta) }));
+  };
+
   const updateSpacing = (delta: number) => {
     const { minSpacing, maxSpacing } = BEAD_THEME.constraints;
     setGridSize(prev => ({
@@ -354,6 +436,29 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     applySpanEdge('bottomSpan', clampSpan(Math.round(v)));
   };
 
+  const setTaperRowsAbsolute = (edge: 'top' | 'bottom', v: number) => {
+    setTaper(prev => {
+      const nextSide = clampTaperSide({ rows: Math.round(v) }, gridSize.height);
+      return taperRowsLinked
+        ? { ...prev, top: nextSide, bottom: nextSide }
+        : { ...prev, [edge]: nextSide };
+    });
+  };
+
+  const setTaperDepthAbsolute = (v: number) => {
+    setTaper(prev => ({ ...prev, depth: clampTaperDepth(Math.round(v)) }));
+  };
+
+  const resetTaperSide = (edge: 'top' | 'bottom') => {
+    setTaper(prev => taperRowsLinked
+      ? { ...prev, top: { rows: 0 }, bottom: { rows: 0 } }
+      : { ...prev, [edge]: { rows: 0 } });
+  };
+
+  const resetTaperDepth = () => {
+    setTaper(prev => ({ ...prev, depth: 0 }));
+  };
+
   const setSpacingAbsolute = (v: number) => {
     const { minSpacing, maxSpacing } = BEAD_THEME.constraints;
     setGridSize(prev => ({
@@ -367,6 +472,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       if (!prev.enabled && pendantPlacements.length > 0) return prev;
       return { ...prev, enabled: !prev.enabled };
     });
+  };
+
+  const toggleTopEdgeEnabled = () => {
+    setTopEdgeEnabled(prev => !prev);
   };
 
   const updateBottomEdgeSpan = (delta: number) => {
@@ -570,11 +679,16 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   return {
     gridSize, rowSpanOverrides, mirrorMode, setMirrorMode, decorBands, bottomEdgeDecor,
     edgeExtension, toggleExtendLeftEdge, toggleExtendRightEdge,
+    topEdgeEnabled, toggleTopEdgeEnabled,
+    taper, updateTaperRows, setTaperRowsAbsolute, resetTaperSide,
+    updateTaperDepth, setTaperDepthAbsolute, resetTaperDepth,
+    taperRowsLinked, toggleTaperRowsLinked,
     pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, chainControls, chainPendingStart, setChainPendingStart,
     threads, threadControls,
+    activeThreadColor, setActiveThreadColor, activeThreadOpacity, setActiveThreadOpacity,
     beads, drawingControls, pendantControls,
-    sidebarOpen, setSidebarOpen, hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
+    hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
     stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewPatch,
     stampAnchorEdge, toggleStampAnchorEdge,
     canvasSvgRef, rowGaps, bottomNodes, internalTop, internalBottom,

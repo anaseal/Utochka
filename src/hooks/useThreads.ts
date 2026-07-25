@@ -15,13 +15,24 @@ type ThreadsApplyPatch = (
 // вместо своего собственного snapshot-механизма.
 export const useThreads = (threads: Thread[], applyPatch: ThreadsApplyPatch) => {
   // strand — только для crossWeave (крестик плетётся двумя нитками
-  // одновременно, силянка — одной); силянка вызывает addThread без второго
-  // аргумента, тогда поле в объекте не появляется вовсе.
-  const addThread = useCallback((beadIds: string[], strand?: 1 | 2) => {
+  // одновременно, силянка — одной); color/opacity — «кисть», выбранная
+  // пользователем в момент коммита (см. Header.tsx, ThreadStyleFields) для
+  // ЭТОЙ конкретной нити, тоже опциональны (undefined → дефолт по strand/CSS,
+  // см. threadColorStyle). Опции, а не позиционные параметры — иначе
+  // 3 независимых optional-аргумента подряд нечитаемы на вызове.
+  const addThread = useCallback((
+    beadIds: string[],
+    options?: { strand?: 1 | 2; color?: string; opacity?: number },
+  ) => {
     if (beadIds.length < 2) return;
     applyPatch(null, null, null, (prev) => [
       ...prev,
-      { id: crypto.randomUUID(), beadIds, ...(strand !== undefined ? { strand } : {}) },
+      {
+        id: crypto.randomUUID(),
+        beadIds,
+        ...(options?.strand !== undefined ? { strand: options.strand } : {}),
+        ...(options?.color !== undefined ? { color: options.color, opacity: options.opacity } : {}),
+      },
     ]);
   }, [applyPatch]);
 

@@ -3,6 +3,7 @@ import { useDrawing } from './useDrawing';
 import { useThreads } from './useThreads';
 import { usePersistedState } from './usePersistedState';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../config/crossWeaveTheme';
+import { THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
 import { PendantPlacement, PendantChain } from '../types/pendant';
 import { Thread } from '../types/thread';
@@ -30,6 +31,22 @@ const isThreads = (v: unknown): v is Thread[] =>
     (t as Thread).beadIds.every(id => typeof id === 'string'));
 
 const isThreadStrand = (v: unknown): v is 1 | 2 => v === 1 || v === 2;
+
+const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+const isColorByStrand = (v: unknown): v is Record<1 | 2, string> => {
+  if (typeof v !== 'object' || v === null) return false;
+  const obj = v as Record<string, unknown>;
+  return isHexColor(obj[1]) && isHexColor(obj[2]);
+};
+
+const isOpacity = (v: unknown): v is number => typeof v === 'number' && v >= 0 && v <= 1;
+
+const isOpacityByStrand = (v: unknown): v is Record<1 | 2, number> => {
+  if (typeof v !== 'object' || v === null) return false;
+  const obj = v as Record<string, unknown>;
+  return isOpacity(obj[1]) && isOpacity(obj[2]);
+};
 
 const isCrossWeaveGridConfig = (v: unknown): v is CrossWeaveGridConfig => {
   if (typeof v !== 'object' || v === null) return false;
@@ -88,6 +105,28 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
   const [activeThreadStrand, setActiveThreadStrand] = usePersistedState<1 | 2>(
     'crossWeave:activeThreadStrand', 1, isThreadStrand,
   );
+
+  // «Кисть» нитки — отдельная на каждую из двух ниток (в отличие от силянки,
+  // где нитка одна): иначе переключение Thread 1 ⇄ Thread 2 перестало бы
+  // само по себе визуально различать нитки, пока пользователь вручную не
+  // перекрасит хотя бы одну (см. useSilyankaProject.ts для техники с одной
+  // нитью). Наружу отдаём уже разрешённые под activeThreadStrand значения —
+  // CrossWeaveCanvasView/Header работают с плоскими activeThreadColor/
+  // activeThreadOpacity, не зная про Record, как и у силянки.
+  const [colorByStrand, setColorByStrand] = usePersistedState<Record<1 | 2, string>>(
+    'crossWeave:activeThreadColorByStrand', { ...THREAD_STRAND_DEFAULT_COLORS }, isColorByStrand,
+  );
+  const [opacityByStrand, setOpacityByStrand] = usePersistedState<Record<1 | 2, number>>(
+    'crossWeave:activeThreadOpacityByStrand', { 1: DEFAULT_THREAD_OPACITY, 2: DEFAULT_THREAD_OPACITY }, isOpacityByStrand,
+  );
+  const activeThreadColor = colorByStrand[activeThreadStrand];
+  const activeThreadOpacity = opacityByStrand[activeThreadStrand];
+  const setActiveThreadColor = useCallback((color: string) => {
+    setColorByStrand(prev => ({ ...prev, [activeThreadStrand]: color }));
+  }, [activeThreadStrand, setColorByStrand]);
+  const setActiveThreadOpacity = useCallback((opacity: number) => {
+    setOpacityByStrand(prev => ({ ...prev, [activeThreadStrand]: opacity }));
+  }, [activeThreadStrand, setOpacityByStrand]);
 
   const drawingControls = useDrawing(
     palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements,
@@ -182,6 +221,7 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
   return {
     gridSize, beads, drawingControls, rawWidth,
     threads, threadControls, activeThreadStrand, setActiveThreadStrand,
+    activeThreadColor, setActiveThreadColor, activeThreadOpacity, setActiveThreadOpacity,
     mirrorMode, setMirrorMode,
     updateDimension, setWidthAbsolute, setHeightAbsolute,
     updateSpacing, setSpacingAbsolute,

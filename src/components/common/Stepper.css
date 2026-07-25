@@ -1,0 +1,106 @@
+.grid-controls { display: flex; gap: 0.625rem; }
+
+/* Двухэтажные пары (Width/Height, Top/Bottom Edge): второй контрол уходит под первый,
+   вместо того чтобы делить ширину по горизонтали */
+.grid-controls--stacked {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+.grid-controls--stacked .grid-controls__label {
+  display: inline-block;
+  min-width: 4.4em;
+  text-align: right;
+}
+
+.grid-controls__group { display: flex; align-items: center; gap: 0.375rem; }
+.grid-controls__label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
+.grid-controls__label-stacked { line-height: 1.05; text-align: right; display: inline-block; }
+.grid-controls__actions {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.grid-controls__btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #f1f5f9;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.grid-controls__btn:hover { background: rgba(255, 255, 255, 0.1); }
+.grid-controls__btn:disabled { opacity: 0.3; cursor: default; }
+.grid-controls__btn:disabled:hover { background: transparent; }
+.grid-controls__reset {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.grid-controls__reset:hover { color: #f1f5f9; background: rgba(255, 255, 255, 0.08); }
+.grid-controls__value {
+  min-width: 30px;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: #22d3ee;
+}
+.grid-controls__value--editable {
+  cursor: text;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s;
+}
+.grid-controls__value--editable:hover {
+  border-bottom-color: rgba(34, 211, 238, 0.5);
+}
+.grid-controls__input {
+  width: 36px;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: #22d3ee;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #22d3ee;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+.grid-controls__input::-webkit-outer-spin-button,
+.grid-controls__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.header__overflow-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+}
+.header__overflow-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+}

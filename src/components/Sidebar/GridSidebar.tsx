@@ -1,0 +1,295 @@
+import { Link2, Unlink2 } from 'lucide-react';
+import { Stepper } from '../common/Stepper';
+import { BEAD_THEME } from '../../config/theme';
+import { CROSS_WEAVE_THEME } from '../../config/crossWeaveTheme';
+import { Taper } from '../../types/bead';
+import './Sidebar.css';
+import './GridSidebar.css';
+
+interface SharedGridSidebarProps {
+  open: boolean;
+}
+
+interface SilyankaGridSidebarProps {
+  gridWidth: number;
+  gridHeight: number;
+  spacing: number;
+  topSpan: number;
+  bottomSpan: number;
+  onWidthChange: (delta: number) => void;
+  onHeightChange: (delta: number) => void;
+  onSpacingChange: (delta: number) => void;
+  onSetWidth?: (v: number) => void;
+  onSetHeight?: (v: number) => void;
+  onSetSpacing?: (v: number) => void;
+  onTopSpanChange: (delta: number) => void;
+  onBottomSpanChange: (delta: number) => void;
+  onSetTopSpan?: (v: number) => void;
+  onSetBottomSpan?: (v: number) => void;
+  onTopEdgeReset: () => void;
+  onBottomEdgeReset: () => void;
+  topEdgeEnabled: boolean;
+  onTopEdgeToggle: () => void;
+  bottomEdgeEnabled: boolean;
+  onBottomEdgeToggle: () => void;
+  hasPendants: boolean;
+  extendLeftEdge: boolean;
+  extendRightEdge: boolean;
+  onToggleExtendLeftEdge: () => void;
+  onToggleExtendRightEdge: () => void;
+  taper: Taper;
+  taperRowsMax: number;
+  onTaperRowsChange: (edge: 'top' | 'bottom', delta: number) => void;
+  onSetTaperRows: (edge: 'top' | 'bottom', v: number) => void;
+  onTaperSideReset: (edge: 'top' | 'bottom') => void;
+  onTaperDepthChange: (delta: number) => void;
+  onSetTaperDepth: (v: number) => void;
+  onTaperDepthReset: () => void;
+  taperRowsLinked: boolean;
+  onToggleTaperRowsLinked: () => void;
+}
+
+interface CrossWeaveGridSidebarProps {
+  gridWidth: number;
+  gridHeight: number;
+  spacing: number;
+  onWidthChange: (delta: number) => void;
+  onHeightChange: (delta: number) => void;
+  onSpacingChange: (delta: number) => void;
+  onSetWidth?: (v: number) => void;
+  onSetHeight?: (v: number) => void;
+  onSetSpacing?: (v: number) => void;
+}
+
+type GridSidebarProps = SharedGridSidebarProps & (
+  | { technique: 'silyanka'; silyankaProps: SilyankaGridSidebarProps; crossWeaveProps?: undefined }
+  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveGridSidebarProps; silyankaProps?: undefined }
+);
+
+export const GridSidebar = (props: GridSidebarProps) => {
+  const { open } = props;
+  const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
+  const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
+
+  const width = silyankaProps ? silyankaProps.gridWidth : crossWeaveProps!.gridWidth;
+  const height = silyankaProps ? silyankaProps.gridHeight : crossWeaveProps!.gridHeight;
+  const spacing = silyankaProps ? silyankaProps.spacing : crossWeaveProps!.spacing;
+  const spacingConstraints = silyankaProps ? BEAD_THEME.constraints : CROSS_WEAVE_THEME.constraints;
+
+  return (
+    <aside className={`sidebar${open ? ' sidebar--open' : ''}`}>
+      <div className="sidebar__header">
+        <h2 className="sidebar__title">Grid</h2>
+      </div>
+
+      <div className="sidebar__body">
+        <section className="sidebar__section">
+          <header className="sidebar__section-heading">
+            <div className="sidebar__section-heading-row">
+              <h3 className="sidebar__section-title">Size</h3>
+            </div>
+          </header>
+          <div className="grid-sidebar__steppers">
+            <Stepper
+              label="Width"
+              value={width}
+              onDelta={silyankaProps ? silyankaProps.onWidthChange : crossWeaveProps!.onWidthChange}
+              onSet={silyankaProps ? silyankaProps.onSetWidth : crossWeaveProps!.onSetWidth}
+              inputValue={width}
+              min={1}
+            />
+            <Stepper
+              label="Height"
+              value={height}
+              onDelta={silyankaProps ? silyankaProps.onHeightChange : crossWeaveProps!.onHeightChange}
+              onSet={silyankaProps ? silyankaProps.onSetHeight : crossWeaveProps!.onSetHeight}
+              inputValue={height}
+              min={silyankaProps ? 2 : 1}
+            />
+            <Stepper
+              label="Spacing"
+              value={spacing}
+              onDelta={(s) => (silyankaProps
+                ? silyankaProps.onSpacingChange(s * spacingConstraints.spacingStep)
+                : crossWeaveProps!.onSpacingChange(s * spacingConstraints.spacingStep))}
+              onSet={silyankaProps ? silyankaProps.onSetSpacing : crossWeaveProps!.onSetSpacing}
+              inputValue={spacing}
+              min={spacingConstraints.minSpacing}
+              max={spacingConstraints.maxSpacing}
+            />
+          </div>
+        </section>
+
+        {silyankaProps && (
+          <>
+            <section className="sidebar__section">
+              <header className="sidebar__section-heading">
+                <div className="sidebar__section-heading-row">
+                  <h3 className="sidebar__section-title">Edges</h3>
+                </div>
+              </header>
+              <div className="grid-sidebar__steppers">
+                <Stepper
+                  label="Top Edge"
+                  value={silyankaProps.topSpan}
+                  onDelta={silyankaProps.onTopSpanChange}
+                  onReset={silyankaProps.onTopEdgeReset}
+                  onSet={silyankaProps.onSetTopSpan}
+                  inputValue={silyankaProps.topSpan}
+                  min={3}
+                  max={10}
+                />
+                <Stepper
+                  label="Bottom Edge"
+                  value={silyankaProps.bottomSpan}
+                  onDelta={silyankaProps.onBottomSpanChange}
+                  onReset={silyankaProps.onBottomEdgeReset}
+                  onSet={silyankaProps.onSetBottomSpan}
+                  inputValue={silyankaProps.bottomSpan}
+                  min={3}
+                  max={10}
+                />
+              </div>
+            </section>
+
+            <section className="sidebar__section">
+              <header className="sidebar__section-heading">
+                <div className="sidebar__section-heading-row">
+                  <h3 className="sidebar__section-title">Taper</h3>
+                </div>
+                <p className="sidebar__section-desc">
+                  Narrow the ends. Rows (per side) = how many rows slope in (fewer = wider flat tip).
+                  Depth is shared by both ends — the minimum width floor the whole piece narrows down
+                  to; if it's wider than a side's own Rows cut, Depth wins right up to that edge.
+                </p>
+              </header>
+
+              <div className="grid-sidebar__steppers">
+                <Stepper
+                  label="Depth"
+                  value={silyankaProps.taper.depth}
+                  onDelta={(d) => silyankaProps.onTaperDepthChange(d)}
+                  onReset={silyankaProps.onTaperDepthReset}
+                  onSet={(v) => silyankaProps.onSetTaperDepth(v)}
+                  inputValue={silyankaProps.taper.depth}
+                  min={0}
+                  max={20}
+                />
+              </div>
+
+              <div className="sidebar__section-heading-row">
+                <span className="grid-sidebar__taper-label">Rows</span>
+                <button
+                  type="button"
+                  className="grid-sidebar__link-btn"
+                  onClick={silyankaProps.onToggleTaperRowsLinked}
+                  aria-pressed={silyankaProps.taperRowsLinked}
+                  aria-label={silyankaProps.taperRowsLinked ? 'Unlink top/bottom rows' : 'Link top/bottom rows'}
+                  title={silyankaProps.taperRowsLinked ? 'Top and bottom change together — click to unlink' : 'Link top and bottom to change together'}
+                >
+                  {silyankaProps.taperRowsLinked ? <Link2 size={13} /> : <Unlink2 size={13} />}
+                </button>
+              </div>
+              <div className="grid-sidebar__steppers">
+                <Stepper
+                  label="Top"
+                  value={silyankaProps.taper.top.rows}
+                  onDelta={(d) => silyankaProps.onTaperRowsChange('top', d)}
+                  onReset={() => silyankaProps.onTaperSideReset('top')}
+                  onSet={(v) => silyankaProps.onSetTaperRows('top', v)}
+                  inputValue={silyankaProps.taper.top.rows}
+                  min={0}
+                  max={silyankaProps.taperRowsMax}
+                />
+                <Stepper
+                  label="Bottom"
+                  value={silyankaProps.taper.bottom.rows}
+                  onDelta={(d) => silyankaProps.onTaperRowsChange('bottom', d)}
+                  onReset={() => silyankaProps.onTaperSideReset('bottom')}
+                  onSet={(v) => silyankaProps.onSetTaperRows('bottom', v)}
+                  inputValue={silyankaProps.taper.bottom.rows}
+                  min={0}
+                  max={silyankaProps.taperRowsMax}
+                />
+              </div>
+            </section>
+
+            <section className="sidebar__section">
+              <header className="sidebar__section-heading">
+                <div className="sidebar__section-heading-row">
+                  <h3 className="sidebar__section-title">Top Chain</h3>
+                </div>
+                <p className="sidebar__section-desc">Decorative edge above the first row</p>
+              </header>
+              <div className="bottom-chain-control">
+                <button
+                  type="button"
+                  className={`bottom-chain-control__toggle${silyankaProps.topEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
+                  onClick={silyankaProps.onTopEdgeToggle}
+                  aria-pressed={silyankaProps.topEdgeEnabled}
+                  aria-label="Toggle Top Chain"
+                />
+              </div>
+            </section>
+
+            <section className="sidebar__section">
+              <header className="sidebar__section-heading">
+                <div className="sidebar__section-heading-row">
+                  <h3 className="sidebar__section-title">Bottom Chain</h3>
+                </div>
+                <p className="sidebar__section-desc">Decorative edge added below the last row</p>
+              </header>
+              <div className="bottom-chain-control">
+                <button
+                  type="button"
+                  className={`bottom-chain-control__toggle${silyankaProps.bottomEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
+                  onClick={silyankaProps.onBottomEdgeToggle}
+                  aria-pressed={silyankaProps.bottomEdgeEnabled}
+                  aria-label="Toggle Bottom Chain"
+                  disabled={!silyankaProps.bottomEdgeEnabled && silyankaProps.hasPendants}
+                  title={!silyankaProps.bottomEdgeEnabled && silyankaProps.hasPendants ? 'Clear pendants to enable Bottom Chain' : undefined}
+                />
+                {!silyankaProps.bottomEdgeEnabled && silyankaProps.hasPendants && (
+                  <p className="bottom-chain-control__hint">
+                    Clear pendants (Pendants &amp; Decor panel) to enable Bottom Chain
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="sidebar__section">
+              <header className="sidebar__section-heading">
+                <div className="sidebar__section-heading-row">
+                  <h3 className="sidebar__section-title">Edge Extension</h3>
+                </div>
+                <p className="sidebar__section-desc">Full diamond at the left/right edge, per side</p>
+              </header>
+              <div className="edge-extension-control">
+                <div className="edge-extension-control__row">
+                  <span className="edge-extension-control__label">Left</span>
+                  <button
+                    type="button"
+                    className={`bottom-chain-control__toggle${silyankaProps.extendLeftEdge ? ' bottom-chain-control__toggle--active' : ''}`}
+                    onClick={silyankaProps.onToggleExtendLeftEdge}
+                    aria-pressed={silyankaProps.extendLeftEdge}
+                    aria-label="Toggle left edge extension"
+                  />
+                </div>
+                <div className="edge-extension-control__row">
+                  <span className="edge-extension-control__label">Right</span>
+                  <button
+                    type="button"
+                    className={`bottom-chain-control__toggle${silyankaProps.extendRightEdge ? ' bottom-chain-control__toggle--active' : ''}`}
+                    onClick={silyankaProps.onToggleExtendRightEdge}
+                    aria-pressed={silyankaProps.extendRightEdge}
+                    aria-label="Toggle right edge extension"
+                  />
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+      </div>
+    </aside>
+  );
+};

@@ -1,124 +1,3 @@
-.pendants-sidebar {
-  position: fixed;
-  top: var(--palette-height);
-  right: 0;
-  bottom: 0;
-  width: 260px;
-  background: var(--color-panel);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform var(--transition-speed) ease;
-  z-index: 20;
-}
-
-.pendants-sidebar--open {
-  transform: translateX(0);
-}
-
-.pendants-sidebar__header {
-  flex-shrink: 0;
-  padding: 14px 14px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.pendants-sidebar__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: #e2e8f0;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.pendants-sidebar__section + .pendants-sidebar__section {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.pendants-sidebar__section-heading {
-  padding: 14px 14px 6px;
-}
-
-.pendants-sidebar__section-heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.pendants-sidebar__section-title {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.pendants-sidebar__section-desc {
-  margin: 3px 0 0;
-  font-size: 10px;
-  line-height: 1.4;
-  color: #64748b;
-}
-
-.pendants-sidebar__section-clear {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border-radius: 4px;
-  background: transparent;
-  border: 1px solid rgba(248, 113, 113, 0.35);
-  color: #f87171;
-  font-size: 11px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
-}
-
-.pendants-sidebar__section-clear:hover:not(:disabled) {
-  background: #3a2230;
-  border-color: #f87171;
-}
-
-.pendants-sidebar__section-clear:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.pendants-sidebar__body {
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
-}
-
-.pendants-sidebar__body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.pendants-sidebar__body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.pendants-sidebar__body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background var(--transition-speed) ease;
-}
-
-.pendants-sidebar__body::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.55);
-  background-clip: padding-box;
-}
-
 .pendants-sidebar__catalog {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -206,60 +85,17 @@
   text-align: center;
 }
 
-.pendants-sidebar__footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.pendants-sidebar__clear {
-  display: block;
-  width: calc(100% - 28px);
-  margin: 14px 14px 0;
-  padding: 8px 12px;
-  background: var(--color-canvas);
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  border-radius: 8px;
-  color: #f87171;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
-}
-
-.pendants-sidebar__clear:hover:not(:disabled) {
-  border-color: #f87171;
-  background: #3a2230;
-}
-
-.pendants-sidebar__clear:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.pendants-sidebar__hint {
-  padding: 12px 16px;
-  font-size: 11px;
-  color: #64748b;
-}
-
 @media (max-width: 1024px) {
-  .pendants-sidebar {
-    width: 220px;
-  }
-
   .pendants-sidebar__catalog {
     padding: 6px 10px 10px;
     gap: 6px;
   }
 }
 
-/* 480–768px: 220px отъедает почти половину узкого экрана — сужаем дальше
-   и переводим каталог на 2 колонки вместо 3, иначе pendant-card становится
-   уже ~50px и превью подвески неразличимо. */
+/* 480–768px: сайдбар сужается до 170px (см. Sidebar.css) — каталог переходит
+   на 2 колонки вместо 3, иначе pendant-card становится уже ~50px и превью
+   подвески неразличимо. */
 @media (max-width: 767.98px) {
-  .pendants-sidebar {
-    width: 170px;
-  }
-
   .pendants-sidebar__catalog {
     grid-template-columns: repeat(2, 1fr);
     padding: 6px 8px 8px;
@@ -333,77 +169,6 @@
 .decor-drag-ghost {
   width: 100px;
   height: 60px;
-}
-
-.bottom-chain-control {
-  flex-shrink: 0;
-  padding: 0 14px 14px;
-}
-
-.bottom-chain-control__toggle {
-  position: relative;
-  width: 32px;
-  height: 18px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
-  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
-  flex-shrink: 0;
-}
-
-.bottom-chain-control__toggle::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #64748b;
-  transition: transform var(--transition-speed) ease, background var(--transition-speed) ease;
-}
-
-.bottom-chain-control__toggle--active {
-  background: rgba(34, 211, 238, 0.25);
-  border-color: #22d3ee;
-}
-
-.bottom-chain-control__toggle--active::after {
-  transform: translateX(14px);
-  background: #22d3ee;
-}
-
-.bottom-chain-control__toggle:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.bottom-chain-control__hint {
-  margin: 6px 0 0;
-  font-size: 11px;
-  line-height: 1.4;
-  color: #64748b;
-}
-
-.edge-extension-control {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 14px 14px;
-}
-
-.edge-extension-control__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.edge-extension-control__label {
-  font-size: 12px;
-  color: #94a3b8;
 }
 
 .chain-tool-toggle {

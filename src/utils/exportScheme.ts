@@ -39,6 +39,9 @@ interface ExportPalette {
   beadNodeEmptyFill: string;
   beadNodeEmptyStroke: string;
   beadNodeEmptyGlow: string;
+  /** --thread-color / --thread-color-2 из CanvasView.css для текущей темы холста. */
+  threadColor: string;
+  threadColor2: string;
 }
 
 const PALETTES: Record<CanvasTheme, ExportPalette> = {
@@ -56,6 +59,8 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     beadNodeEmptyFill: 'rgba(140, 185, 220, 0.07)',
     beadNodeEmptyStroke: 'rgba(140, 185, 220, 0.85)',
     beadNodeEmptyGlow: 'rgba(140, 185, 220, 1)',
+    threadColor: 'rgba(226, 214, 187, 0.85)',
+    threadColor2: 'rgba(34, 211, 238, 0.85)',
   },
   light: {
     bg: '#f8fafc',
@@ -71,6 +76,8 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     beadNodeEmptyFill: 'transparent',
     beadNodeEmptyStroke: 'rgba(71, 85, 105, 0.75)',
     beadNodeEmptyGlow: 'transparent',
+    threadColor: 'rgba(92, 71, 33, 0.75)',
+    threadColor2: 'rgba(8, 145, 178, 0.8)',
   },
 };
 
@@ -94,6 +101,12 @@ const STRIP_SELECTORS = [
   '.pendant-hover-area',
   '.pendant-drop-target',
   '.pendant-remove-btn',
+  '.pendant-chain-bead__hitbox',
+  '.pendant-chain-remove-btn',
+  '.thread-group__handle',
+  '.thread-group__remove-btn',
+  '.thread-layer__preview',
+  '.thread-layer__start-dot',
 ].join(', ');
 
 /**
@@ -103,9 +116,25 @@ const STRIP_SELECTORS = [
  * держится на CSS-переменных из BeadView.css, поэтому без явного правила тут
  * они схлопывались бы в дефолтный чёрный `fill`/`stroke` — особенно заметно
  * у плотно расставленных бисерин цепочки-подвески (сливались в чёрное пятно).
+ * По той же причине сюда продублированы правила ThreadLayer.css: без
+ * стилей `.thread-group__path` (в частности `fill: none`) кривая нитки
+ * рендерилась залитой чёрным — SVG по умолчанию заливает path чёрным,
+ * а не оставляет прозрачным. `--thread-color(-2)` объявлены на самом `svg`,
+ * чтобы `var(--thread-color-effective, var(--thread-color))` резолвился так
+ * же, как в живом холсте (CanvasView.css), с фолбэком на цвет из `pal`.
  * Цвета осей/оси зеркала зависят от темы холста (`pal`).
  */
 const buildExportStyle = (pal: ExportPalette): string => `
+svg {
+  --thread-color: ${pal.threadColor};
+  --thread-color-2: ${pal.threadColor2};
+}
+.thread-group__path {
+  fill: none;
+  stroke: var(--thread-color-effective, var(--thread-color));
+  stroke-width: 2;
+  stroke-linecap: round;
+}
 .bead__body, .pendant-bead__body {
   stroke: #000000;
   stroke-width: 0.5px;

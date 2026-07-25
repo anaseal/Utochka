@@ -9,4 +9,18 @@ export interface Thread {
    * используется (всегда undefined).
    */
   strand?: 1 | 2;
+  /**
+   * Цвет/прозрачность, выбранные пользователем для ЭТОЙ конкретной нити в
+   * момент коммита (попап у кнопки инструмента «Нитка», см. Header.tsx) —
+   * выставляются только вместе. undefined у обоих (в т.ч. у ниток, созданных
+   * до этой фичи) — старое поведение: цвет берётся из strand/дефолта CSS
+   * (см. threadColorStyle, utils/threadStyle.ts). Перепрокладка конца
+   * (rerouteThreadEnd) их не меняет.
+   */
+  color?: string;
+  opacity?: number;
 }
+
+/** id бусины-якоря нужного конца нитки (см. beginThreadReroute/ручки в ThreadLayer). */
+export const threadEndBeadId = (thread: Thread, end: 'start' | 'end'): string =>
+  end === 'start' ? thread.beadIds[0] : thread.beadIds[thread.beadIds.length - 1];

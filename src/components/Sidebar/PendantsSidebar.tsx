@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Bead } from '../../types/bead';
 import { PendantPlacement, PendantTemplate, PendantChain } from '../../types/pendant';
 import { BEAD_THEME } from '../../config/theme';
+import './Sidebar.css';
 import './PendantsSidebar.css';
 
 interface PendantsSidebarProps {
@@ -21,12 +22,10 @@ interface PendantsSidebarProps {
   onDecorCount: (nodeRow: number, delta: number) => void;
   onClearDecor: () => void;
   onHoveredRowChange: (row: number | null) => void;
+  // Bottom Chain теперь включается/выключается в панели «Сетка» (GridSidebar) —
+  // здесь только читаем флаг, чтобы блокировать карточки подвесок (взаимоисключение,
+  // см. spec.md, «Взаимоисключение с Bottom Chain»).
   bottomEdgeEnabled: boolean;
-  onBottomEdgeToggle: () => void;
-  extendLeftEdge: boolean;
-  extendRightEdge: boolean;
-  onToggleExtendLeftEdge: () => void;
-  onToggleExtendRightEdge: () => void;
   pendantChains: PendantChain[];
   chainToolActive: boolean;
   onToggleChainTool: () => void;
@@ -126,11 +125,6 @@ export const PendantsSidebar = ({
   onClearDecor,
   onHoveredRowChange,
   bottomEdgeEnabled,
-  onBottomEdgeToggle,
-  extendLeftEdge,
-  extendRightEdge,
-  onToggleExtendLeftEdge,
-  onToggleExtendRightEdge,
   pendantChains,
   chainToolActive,
   onToggleChainTool,
@@ -268,90 +262,23 @@ export const PendantsSidebar = ({
     onClearAll();
     onClearDecor();
     onClearChains();
-    if (bottomEdgeEnabled) onBottomEdgeToggle();
-  }, [onClearAll, onClearDecor, onClearChains, bottomEdgeEnabled, onBottomEdgeToggle]);
+  }, [onClearAll, onClearDecor, onClearChains]);
 
   return (
     <>
-      <aside className={`pendants-sidebar${open ? ' pendants-sidebar--open' : ''}`}>
-        <div className="pendants-sidebar__header">
-          <h2 className="pendants-sidebar__title">Pendants &amp; Decor</h2>
+      <aside className={`sidebar${open ? ' sidebar--open' : ''}`}>
+        <div className="sidebar__header">
+          <h2 className="sidebar__title">Pendants &amp; Decor</h2>
         </div>
 
-        <div className="pendants-sidebar__body">
-          <section className="pendants-sidebar__section">
-            <header className="pendants-sidebar__section-heading">
-              <div className="pendants-sidebar__section-heading-row">
-                <h3 className="pendants-sidebar__section-title">Bottom Chain</h3>
+        <div className="sidebar__body">
+          <section className="sidebar__section">
+            <header className="sidebar__section-heading">
+              <div className="sidebar__section-heading-row">
+                <h3 className="sidebar__section-title">Pendants</h3>
                 <button
                   type="button"
-                  className="pendants-sidebar__section-clear"
-                  onClick={onBottomEdgeToggle}
-                  disabled={!bottomEdgeEnabled}
-                  aria-label="Clear Bottom Chain"
-                  title="Clear Bottom Chain"
-                >
-                  ×
-                </button>
-              </div>
-              <p className="pendants-sidebar__section-desc">Decorative edge added below the last row</p>
-            </header>
-            <div className="bottom-chain-control">
-              <button
-                type="button"
-                className={`bottom-chain-control__toggle${bottomEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
-                onClick={onBottomEdgeToggle}
-                aria-pressed={bottomEdgeEnabled}
-                aria-label="Toggle Bottom Chain"
-                disabled={!bottomEdgeEnabled && hasPendants}
-                title={!bottomEdgeEnabled && hasPendants ? 'Clear pendants to enable Bottom Chain' : undefined}
-              />
-              {!bottomEdgeEnabled && hasPendants && (
-                <p className="bottom-chain-control__hint">
-                  Clear pendants (above) to enable Bottom Chain
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section className="pendants-sidebar__section">
-            <header className="pendants-sidebar__section-heading">
-              <div className="pendants-sidebar__section-heading-row">
-                <h3 className="pendants-sidebar__section-title">Edge Extension</h3>
-              </div>
-              <p className="pendants-sidebar__section-desc">Full diamond at the left/right edge, per side</p>
-            </header>
-            <div className="edge-extension-control">
-              <div className="edge-extension-control__row">
-                <span className="edge-extension-control__label">Left</span>
-                <button
-                  type="button"
-                  className={`bottom-chain-control__toggle${extendLeftEdge ? ' bottom-chain-control__toggle--active' : ''}`}
-                  onClick={onToggleExtendLeftEdge}
-                  aria-pressed={extendLeftEdge}
-                  aria-label="Toggle left edge extension"
-                />
-              </div>
-              <div className="edge-extension-control__row">
-                <span className="edge-extension-control__label">Right</span>
-                <button
-                  type="button"
-                  className={`bottom-chain-control__toggle${extendRightEdge ? ' bottom-chain-control__toggle--active' : ''}`}
-                  onClick={onToggleExtendRightEdge}
-                  aria-pressed={extendRightEdge}
-                  aria-label="Toggle right edge extension"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="pendants-sidebar__section">
-            <header className="pendants-sidebar__section-heading">
-              <div className="pendants-sidebar__section-heading-row">
-                <h3 className="pendants-sidebar__section-title">Pendants</h3>
-                <button
-                  type="button"
-                  className="pendants-sidebar__section-clear"
+                  className="sidebar__section-clear"
                   onClick={onClearAll}
                   disabled={!hasPendants}
                   aria-label="Clear Pendants"
@@ -360,7 +287,7 @@ export const PendantsSidebar = ({
                   ×
                 </button>
               </div>
-              <p className="pendants-sidebar__section-desc">Drag a template onto a bottom-row node</p>
+              <p className="sidebar__section-desc">Drag a template onto a bottom-row node</p>
             </header>
             <div className="pendants-sidebar__catalog">
               {templates.map((template) => {
@@ -390,13 +317,13 @@ export const PendantsSidebar = ({
             </div>
           </section>
 
-          <section className="pendants-sidebar__section">
-            <header className="pendants-sidebar__section-heading">
-              <div className="pendants-sidebar__section-heading-row">
-                <h3 className="pendants-sidebar__section-title">Chains</h3>
+          <section className="sidebar__section">
+            <header className="sidebar__section-heading">
+              <div className="sidebar__section-heading-row">
+                <h3 className="sidebar__section-title">Chains</h3>
                 <button
                   type="button"
-                  className="pendants-sidebar__section-clear"
+                  className="sidebar__section-clear"
                   onClick={onClearChains}
                   disabled={pendantChains.length === 0}
                   aria-label="Clear Chains"
@@ -405,7 +332,7 @@ export const PendantsSidebar = ({
                   ×
                 </button>
               </div>
-              <p className="pendants-sidebar__section-desc">
+              <p className="sidebar__section-desc">
                 {chainToolActive
                   ? (chainPendingStart !== null
                     ? 'Click the end node on the bottom row'
@@ -444,13 +371,13 @@ export const PendantsSidebar = ({
             )}
           </section>
 
-          <section className="pendants-sidebar__section">
-            <header className="pendants-sidebar__section-heading">
-              <div className="pendants-sidebar__section-heading-row">
-                <h3 className="pendants-sidebar__section-title">Decor</h3>
+          <section className="sidebar__section">
+            <header className="sidebar__section-heading">
+              <div className="sidebar__section-heading-row">
+                <h3 className="sidebar__section-title">Decor</h3>
                 <button
                   type="button"
-                  className="pendants-sidebar__section-clear"
+                  className="sidebar__section-clear"
                   onClick={onClearDecor}
                   disabled={activeBands.length === 0}
                   aria-label="Clear Decor"
@@ -459,7 +386,7 @@ export const PendantsSidebar = ({
                   ×
                 </button>
               </div>
-              <p className="pendants-sidebar__section-desc">Drag a band onto a gap between rows</p>
+              <p className="sidebar__section-desc">Drag a band onto a gap between rows</p>
             </header>
             <div className="pendants-sidebar__catalog decor-catalog">
               <button
@@ -507,16 +434,16 @@ export const PendantsSidebar = ({
           </section>
         </div>
 
-        <div className="pendants-sidebar__footer">
+        <div className="sidebar__footer">
           <button
             type="button"
-            className="pendants-sidebar__clear"
+            className="sidebar__clear"
             onClick={handleClearAll}
-            disabled={!hasPendants && activeBands.length === 0 && !bottomEdgeEnabled && pendantChains.length === 0}
+            disabled={!hasPendants && activeBands.length === 0 && pendantChains.length === 0}
           >
             Reset all
           </button>
-          <p className="pendants-sidebar__hint">
+          <p className="sidebar__hint">
             {bottomEdgeEnabled
               ? 'Drag a band onto a row gap (pendants unavailable while Bottom Chain is on)'
               : 'Drag a pendant onto a bottom-row node, or a band onto a row gap'}

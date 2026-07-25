@@ -10,11 +10,16 @@
 // Возвращает null, когда у бисерины нет зеркальной пары внутри сетки.
 
 import { decode, encode } from './beadId';
+import { getColumnRange } from './columnRange';
 
 const flipSide = (side: 'left' | 'right'): 'left' | 'right' =>
   side === 'left' ? 'right' : 'left';
 
-// Зеркальная колонка по чётности ряда + проверка, что она в диапазоне сетки.
+// Зеркальная колонка по чётности ряда + проверка, что она в диапазоне сетки
+// (границы — из getColumnRange, общего с generator.ts, чтобы учитывать
+// EdgeExtension). Сужение концов (Taper) здесь не учитывается: оно режет по
+// координатам после построения (generator.ts), а обрезанные бусины отсеются
+// проверкой существования (beadIds.has) на стороне вызывающего кода.
 const mirrorCol = (
   r: number,
   c: number,
@@ -24,8 +29,7 @@ const mirrorCol = (
 ): number | null => {
   const isEven = r % 2 === 0;
   const mc = isEven ? width - 1 - c : width - 2 - c;
-  const minC = isEven ? 0 : (extendLeft ? -1 : 0);
-  const maxC = isEven ? width - 1 : (extendRight ? width - 1 : width - 2);
+  const { minC, maxC } = getColumnRange(r, width, extendLeft, extendRight);
   return mc >= minC && mc <= maxC ? mc : null;
 };
 
