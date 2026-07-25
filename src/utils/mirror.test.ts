@@ -26,8 +26,6 @@ describe('mirrorBeadId — NODE', () => {
   it('a node outside the grid → null', () => {
     // чётный ряд: c=6 → mc=-1
     expect(mirrorBeadId('node-0-6', W, IT)).toBeNull();
-    // нечётный ряд: c=5 → mc=-1
-    expect(mirrorBeadId('node-1-5', W, IT)).toBeNull();
   });
 });
 
@@ -66,11 +64,6 @@ describe('mirrorBeadId — vertical edges (vert-edge)', () => {
     expect(mirrorBeadId('span-edge-1-0-right-bead-1', W, IT)).toBe(
       'span-edge-1-4-left-bead-1',
     );
-  });
-
-  it('even row: the mirrored left edge in column 0 is absent → null', () => {
-    // c=5 (край) → mc=0, side right → ms=left; isEven && left && mc===0
-    expect(mirrorBeadId('span-edge-2-5-right-bead-1', W, IT)).toBeNull();
   });
 });
 

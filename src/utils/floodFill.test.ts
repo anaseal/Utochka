@@ -24,7 +24,7 @@ describe('computeUnifiedFloodFill — basic grid behavior', () => {
       noTemplates,
       bottomNodes,
     );
-    expect(res).toEqual({ gridIds: [], pendantHits: [] });
+    expect(res).toEqual({ gridIds: [], pendantHits: [], chainHits: [] });
   });
 
   it('uniformly transparent grid is filled entirely (graph is connected)', () => {
