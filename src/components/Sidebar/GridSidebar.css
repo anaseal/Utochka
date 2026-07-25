@@ -12,10 +12,11 @@
   margin-left: auto;
 }
 
-.grid-sidebar__taper-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #94a3b8;
+/* Подзаголовок «Rows» внутри секции Taper — тот же регистр/размер/цвет,
+   что и у .sidebar__section-title, но без верхнего паддинга .sidebar__section-heading
+   (сверху уже есть отступ от степпера Depth, см. .grid-sidebar__steppers). */
+.grid-sidebar__subheading {
+  padding: 0 14px 6px;
 }
 
 /* Тумблер синхронизации Top/Bottom Rows секции Taper — рядом с лейблом

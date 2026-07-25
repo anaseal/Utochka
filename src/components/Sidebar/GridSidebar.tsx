@@ -177,8 +177,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
                 />
               </div>
 
-              <div className="sidebar__section-heading-row">
-                <span className="grid-sidebar__taper-label">Rows</span>
+              <div className="sidebar__section-heading-row grid-sidebar__subheading">
+                <h4 className="sidebar__section-title">Rows</h4>
                 <button
                   type="button"
                   className="grid-sidebar__link-btn"
