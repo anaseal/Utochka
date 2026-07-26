@@ -1,4 +1,4 @@
-import { useCallback, Dispatch, SetStateAction } from 'react';
+import { useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import { PendantChain } from '../types/pendant';
 import { DrawingTool } from './useDrawing';
 
@@ -83,5 +83,11 @@ export const usePendantChains = (
     });
   }, [setChains, activeColor, activeTool, withMirror]);
 
-  return { chains, addChain, removeChain, clearAllChains, paintChainBead };
+  // useMemo — см. useThreads.ts: без него объект-обёртка менялся бы на
+  // каждый рендер и пробивал memo везде, где используется целиком
+  // (например, handleChainNodeClick в useSilyankaProject.ts).
+  return useMemo(
+    () => ({ chains, addChain, removeChain, clearAllChains, paintChainBead }),
+    [chains, addChain, removeChain, clearAllChains, paintChainBead],
+  );
 };

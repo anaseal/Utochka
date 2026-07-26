@@ -213,7 +213,12 @@
   border-left: 1px solid rgba(255,255,255,0.1);
   transition: color 0.15s, background 0.15s;
 }
-.grid-controls__btn--reset:hover {
+/* Двойной класс-селектор, а не просто .grid-controls__btn--reset:hover —
+   иначе одинаковая специфичность с .grid-controls__btn:hover (Stepper.css)
+   решается порядком подключения CSS, а Header.css грузится раньше Stepper.css
+   (Header.tsx импортирует './Header.css' до 'Stepper'), и серая подложка
+   степпера побеждала, перебивая задуманный прозрачный фон + бирюзовый текст. */
+.grid-controls__btn.grid-controls__btn--reset:hover {
   color: #22d3ee;
   background: transparent;
 }

@@ -40,6 +40,7 @@ export const BeadView = memo(({
 
   return (
     <g
+      id={id}
       className={`bead ${isNode ? 'bead--type-node' : 'bead--type-span'}${isEmpty ? ' bead--empty' : ''}`}
       onPointerEnter={() => onPointerEnter(id)}
       onPointerDown={(e) => {

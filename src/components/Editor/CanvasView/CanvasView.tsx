@@ -49,6 +49,7 @@ interface CanvasViewProps {
   activeColor: string;
   isDrawing: boolean;
   paintBead: (id: string) => void;
+  paintBeadFast: (id: string) => string | undefined;
   startDrawing: () => void;
   stopDrawing: () => void;
   onFloodFill: (id: string) => void;
@@ -111,6 +112,7 @@ export const CanvasView = ({
   activeColor,
   isDrawing,
   paintBead,
+  paintBeadFast,
   startDrawing,
   stopDrawing,
   onFloodFill,
@@ -411,6 +413,27 @@ export const CanvasView = ({
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
 
+  // Красит одну бисерину напрямую в DOM, в обход React — используется только
+  // во время протяжки (см. paintBeadFast/strokeChangesRef в useDrawing.ts).
+  // Держит в синхроне ровно то, что рендерит BeadView по тем же данным:
+  // fill/--bead-color и класс bead--empty (см. BeadView.tsx/BeadView.css).
+  const applyBeadColorDom = useCallback((id: string, color: string | undefined) => {
+    const svg = canvasSvgRef.current;
+    const g = svg?.ownerDocument.getElementById(id);
+    if (!g) return;
+    g.classList.toggle('bead--empty', !color);
+    const body = g.querySelector('.bead__body') as SVGCircleElement | null;
+    if (!body) return;
+    const finalColor = color ?? defaultColorFor(g.classList.contains('bead--type-node') ? 'NODE' : 'SPAN');
+    body.setAttribute('fill', finalColor);
+    body.style.setProperty('--bead-color', finalColor);
+  }, [canvasSvgRef]);
+
+  const paintBeadFastAndDom = useCallback((id: string) => {
+    applyBeadColorDom(id, paintBeadFast(id));
+  }, [paintBeadFast, applyBeadColorDom]);
+  const applyPaintFast = useMirrorPaint(paintBeadFastAndDom, mirrorMode, mirrorFn);
+
   // Хватание ручки конца существующей нитки (ThreadLayer) — сеет трассировку
   // якорной бусиной того конца; сам якорь не входит в итоговый traceBeadIds
   // (см. useThreads.rerouteThreadEnd — там slice(1) убирает первую точку).
@@ -556,9 +579,9 @@ export const CanvasView = ({
   // commitThreadTrace выше.
   const handlePointerEnter = useCallback((id: string) => {
     if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread' && isDrawing) {
-      applyPaint(id);
+      applyPaintFast(id);
     }
-  }, [activeTool, isDrawing, applyPaint]);
+  }, [activeTool, isDrawing, applyPaintFast]);
 
   const handlePointerDown = useCallback((id: string) => {
     if (activeTool === 'thread') {

@@ -17,7 +17,7 @@ export const BEAD_THEME = {
     spacing: 55,
     beadsInSpan: 3,
     initialWidth: 70,
-    initialHeight: 8,
+    initialHeight: 4,
     verticalCompression: 0.2,
     horizontalStepMultiplier: 0.8,
     offsetX: 120,

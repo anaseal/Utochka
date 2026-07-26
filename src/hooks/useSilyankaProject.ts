@@ -479,9 +479,14 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setTopEdgeEnabled(prev => !prev);
   };
 
-  const updateBottomEdgeSpan = (delta: number) => {
+  // useCallback: без него функция получала бы новую ссылку на каждый
+  // рендер useSilyankaProject (т.е. от любого клика где угодно в
+  // приложении) — а это проп BeadGrid (onBottomEdgeSpanChange), и
+  // нестабильная ссылка пробивала бы его memo, пересобирая весь список
+  // из тысяч бисерин на совершенно не связанные действия.
+  const updateBottomEdgeSpan = useCallback((delta: number) => {
     setBottomEdgeDecor(prev => ({ ...prev, span: clampSpan(prev.span + delta) }));
-  };
+  }, [setBottomEdgeDecor]);
 
   const toggleExtendLeftEdge = () => {
     setEdgeExtension(prev => ({ ...prev, left: !prev.left }));
@@ -491,7 +496,9 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setEdgeExtension(prev => ({ ...prev, right: !prev.right }));
   };
 
-  const updateRowSpan = (spanRowIndex: number, delta: number) => {
+  // useCallback — см. updateBottomEdgeSpan выше, тот же проп BeadGrid
+  // (onRowSpanChange) с той же проблемой нестабильной ссылки.
+  const updateRowSpan = useCallback((spanRowIndex: number, delta: number) => {
     setRowSpanOverrides(prev => {
       const current = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, prev);
       const newVal = clampSpan(current + delta);
@@ -504,7 +511,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       }
       return { ...prev, [spanRowIndex]: newVal };
     });
-  };
+  }, [setRowSpanOverrides, gridSize.topSpan, gridSize.bottomSpan]);
 
   // Промежуточный декор: ± меняет число рядов полосы между узловым рядом r и r+1.
   // 0 (ниже minRows) — полоса удаляется.

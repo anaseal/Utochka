@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Thread } from '../types/thread';
 
 type ThreadsApplyPatch = (
@@ -63,5 +63,13 @@ export const useThreads = (threads: Thread[], applyPatch: ThreadsApplyPatch) => 
     }));
   }, [applyPatch]);
 
-  return { threads, addThread, removeThread, rerouteThreadEnd, clearAllThreads };
+  // useMemo: без него хук отдавал бы новый объект-обёртку на каждый рендер
+  // (даже когда ничего из вложенного не менялось) — а он используется как
+  // единый объект в зависимостях других useCallback выше по дереву, и
+  // нестабильная ссылка каскадом пробивала бы memo у BeadGrid/слоёв на
+  // совершенно не связанные с нитками действия.
+  return useMemo(
+    () => ({ threads, addThread, removeThread, rerouteThreadEnd, clearAllThreads }),
+    [threads, addThread, removeThread, rerouteThreadEnd, clearAllThreads],
+  );
 };

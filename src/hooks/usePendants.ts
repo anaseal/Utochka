@@ -1,4 +1,4 @@
-import { useCallback, Dispatch, SetStateAction } from 'react';
+import { useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import { PendantPlacement } from '../types/pendant';
 import { DrawingTool } from './useDrawing';
 
@@ -77,5 +77,9 @@ export const usePendants = (
     });
   }, [setPlacements, activeColor, activeTool, withMirror]);
 
-  return { placements, addPlacement, removePlacement, clearAllPlacements, paintPendantBead };
+  // useMemo — см. usePendantChains.ts/useThreads.ts, тот же приём.
+  return useMemo(
+    () => ({ placements, addPlacement, removePlacement, clearAllPlacements, paintPendantBead }),
+    [placements, addPlacement, removePlacement, clearAllPlacements, paintPendantBead],
+  );
 };

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, Dispatch, SetStateAction } from 'react';
+import { useState, useCallback, useMemo, useRef, Dispatch, SetStateAction } from 'react';
 import { BEAD_THEME } from '../config/theme';
 import { usePersistedState } from './usePersistedState';
 import { PendantPlacement, PendantChain } from '../types/pendant';
@@ -42,6 +42,17 @@ export const useDrawing = (
 
   const [activeColor, setActiveColorState] = useState(initialColor);
   const [activeTool, setActiveTool] = useState<DrawingTool>('pencil');
+
+  // paintBead/paintBeadFast читают активные цвет/инструмент через рефы, а не
+  // напрямую из замыкания — иначе смена цвета в палитре меняла бы ссылку на
+  // paintBead на каждый клик, а через applyPaint/handlePointerEnter это
+  // цепочкой пробивало бы memo у BeadGrid (см. BeadGrid.tsx), пересобирая
+  // весь список из тысяч бисерин просто от выбора цвета, без какого-либо
+  // рисования.
+  const activeColorRef = useRef(activeColor);
+  activeColorRef.current = activeColor;
+  const activeToolRef = useRef(activeTool);
+  activeToolRef.current = activeTool;
   const [recentColors, setRecentColors] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(recentStorageKey);
@@ -79,6 +90,16 @@ export const useDrawing = (
 
   const preStrokeRef = useRef<HistorySnapshot>({ designMap: {}, pendants: [], chains: [], threads: [] });
 
+  // Буфер текущего мазка карандашом/ластиком: null = стереть бисерину.
+  // paintBeadFast пишет сюда, а не в designMap напрямую — setDesignMap на
+  // каждую задетую протяжкой бисерину пересобирал бы весь BeadGrid (тысячи
+  // элементов) на каждый пиксель протяжки. Вызывающая сторона (CanvasView)
+  // сама красит бисерину в DOM по возвращённому цвету, а весь буфер разом
+  // коммитится в designMap в stopDrawing — тем же приёмом, каким уже
+  // избегают лишних setState во время live-жеста при pinch-zoom
+  // (см. useTouchPanZoom).
+  const strokeChangesRef = useRef<Map<string, string | null>>(new Map());
+
   const pushSnapshot = useCallback((snapshot: HistorySnapshot) => {
     setPast(prev => {
       const next = [...prev, snapshot];
@@ -95,18 +116,31 @@ export const useDrawing = (
   const stopDrawing = useCallback(() => {
     if (isDrawing) {
       const pre = preStrokeRef.current;
+      const changes = strokeChangesRef.current;
+      const hasStagedChanges = changes.size > 0;
+      if (hasStagedChanges) {
+        setDesignMap((prev) => {
+          const next = { ...prev };
+          for (const [id, color] of changes) {
+            if (color === null) delete next[id];
+            else next[id] = color;
+          }
+          return next;
+        });
+        changes.clear();
+      }
       if (
-        pre.designMap !== designMap || pre.pendants !== pendantPlacements ||
+        hasStagedChanges || pre.designMap !== designMap || pre.pendants !== pendantPlacements ||
         pre.chains !== pendantChains || pre.threads !== threads
       ) {
         pushSnapshot(pre);
       }
     }
     setIsDrawing(false);
-  }, [isDrawing, designMap, pendantPlacements, pendantChains, threads, pushSnapshot]);
+  }, [isDrawing, designMap, pendantPlacements, pendantChains, threads, pushSnapshot, setDesignMap]);
 
   const paintBead = useCallback((id: string) => {
-    if (activeTool === 'eraser') {
+    if (activeToolRef.current === 'eraser') {
       setDesignMap((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -115,10 +149,20 @@ export const useDrawing = (
     } else {
       setDesignMap((prev) => ({
         ...prev,
-        [id]: activeColor
+        [id]: activeColorRef.current
       }));
     }
-  }, [activeColor, activeTool]);
+  }, []);
+
+  // Быстрый путь для протяжки (см. strokeChangesRef выше) — не трогает React
+  // state, только копит изменение и отдаёт итоговый цвет вызывающей стороне
+  // для прямой записи в DOM. undefined в возврате означает «стереть»
+  // (совпадает по смыслу с color? в BeadView — рисуется дефолтный цвет типа).
+  const paintBeadFast = useCallback((id: string): string | undefined => {
+    const color = activeToolRef.current === 'eraser' ? undefined : activeColorRef.current;
+    strokeChangesRef.current.set(id, color ?? null);
+    return color;
+  }, []);
 
   const clearAll = useCallback(() => {
     const hasDesign = Object.keys(designMap).length > 0;
@@ -202,7 +246,13 @@ export const useDrawing = (
     setFuture(f => f.slice(1));
   }, [future, designMap, pendantPlacements, pendantChains, threads, setPendantPlacements, setPendantChains, setThreads]);
 
-  return {
+  // useMemo — та же причина, что и в usePendants.ts/usePendantChains.ts/
+  // useThreads.ts: без него drawingControls был бы новым объектом на любой
+  // рендер App (даже не связанный с рисованием), а он используется целиком
+  // в зависимостях других useCallback (например, makeSymmetric в
+  // useSilyankaProject.ts) — нестабильная ссылка каскадом пробивала бы memo
+  // у BeadGrid на любое действие в приложении.
+  return useMemo(() => ({
     activeColor,
     setActiveColor,
     commitRecentColor,
@@ -212,6 +262,7 @@ export const useDrawing = (
     designMap,
     isDrawing,
     paintBead,
+    paintBeadFast,
     startDrawing,
     stopDrawing,
     clearAll,
@@ -221,5 +272,9 @@ export const useDrawing = (
     redo,
     canUndo: past.length > 0,
     canRedo: future.length > 0,
-  };
+  }), [
+    activeColor, setActiveColor, commitRecentColor, activeTool, setActiveTool, recentColors,
+    designMap, isDrawing, paintBead, paintBeadFast, startDrawing, stopDrawing, clearAll,
+    remapDesignMap, applyPatch, undo, redo, past.length, future.length,
+  ]);
 };
