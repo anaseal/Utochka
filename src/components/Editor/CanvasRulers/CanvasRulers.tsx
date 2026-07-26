@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Bead } from '../../../types/bead';
 import { resolveSpanCount } from '../../../utils/spans';
-import { buildColumnAxis } from '../../../utils/columnAxis';
+import { buildColumnAxis, computeMirrorAxisX } from '../../../utils/columnAxis';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import './CanvasRulers.css';
 
@@ -11,17 +11,19 @@ interface CanvasRulersProps {
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
   onRowSpanChange: (spanRowIndex: number, delta: number) => void;
-  hoveredRow: number | null;
-  mirrorMode: boolean;
   width: number;
   topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
   bottomEdgeSpan: number;
   onBottomEdgeSpanChange: (delta: number) => void;
-  // На ≤767.98px ряд ±/счётчик на каждый span-ряд занимает весь холст по
-  // вертикали (см. CanvasView.tsx) — сворачивается по умолчанию, раскрывается
-  // тогглом. На более широких экранах класс ничего не меняет (см. CanvasRulers.css).
+  // Ряд ±/счётчик на каждый span-ряд сворачивается по умолчанию на всех
+  // ширинах экрана (см. CanvasView.tsx) — раскрывается тогглом
+  // .span-controls-toggle (см. CanvasRulers.css).
   spanControlsExpanded: boolean;
+  // Контр-преобразование подписей при повороте/отражении полотна в режиме
+  // плетения (см. utils/weaveView.ts) — цифры остаются горизонтальными и
+  // незеркальными в любом положении полотна.
+  labelTransform?: (x: number, y: number) => string | undefined;
   // Доп. сдвиг влево для номеров рядов и ±/счётчиков (canvasDim.ts →
   // computeCanvasDim.shiftX) — компенсирует общий translate группы в
   // CanvasView, чтобы сама панель осталась на прежнем месте, а не наехала на
@@ -69,7 +71,7 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, hoveredRow, mirrorMode, width, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded, gutterShiftX }: CanvasRulersProps) => {
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, width, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded, gutterShiftX, labelTransform }: CanvasRulersProps) => {
   // На ≤767.98px шрифт подписей мельче (CanvasRulers.css), а margin чуть
   // больше — левее для номеров рядов (baselineX=-axisMarginX, text-anchor
   // end — больше margin = левее), выше для номеров колонн (baselineY=
@@ -109,16 +111,26 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
   // depth срез держится по всему полотну — крайние колонки могут не
   // существовать ни в одном ряду, поэтому buildColumnAxis достраивает их
   // позиции экстраполяцией (см. spec.md, «Линейка и Taper», и columnAxis.ts).
-  const colAxesNodes = useMemo(() => {
+  const columnAxis = useMemo(() => {
     const points = nodes
       .filter(n => n.logicalIndex.row % 2 !== 0)
       .map(n => ({ col: n.logicalIndex.col, x: n.x }));
-    return buildColumnAxis(points, width).map(({ col, x }) => ({
-      id: `col-${col}`,
-      x,
-      logicalIndex: { col },
-    }));
+    return buildColumnAxis(points, width);
   }, [nodes, width]);
+
+  const colAxesNodes = useMemo(() => columnAxis.map(({ col, x }) => ({
+    id: `col-${col}`,
+    x,
+    logicalIndex: { col },
+  })), [columnAxis]);
+
+  // Сколько узлов уцелело в ряду — горизонтальной цепочке (верхней или нижней)
+  // нужны хотя бы два соседних узла, иначе натягивать её не между чем.
+  const rowNodeCounts = useMemo(() => {
+    const map = new Map<number, number>();
+    nodes.forEach(n => map.set(n.logicalIndex.row, (map.get(n.logicalIndex.row) ?? 0) + 1));
+    return map;
+  }, [nodes]);
 
   const baselineX = -axisMarginX;
   const baselineY = -axisMarginY;
@@ -151,8 +163,10 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     // вместе с выключенной верхней цепочкой (Top Chain), как и r=-2 у Bottom Chain.
     // Используем минимальный gap между соседними рядами как базовый шаг —
     // он не растягивается декор-полосами и даёт стабильный отступ.
+    // Сильное сужение может оставить в ряду один узел — цепочки тогда нет
+    // вовсе, и степпер её количества бисерин управлял бы невидимым (см. spec.md).
     const firstRowY = rowYMap.get(0);
-    if (topEdgeEnabled && firstRowY !== undefined) {
+    if (topEdgeEnabled && firstRowY !== undefined && (rowNodeCounts.get(0) ?? 0) >= 2) {
       controls.unshift({
         r: -1,
         midY: firstRowY - minGap / 2,
@@ -164,7 +178,7 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
 
     // Нижняя горизонтальная цепочка (r=-2) — независимый BottomEdgeDecor,
     // не связан с rowSpanOverrides; располагается под последним рядом.
-    if (bottomEdgeEnabled && rows.length > 0) {
+    if (bottomEdgeEnabled && rows.length > 0 && (rowNodeCounts.get(rows[rows.length - 1]) ?? 0) >= 2) {
       const lastRowY = rowYMap.get(rows[rows.length - 1])!;
       controls.push({
         r: -2,
@@ -177,23 +191,23 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
     }
 
     return controls;
-  }, [rowYMap, rowSpanOverrides, topSpan, bottomSpan, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange]);
+  }, [rowYMap, rowNodeCounts, rowSpanOverrides, topSpan, bottomSpan, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange]);
 
   const ctrlCenterX = baselineX - 60;
 
+  // Ось зеркала считается от НОМИНАЛЬНОЙ ширины (computeMirrorAxisX по
+  // достроенной оси колонок), а не от габаритов уцелевшего полотна — иначе при
+  // активном Taper линия съезжает вбок, хотя зеркалит редактор по полной сетке
+  // (см. columnAxis.ts).
   const mirrorAxis = useMemo(() => {
-    if (width <= 1) return null;
-    let maxX = 0;
-    for (const n of nodes) {
-      if (n.logicalIndex.row % 2 === 0 && n.x > maxX) maxX = n.x;
-    }
-    if (maxX <= 0) return null;
+    const x = computeMirrorAxisX(columnAxis, width);
+    if (x === null) return null;
     const ys = Array.from(rowYMap.values());
     if (ys.length === 0) return null;
     const yTop = Math.min(...ys) - axisMarginY;
     const yBottom = Math.max(...ys) + axisMarginY;
-    return { x: maxX / 2, yTop, yBottom };
-  }, [width, nodes, rowYMap]);
+    return { x, yTop, yBottom };
+  }, [columnAxis, width, rowYMap, axisMarginY]);
 
   return (
     <g className="canvas__ruler-group">
@@ -215,7 +229,8 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
             x={baselineX}
             y={node.y}
             dominantBaseline="middle"
-            textAnchor="end"
+            textAnchor={labelTransform ? 'middle' : 'end'}
+            transform={labelTransform?.(baselineX, node.y)}
             className="canvas__axis-text"
           >
             {i + 1}
@@ -262,7 +277,9 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
           key={`idx-col-${node.id}`}
           x={node.x}
           y={baselineY}
+          dominantBaseline="middle"
           textAnchor="middle"
+          transform={labelTransform?.(node.x, baselineY)}
           className="canvas__axis-text"
         >
           {node.logicalIndex.col + 1}

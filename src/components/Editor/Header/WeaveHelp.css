@@ -1,0 +1,97 @@
+/* Пузырёк-подсказка режима плетения. Оформление — как у .mirror-menu__panel
+   (тот же фон, рамка, тень и радиус), но шире и с хвостиком к кнопке. */
+
+.weave-help {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.weave-help__bubble {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  padding: 12px 14px;
+  z-index: 110;
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* Хвостик — повёрнутый квадрат под кнопкой; верхние границы совпадают с
+   рамкой пузырька, нижние скрыты его же фоном. */
+.weave-help__bubble::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 12px;
+  width: 9px;
+  height: 9px;
+  background: #0f172a;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  transform: rotate(45deg);
+}
+
+.weave-help__lead {
+  margin: 0 0 10px;
+  color: #e2e8f0;
+}
+
+.weave-help__title {
+  margin: 12px 0 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #22d3ee;
+}
+
+.weave-help__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weave-help__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.weave-help__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+/* Кнопки без иконки lucide (проценты, стрелка поворота) — тот же размер и
+   выравнивание, что у иконок, чтобы текст шёл одной колонкой. */
+.weave-help__icon--text {
+  width: 12px;
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+}
+
+.weave-help__bubble b {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.weave-help__note {
+  margin: 7px 0 0;
+  color: #94a3b8;
+}

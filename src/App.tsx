@@ -1,5 +1,5 @@
 /* src/App.tsx */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSilyankaProject } from './hooks/useSilyankaProject';
 import { useCrossWeaveProject } from './hooks/useCrossWeaveProject';
 import { usePersistedState } from './hooks/usePersistedState';
@@ -11,6 +11,7 @@ import { GridSidebar } from './components/Sidebar/GridSidebar';
 import { ReferenceWindow } from './components/Editor/ReferenceWindow/ReferenceWindow';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from './data/pendantTemplates';
 import { DrawingTool } from './hooks/useDrawing';
+import { WeaveTool, WeaveOrientation } from './components/Editor/Header/WeaveControls';
 import { APP_CONSTRAINTS } from './config/theme';
 import { clamp } from './utils/clamp';
 import { exportProject, importProject, applyProjectData } from './utils/projectFile';
@@ -29,6 +30,12 @@ const isPalette = (v: unknown): v is string[] =>
 
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 
+const isWeaveTool = (v: unknown): v is WeaveTool =>
+  v === 'segment' || v === 'bead' || v === 'erase';
+
+const isWeaveOrientation = (v: unknown): v is WeaveOrientation =>
+  v === 'vertical' || v === 'horizontal';
+
 function App() {
   const [technique, setTechnique] = usePersistedState<Technique>('app:technique', 'silyanka', isTechnique);
   const [zoom, setZoom] = usePersistedState<number>('app:zoom', 1, isZoom);
@@ -39,6 +46,30 @@ function App() {
   const [referenceOpen, setReferenceOpen] = usePersistedState<boolean>(
     'app:referenceWindow:open', false, isBoolean,
   );
+  // Режим плетения — отдельный мод: инструментов рисования в нём нет, холст
+  // только отмечает прогресс (см. spec.md, «Режим плетения»). Сам режим и вид
+  // полотна общие для обеих техник, а прогресс у каждой свой (useWeaveProgress).
+  const [weaveMode, setWeaveMode] = usePersistedState<boolean>('app:weaveMode', false, isBoolean);
+  const [weaveTool, setWeaveTool] = usePersistedState<WeaveTool>(
+    'app:weaveTool', 'segment', isWeaveTool,
+  );
+  const [weaveOrientation, setWeaveOrientation] = usePersistedState<WeaveOrientation>(
+    'app:weaveOrientation', 'vertical', isWeaveOrientation,
+  );
+  const [weaveFlipped, setWeaveFlipped] = usePersistedState<boolean>(
+    'app:weaveFlip', false, isBoolean,
+  );
+  const toggleWeaveOrientation = () => {
+    setWeaveOrientation((o) => (o === 'vertical' ? 'horizontal' : 'vertical'));
+  };
+  // Рамка «здесь я остановилась» не горит постоянно: показывается на пару
+  // секунд после нажатия Locate (WeaveControls) и гаснет сама.
+  const [weaveShowLast, setWeaveShowLast] = useState(false);
+  useEffect(() => {
+    if (!weaveShowLast) return;
+    const timer = setTimeout(() => setWeaveShowLast(false), 2500);
+    return () => clearTimeout(timer);
+  }, [weaveShowLast]);
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const showToast = (message: string) => setToast({ id: Date.now(), message });
   useEffect(() => {
@@ -97,7 +128,6 @@ function App() {
       applyProjectData(data);
       window.location.reload();
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Оба хука вызываются безусловно (Rules of Hooks) — неактивная техника
@@ -131,8 +161,15 @@ function App() {
     silyanka.setStampHoverNodeId(null);
   };
 
+  // Обработчик пересобирается на каждый рендер (замыкается на technique/
+  // silyanka/crossWeave), но сам addEventListener — только один раз при
+  // монтировании: сравнение по ref избегает постоянного снятия/навешивания
+  // keydown-слушателя, которое было бы неизбежно при [technique, silyanka,
+  // crossWeave] в зависимостях эффекта (оба хука возвращают новый объект-
+  // литерал на каждый рендер).
+  const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    handleKeyDownRef.current = (e: KeyboardEvent) => {
       if (technique === 'silyanka' && e.key === 'Escape' && silyanka.stampPattern) {
         cancelStampPattern();
         return;
@@ -229,9 +266,38 @@ function App() {
           break;
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [technique, silyanka, crossWeave]);
+  });
+
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => handleKeyDownRef.current(e);
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, []);
+
+  // Пакет контролов режима плетения для хедера — из активной техники.
+  // Locate скроллит к первой бисерине последнего сегмента: getElementById +
+  // scrollIntoView, браузер сам учитывает zoom/поворот/отражение полотна.
+  const activeWeave = technique === 'silyanka' ? silyanka.weave : crossWeave.weave;
+  const weaveControls = {
+    tool: weaveTool,
+    onToolChange: setWeaveTool,
+    markedCount: activeWeave.markedCount,
+    totalCount: technique === 'silyanka' ? silyanka.beads.length : crossWeave.beads.length,
+    canUndo: activeWeave.canUndo,
+    onUndo: activeWeave.undo,
+    onReset: activeWeave.resetAll,
+    onLocate: () => {
+      const first = activeWeave.lastSegment[0];
+      if (!first) return;
+      document.getElementById(first)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      setWeaveShowLast(true);
+    },
+    canLocate: activeWeave.lastSegment.length > 0,
+    orientation: weaveOrientation,
+    onToggleOrientation: toggleWeaveOrientation,
+    flipped: weaveFlipped,
+    onToggleFlip: () => setWeaveFlipped((f) => !f),
+  };
 
   // Панели «Pendants & Decor» и «Grid» делят один и тот же правый слот
   // (см. Sidebar.css, .sidebar — оба fixed/right:0) и поэтому взаимоисключают
@@ -239,6 +305,17 @@ function App() {
   const [activeSidebar, setActiveSidebar] = useState<'pendants' | 'grid' | null>(null);
   const togglePendantsSidebar = () => setActiveSidebar(s => (s === 'pendants' ? null : 'pendants'));
   const toggleGridSidebar = () => setActiveSidebar(s => (s === 'grid' ? null : 'grid'));
+
+  // Вход в режим плетения закрывает боковые панели и окно референса: их
+  // кнопки в самом режиме скрыты (см. Header, .header__end-icons), так что
+  // открытую панель иначе было бы нечем закрыть.
+  const toggleWeaveMode = () => {
+    if (!weaveMode) {
+      setActiveSidebar(null);
+      setReferenceOpen(false);
+    }
+    setWeaveMode(!weaveMode);
+  };
 
   return (
     <main className={`editor${activeSidebar !== null ? ' editor--sidebar-open' : ''}`}>
@@ -271,6 +348,9 @@ function App() {
           onClearAllThreads={silyanka.threadControls.clearAllThreads}
           gridSidebarOpen={activeSidebar === 'grid'}
           onToggleGridSidebar={toggleGridSidebar}
+          weaveMode={weaveMode}
+          onToggleWeaveMode={toggleWeaveMode}
+          weaveControls={weaveControls}
           silyankaProps={{
             mirrorMode: silyanka.mirrorMode,
             setMirrorMode: silyanka.setMirrorMode,
@@ -317,6 +397,9 @@ function App() {
           onClearAllThreads={crossWeave.threadControls.clearAllThreads}
           gridSidebarOpen={activeSidebar === 'grid'}
           onToggleGridSidebar={toggleGridSidebar}
+          weaveMode={weaveMode}
+          onToggleWeaveMode={toggleWeaveMode}
+          weaveControls={weaveControls}
           crossWeaveProps={{
             activeThreadStrand: crossWeave.activeThreadStrand,
             onSelectThreadStrand: crossWeave.setActiveThreadStrand,
@@ -368,7 +451,8 @@ function App() {
             onToggleExtendLeftEdge: silyanka.toggleExtendLeftEdge,
             onToggleExtendRightEdge: silyanka.toggleExtendRightEdge,
             taper: silyanka.taper,
-            taperRowsMax: silyanka.gridSize.height + 1,
+            taperRowsMax: silyanka.taperRowsMax,
+            taperDepthMax: silyanka.taperDepthMax,
             onTaperRowsChange: silyanka.updateTaperRows,
             onSetTaperRows: silyanka.setTaperRowsAbsolute,
             onTaperSideReset: silyanka.resetTaperSide,
@@ -448,6 +532,12 @@ function App() {
           onStampSelect={silyanka.handleStampSelect}
           onStampHover={silyanka.setStampHoverNodeId}
           onStampPlace={silyanka.handleStampPlace}
+          weaveMode={weaveMode}
+          weaveTool={weaveTool}
+          weaveOrientation={weaveOrientation}
+          weaveFlipped={weaveFlipped}
+          weave={silyanka.weave}
+          weaveShowLast={weaveShowLast}
           {...silyanka.drawingControls}
         />
       ) : (
@@ -478,6 +568,12 @@ function App() {
           activeThreadColor={crossWeave.activeThreadColor}
           activeThreadOpacity={crossWeave.activeThreadOpacity}
           applyPatch={crossWeave.drawingControls.applyPatch}
+          weaveMode={weaveMode}
+          weaveTool={weaveTool}
+          weaveOrientation={weaveOrientation}
+          weaveFlipped={weaveFlipped}
+          weave={crossWeave.weave}
+          weaveShowLast={weaveShowLast}
         />
       )}
 

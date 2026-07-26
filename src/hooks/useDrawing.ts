@@ -77,7 +77,7 @@ export const useDrawing = (
     setRecentColors(prev => {
       if (prev[0] === color) return prev;
       const next = [color, ...prev.filter(c => c !== color)].slice(0, RECENT_LIMIT);
-      try { localStorage.setItem(recentStorageKey, JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(recentStorageKey, JSON.stringify(next)); } catch { /* localStorage недоступен или переполнен — не критично */ }
       return next;
     });
   }, [basePalette, recentStorageKey]);

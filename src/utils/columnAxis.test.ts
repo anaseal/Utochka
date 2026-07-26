@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildColumnAxis } from './columnAxis';
+import { buildColumnAxis, computeMirrorAxisX } from './columnAxis';
 
 describe('buildColumnAxis', () => {
   it('no points → empty axis', () => {
@@ -51,5 +51,31 @@ describe('buildColumnAxis', () => {
       { col: 0, x: 10 }, { col: 1, x: 15 }, { col: 2, x: 20 }, { col: 3, x: 25 },
       { col: 4, x: 30 }, { col: 5, x: 35 }, { col: 6, x: 40 },
     ]);
+  });
+});
+
+describe('computeMirrorAxisX', () => {
+  // Узлы нечётного ряда стоят на полшага правее своего индекса: при stepX=10
+  // колонка 0 это x=5, колонка width-2=4 это x=45 — середина полотна 25, она
+  // же половина ширины чётного ряда (5 колонок × 10 / 2).
+  const axis = [
+    { col: 0, x: 5 }, { col: 1, x: 15 }, { col: 2, x: 25 }, { col: 3, x: 35 }, { col: 4, x: 45 },
+  ];
+
+  it('полная ось → середина номинальной ширины', () => {
+    expect(computeMirrorAxisX(axis, 6)).toBe(25);
+  });
+
+  it('Taper срезал крайние колонки — ось та же (buildColumnAxis их достроил)', () => {
+    const points = [{ col: 1, x: 15 }, { col: 3, x: 35 }];
+    expect(computeMirrorAxisX(buildColumnAxis(points, 6), 6)).toBe(25);
+  });
+
+  it('уцелела одна колонка → null (ось строить не из чего)', () => {
+    expect(computeMirrorAxisX(buildColumnAxis([{ col: 2, x: 25 }], 6), 6)).toBeNull();
+  });
+
+  it('ширина 1 → null', () => {
+    expect(computeMirrorAxisX([{ col: 0, x: 5 }], 1)).toBeNull();
   });
 });

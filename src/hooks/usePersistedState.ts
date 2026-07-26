@@ -32,7 +32,7 @@ export function usePersistedState<T>(
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(key, JSON.stringify(latestStateRef.current));
-      } catch {}
+      } catch { /* localStorage недоступен или переполнен — не критично */ }
     }, PERSIST_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [key, state]);

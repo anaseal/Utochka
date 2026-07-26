@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useDrawing } from './useDrawing';
 import { useThreads } from './useThreads';
+import { useWeaveProgress } from './useWeaveProgress';
 import { usePersistedState } from './usePersistedState';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../config/crossWeaveTheme';
 import { THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
@@ -134,6 +135,9 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
   );
   const threadControls = useThreads(threads, drawingControls.applyPatch);
 
+  // Прогресс плетения — свой у каждой техники (см. useWeaveProgress).
+  const weave = useWeaveProgress('crossWeave');
+
   // Заливка: BFS по графу физической смежности бисерин (см.
   // crossWeaveFloodFill.ts) — своя, отдельная от силяночной
   // computeUnifiedFloodFill, т.к. тут нет node/span/pendant. В Mirror Mode
@@ -239,7 +243,7 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
 
   return {
     gridSize, beads, drawingControls, rawWidth,
-    threads, threadControls, activeThreadStrand, setActiveThreadStrand,
+    threads, threadControls, weave, activeThreadStrand, setActiveThreadStrand,
     activeThreadColor, setActiveThreadColor, activeThreadOpacity, setActiveThreadOpacity,
     mirrorMode, setMirrorMode,
     updateDimension, setWidthAbsolute, setHeightAbsolute,

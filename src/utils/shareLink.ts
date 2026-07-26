@@ -19,7 +19,7 @@ const bytesToBase64Url = (bytes: Uint8Array): string => {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 };
 
-const base64UrlToBytes = (b64url: string): Uint8Array => {
+const base64UrlToBytes = (b64url: string): Uint8Array<ArrayBuffer> => {
   const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
   const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
   const binary = atob(padded);
@@ -36,7 +36,9 @@ const compress = async (text: string): Promise<Uint8Array> => {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 };
 
-const decompress = async (bytes: Uint8Array): Promise<string> => {
+// Uint8Array<ArrayBuffer>, а не просто Uint8Array: Blob не принимает буфер,
+// который может оказаться SharedArrayBuffer.
+const decompress = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> => {
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Response(stream).text();
 };
@@ -45,7 +47,7 @@ const buildPayload = async (): Promise<string> => {
   if (!isCompressionSupported()) {
     throw new Error('Браузер не поддерживает создание ссылок — обновите браузер.');
   }
-  const compressed = await compress(JSON.stringify(buildProjectData()));
+  const compressed = await compress(JSON.stringify(buildProjectData({ forShare: true })));
   return bytesToBase64Url(compressed);
 };
 

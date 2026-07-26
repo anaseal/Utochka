@@ -14,6 +14,7 @@ export const Stepper = ({
   inputValue,
   min,
   max,
+  disabled = false,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
@@ -24,11 +25,16 @@ export const Stepper = ({
   inputValue?: number;
   min?: number;
   max?: number;
+  // Параметр, который в текущем состоянии ни на что не влияет (например
+  // Taper Depth, пока обе стороны выключены) — крутится, но ничего не меняет.
+  // Гасим целиком, а не прячем: место в панели остаётся, и видно, что настройка
+  // есть, просто сейчас не работает.
+  disabled?: boolean;
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const editable = onSet !== undefined && inputValue !== undefined;
+  const editable = onSet !== undefined && inputValue !== undefined && !disabled;
 
   useEffect(() => {
     if (editing) inputRef.current?.select();
@@ -83,9 +89,9 @@ export const Stepper = ({
 
   const actions = (
     <div className="grid-controls__actions">
-      <button onClick={() => onDelta(-1)} className="grid-controls__btn">−</button>
+      <button onClick={() => onDelta(-1)} className="grid-controls__btn" disabled={disabled}>−</button>
       {valueEl}
-      <button onClick={() => onDelta(1)} className="grid-controls__btn">+</button>
+      <button onClick={() => onDelta(1)} className="grid-controls__btn" disabled={disabled}>+</button>
     </div>
   );
 
@@ -94,6 +100,7 @@ export const Stepper = ({
       type="button"
       onClick={onReset}
       className="grid-controls__reset"
+      disabled={disabled}
       title="Reset to default"
       aria-label="Reset to default"
     >
@@ -102,7 +109,7 @@ export const Stepper = ({
   );
 
   return (
-    <div className={wrapperClass}>
+    <div className={`${wrapperClass}${disabled ? ' grid-controls--disabled' : ''}`}>
       <span className={labelClass}>{label}</span>
       {variant === 'overflow' ? (
         <>{reset}{actions}</>

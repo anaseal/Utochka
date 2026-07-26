@@ -6,12 +6,14 @@ interface CrossWeaveRulersProps {
   beads: CrossWeaveBead[];
   width: number;
   height: number;
+  // См. CanvasRulers — контр-преобразование подписей в режиме плетения.
+  labelTransform?: (x: number, y: number) => string | undefined;
 }
 
 // Простая нумерация рядов/колонок — в отличие от силянки, у CrossWeave нет
 // per-row span-контролов и оси зеркала, поэтому это не ветка CanvasRulers,
 // а отдельный минимальный компонент.
-export const CrossWeaveRulers = ({ beads, width, height }: CrossWeaveRulersProps) => {
+export const CrossWeaveRulers = ({ beads, width, height, labelTransform }: CrossWeaveRulersProps) => {
   const axisMarginX = 30;
   const axisMarginY = 40;
 
@@ -40,7 +42,8 @@ export const CrossWeaveRulers = ({ beads, width, height }: CrossWeaveRulersProps
           x={-axisMarginX}
           y={bead.y}
           dominantBaseline="middle"
-          textAnchor="end"
+          textAnchor={labelTransform ? 'middle' : 'end'}
+          transform={labelTransform?.(-axisMarginX, bead.y)}
           className="canvas__axis-text"
         >
           {i + 1}
@@ -52,7 +55,9 @@ export const CrossWeaveRulers = ({ beads, width, height }: CrossWeaveRulersProps
           key={`idx-col-${bead.id}`}
           x={bead.x}
           y={-axisMarginY}
+          dominantBaseline="middle"
           textAnchor="middle"
+          transform={labelTransform?.(bead.x, -axisMarginY)}
           className="canvas__axis-text"
         >
           {i + 1}

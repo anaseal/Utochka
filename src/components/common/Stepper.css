@@ -88,6 +88,20 @@
   margin: 0;
 }
 
+/* Степпер параметра, который сейчас ни на что не влияет (Stepper disabled):
+   гасим всю строку целиком, включая лейбл и кнопку сброса, — иначе
+   заблокированные кнопки рядом с ярким лейблом читаются как сбой отрисовки. */
+.grid-controls--disabled {
+  opacity: 0.45;
+}
+.grid-controls--disabled .grid-controls__value {
+  cursor: default;
+}
+.grid-controls--disabled .grid-controls__reset:disabled:hover {
+  color: #64748b;
+  background: transparent;
+}
+
 .header__overflow-row {
   display: flex;
   align-items: center;

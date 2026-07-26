@@ -3,7 +3,7 @@ import { BEAD_THEME } from '../config/theme';
 import { resolveSpanCount } from './spans';
 import { encode } from './beadId';
 import { getColumnRange } from './columnRange';
-import { getTaperColumnCut } from './taper';
+import { getTaperColumnCuts, TaperColumnCuts } from './taper';
 
 type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
@@ -82,20 +82,31 @@ export const generateSilyankaGrid = (
   const maxC = (r: number): number =>
     getColumnRange(r, width, extendLeftEdge, extendRightEdge).maxC;
 
-  // Сужение концов (Taper): сколько колонок срезать с каждой стороны ряда r.
-  // getTaperColumnCut принимает minC(r) — целевая линия среза дробная (в
-  // половинках колонки), и без учёта минимальной колонки ряда целочисленный
-  // срез не попадает на неё одинаково у чётных/нечётных рядов (см. taper.ts).
+  // Сужение концов (Taper): сколько колонок срезать с левого и правого края
+  // ряда r. Стороны считаются независимо (см. taper.ts) — границы ряда
+  // зависят от Edge Extension и не обязаны быть симметричными.
   // Клэмп per-row (не по глобальному bounding box) гарантирует ≥1 колонку в
   // каждом ряду — острый кончик вместо разрыва полотна (см. spec.md).
-  const kByRow: number[] = [];
+  const cutByRow: TaperColumnCuts[] = [];
   for (let r = 0; r <= 2 * height; r++) {
-    const raw = getTaperColumnCut(taper, r, height, minC(r));
-    const count = maxC(r) - minC(r) + 1;
-    kByRow.push(Math.max(0, Math.min(raw, Math.floor((count - 1) / 2))));
+    const { left, right } = getTaperColumnCuts(taper, r, height, width, minC(r), maxC(r));
+    const excess = left + right - (maxC(r) - minC(r));
+    if (excess <= 0) {
+      cutByRow.push({ left, right });
+      continue;
+    }
+    // Возвращаем лишнее поровну обеим сторонам, нечётный остаток — той, где
+    // срез больше: уцелевший кончик остаётся как можно ближе к середине.
+    const back = Math.floor(excess / 2);
+    let l = left - back;
+    let rt = right - back;
+    if (excess % 2 === 1) {
+      if (l >= rt) l -= 1; else rt -= 1;
+    }
+    cutByRow.push({ left: Math.max(0, l), right: Math.max(0, rt) });
   }
   const nodeSurvives = (r: number, c: number): boolean =>
-    c >= minC(r) + kByRow[r] && c <= maxC(r) - kByRow[r];
+    c >= minC(r) + cutByRow[r].left && c <= maxC(r) - cutByRow[r].right;
 
   const nodeGrid: SpanCoords[][] = []; // nodeGrid[r][c - minC(r)]
   // decorGrid[r] — декор-ряды (сверху вниз) полосы между узловым рядом r и r+1

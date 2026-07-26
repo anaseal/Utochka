@@ -29,11 +29,25 @@ const collectKeys = (): Record<string, string> => {
 // проекта. Переиспользуется файловым экспортом и Share-ссылкой (см.
 // src/utils/shareLink.ts) — второй сознательно не тащит картинку референса
 // точно так же, как файловый экспорт.
-export const buildProjectData = (): ProjectFile => ({
-  version: PROJECT_FILE_VERSION,
-  savedAt: new Date().toISOString(),
-  localStorage: collectKeys(),
-});
+// Ключи, которые не имеет смысла передавать другому человеку: прогресс
+// плетения — это состояние конкретной работы в руках, а не часть схемы.
+// Получатель ссылки не должен открывать чужую схему наполовину «затянутой».
+// В файл проекта прогресс, наоборот, входит — это своя же работа.
+const SHARE_EXCLUDED = ['weavePasses', 'weaveLastSegment', 'weaveMode'];
+
+const isShareable = (key: string) =>
+  !SHARE_EXCLUDED.some(suffix => key.endsWith(`:${suffix}`));
+
+export const buildProjectData = (options: { forShare?: boolean } = {}): ProjectFile => {
+  const data = collectKeys();
+  return {
+    version: PROJECT_FILE_VERSION,
+    savedAt: new Date().toISOString(),
+    localStorage: options.forShare
+      ? Object.fromEntries(Object.entries(data).filter(([key]) => isShareable(key)))
+      : data,
+  };
+};
 
 export const exportProject = () => {
   const blob = new Blob([JSON.stringify(buildProjectData())], { type: 'application/json' });

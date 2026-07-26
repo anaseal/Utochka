@@ -161,7 +161,7 @@ export const PendantsSidebar = ({
     return best;
   }, [canvasSvgRef, bottomNodes, zoom]);
 
-  const computeRow = useCallback((clientX: number, clientY: number): number | null => {
+  const computeRow = useCallback((clientY: number): number | null => {
     const svg = canvasSvgRef.current;
     if (!svg || rowGaps.length === 0) return null;
     const rect = svg.getBoundingClientRect();
@@ -222,7 +222,7 @@ export const PendantsSidebar = ({
       const point = pending;
       if (!point) return;
       setDecorDrag((d) => (d ? { ...d, x: point.x, y: point.y } : d));
-      onHoveredRowChange(computeRow(point.x, point.y));
+      onHoveredRowChange(computeRow(point.y));
     };
     const onMove = (e: PointerEvent) => {
       pending = { x: e.clientX, y: e.clientY };
@@ -230,7 +230,7 @@ export const PendantsSidebar = ({
     };
     const onUp = (e: PointerEvent) => {
       if (rafId !== null) cancelAnimationFrame(rafId);
-      const row = computeRow(e.clientX, e.clientY);
+      const row = computeRow(e.clientY);
       if (row !== null) onDecorDrop(row);
       onHoveredRowChange(null);
       setDecorDrag(null);

@@ -36,6 +36,9 @@ export const CrossWeaveBeadView = memo(({
 
   return (
     <g
+      // id нужен режиму плетения: отметки ставятся классом прямо в DOM через
+      // document.getElementById (useWeaveMarks.ts), минуя React.
+      id={id}
       className={`bead bead--type-span${isEmpty ? ' bead--empty' : ''}`}
       onPointerEnter={() => onPointerEnter(id)}
       onPointerDown={(e) => {

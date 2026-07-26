@@ -242,40 +242,34 @@
 }
 
 /* Ручка выдвижной панели редактора количества бисерин (per-row span controls
-   в CanvasRulers) — виден только на ≤767.98px, где эти контролы по умолчанию
-   свёрнуты (см. CanvasRulers.css). Лежит ПОВЕРХ карточки холста, а не рядом
-   с ней — position:absolute относительно .canvas__svg-frame (обёртка точно
-   по размеру .canvas__svg, но без overflow:auto, поэтому ручка не уезжает
-   при скролле сетки бисерин). Две предыдущие попытки фикса (position:fixed
-   относительно viewport, затем flex-элемент рядом с карточкой) сажали ручку
-   СНАРУЖИ карточки — то не совпадало с задумкой "ручка на холсте", отсюда
-   и растущий из этого баг. Прижата к левому краю карточки вплотную (left:0,
-   без левого борде́ра и без скругления слева) — читается как докованная
-   вкладка, а не отдельный плавающий чип. */
+   в CanvasRulers) — видна на всех ширинах экрана, эти контролы по умолчанию
+   свёрнуты везде (см. CanvasRulers.css). Лежит ПОВЕРХ карточки холста, а не
+   рядом с ней — position:absolute относительно .canvas__svg-frame (обёртка
+   точно по размеру .canvas__svg, но без overflow:auto, поэтому ручка не
+   уезжает при скролле сетки бисерин). Две предыдущие попытки фикса
+   (position:fixed относительно viewport, затем flex-элемент рядом с
+   карточкой) сажали ручку СНАРУЖИ карточки — то не совпадало с задумкой
+   "ручка на холсте", отсюда и растущий из этого баг. Прижата к левому краю
+   карточки вплотную (left:0, без левого борде́ра и без скругления слева) —
+   читается как докованная вкладка, а не отдельный плавающий чип. */
 .span-controls-toggle {
-  display: none;
-}
-
-@media (max-width: 767.98px) {
-  .span-controls-toggle {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 48px;
-    background: #111727;
-    color: #607086;
-    border: 1px solid #607086;
-    border-left: none;
-    border-radius: 0 10px 10px 0;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s;
-  }
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 48px;
+  background: #111727;
+  color: #607086;
+  border: 1px solid #607086;
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s;
 }
 
 .span-controls-toggle:hover {
@@ -362,4 +356,13 @@
   .export-btn__label {
     display: none;
   }
+}
+
+/* --- Режим плетения ---------------------------------------------------------
+   Всё редактирующее и не относящееся к отметке прогресса скрывается классом
+   на вьюпорте, а не пропами внутрь BeadGrid — CSS не пробивает его memo. */
+.editor__viewport--weave .span-controls-toggle,
+.editor__viewport--weave .span-ctrl-layer,
+.editor__viewport--weave .canvas__mirror-axis {
+  display: none;
 }

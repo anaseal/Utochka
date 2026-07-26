@@ -774,3 +774,53 @@
 
   .tool-btn--lg { width: 1.75rem; height: 1.75rem; }
 }
+/* --- Режим плетения (WeaveControls) -----------------------------------------
+   Контролы стоят в хедере на месте скрытых палитры/инструментов и целиком
+   собраны из существующих блоков (tool-group, grid-controls). Ниже — только
+   то, чего у тех блоков нет: компактный прогресс в стиле блока Zoom. Цвета —
+   та же пара, что во всём хедере: слейт-текст + циановый акцент. */
+.weave-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 84px;
+}
+
+.weave-progress__value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.weave-progress__total {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.weave-progress__bar {
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.weave-progress__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #22d3ee;
+  transition: width var(--transition-speed) ease;
+}
+
+.grid-controls__btn--on {
+  color: #22d3ee;
+}
+
+.weave-orientation-glyph {
+  font-size: 13px;
+  line-height: 1;
+}

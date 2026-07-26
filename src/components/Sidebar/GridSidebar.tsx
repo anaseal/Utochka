@@ -39,6 +39,7 @@ interface SilyankaGridSidebarProps {
   onToggleExtendRightEdge: () => void;
   taper: Taper;
   taperRowsMax: number;
+  taperDepthMax: number;
   onTaperRowsChange: (edge: 'top' | 'bottom', delta: number) => void;
   onSetTaperRows: (edge: 'top' | 'bottom', v: number) => void;
   onTaperSideReset: (edge: 'top' | 'bottom') => void;
@@ -79,6 +80,13 @@ export const GridSidebar = (props: GridSidebarProps) => {
   const height = silyankaProps ? silyankaProps.gridHeight : crossWeaveProps!.gridHeight;
   const spacing = silyankaProps ? silyankaProps.spacing : crossWeaveProps!.spacing;
   const spacingConstraints = silyankaProps ? BEAD_THEME.constraints : CROSS_WEAVE_THEME.constraints;
+
+  // Depth — общий пол ширины для активных сторон: пока обе стороны выключены
+  // (rows=0), он не срезает ничего (см. taper.ts), поэтому степпер гасим, а не
+  // оставляем крутиться вхолостую.
+  const taperDepthEnabled = !!silyankaProps
+    && (silyankaProps.taper.top.rows > 0 || silyankaProps.taper.bottom.rows > 0);
+  const taperActive = taperDepthEnabled;
 
   return (
     <aside className={`sidebar${open ? ' sidebar--open' : ''}`}>
@@ -162,24 +170,9 @@ export const GridSidebar = (props: GridSidebarProps) => {
                   <h3 className="sidebar__section-title">Taper</h3>
                 </div>
                 <p className="sidebar__section-desc">
-                  Narrow the ends. Rows (per side) = how many rows slope in (fewer = wider flat tip).
-                  Depth is shared by both ends — the minimum width floor the whole piece narrows down
-                  to; if it's wider than a side's own Rows cut, Depth wins right up to that edge.
+                  Narrows the ends of the piece, the way decreasing beads towards the cord does.
                 </p>
               </header>
-
-              <div className="grid-sidebar__steppers">
-                <Stepper
-                  label="Depth"
-                  value={silyankaProps.taper.depth}
-                  onDelta={(d) => silyankaProps.onTaperDepthChange(d)}
-                  onReset={silyankaProps.onTaperDepthReset}
-                  onSet={(v) => silyankaProps.onSetTaperDepth(v)}
-                  inputValue={silyankaProps.taper.depth}
-                  min={0}
-                  max={20}
-                />
-              </div>
 
               <div className="sidebar__section-heading-row grid-sidebar__subheading">
                 <h4 className="sidebar__section-title">Rows</h4>
@@ -189,11 +182,14 @@ export const GridSidebar = (props: GridSidebarProps) => {
                   onClick={silyankaProps.onToggleTaperRowsLinked}
                   aria-pressed={silyankaProps.taperRowsLinked}
                   aria-label={silyankaProps.taperRowsLinked ? 'Unlink top/bottom rows' : 'Link top/bottom rows'}
-                  title={silyankaProps.taperRowsLinked ? 'Top and bottom change together — click to unlink' : 'Link top and bottom to change together'}
+                  title={silyankaProps.taperRowsLinked ? 'Top and bottom change together — click to unlink' : 'Link top and bottom to change together (both take the larger value)'}
                 >
                   {silyankaProps.taperRowsLinked ? <Link2 size={13} /> : <Unlink2 size={13} />}
                 </button>
               </div>
+              <p className="grid-sidebar__hint">
+                How many rows that end takes to slope in. 0 leaves the end straight.
+              </p>
               <div className="grid-sidebar__steppers">
                 <Stepper
                   label="Top"
@@ -216,6 +212,32 @@ export const GridSidebar = (props: GridSidebarProps) => {
                   max={silyankaProps.taperRowsMax}
                 />
               </div>
+
+              <p className="grid-sidebar__hint">
+                {taperDepthEnabled
+                  ? 'How deep the narrowing goes: what stays cut off after the slope has run out, all along the piece. Counted in half columns — 2 takes off one whole column per side.'
+                  : 'Depth only limits an active slope — set Rows above 0 on at least one end first.'}
+              </p>
+              <div className="grid-sidebar__steppers">
+                <Stepper
+                  label="Depth"
+                  value={silyankaProps.taper.depth}
+                  onDelta={(d) => silyankaProps.onTaperDepthChange(d)}
+                  onReset={silyankaProps.onTaperDepthReset}
+                  onSet={(v) => silyankaProps.onSetTaperDepth(v)}
+                  inputValue={silyankaProps.taper.depth}
+                  min={0}
+                  max={silyankaProps.taperDepthMax}
+                  disabled={!taperDepthEnabled}
+                />
+              </div>
+
+              {taperActive && silyankaProps.hasPendants && (
+                <p className="grid-sidebar__hint">
+                  Pendants on the columns the taper cuts away are hidden, not deleted — lower Rows
+                  or Depth and they come back.
+                </p>
+              )}
             </section>
 
             <section className="sidebar__section">

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   MoreHorizontal, FlipHorizontal, PaintBucket, Stamp, Pencil,
   ArrowUpToLine, ArrowDownToLine, X, Image, Download, Upload, Share2, Palette,
-  Check, SlidersHorizontal, Trash2,
+  Check, SlidersHorizontal, Trash2, ListChecks,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
@@ -15,6 +15,7 @@ import { Thread } from '../../../types/thread';
 import { StampAnchorEdge } from '../../../utils/stamp';
 import { APP_CONSTRAINTS, BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS } from '../../../config/theme';
 import { ThreadStyleFields } from './ThreadStyleFields';
+import { WeaveControls, WeaveTool, WeaveOrientation } from './WeaveControls';
 
 
 export type Technique = 'silyanka' | 'crossWeave';
@@ -49,6 +50,28 @@ interface SharedHeaderProps {
   // Extension/Bottom Chain) — см. src/components/Sidebar/GridSidebar.tsx.
   gridSidebarOpen: boolean;
   onToggleGridSidebar: () => void;
+  // Режим плетения — отдельный мод: пока он включён, инструменты рисования и
+  // палитра из хедера убраны, холст только отмечает прогресс
+  // (см. spec.md, «Режим плетения»).
+  weaveMode: boolean;
+  onToggleWeaveMode: () => void;
+  // Пакет контролов режима плетения (см. WeaveControls) — собирается в App
+  // из активной техники.
+  weaveControls: {
+    tool: WeaveTool;
+    onToolChange: (tool: WeaveTool) => void;
+    markedCount: number;
+    totalCount: number;
+    canUndo: boolean;
+    onUndo: () => void;
+    onReset: () => void;
+    onLocate: () => void;
+    canLocate: boolean;
+    orientation: WeaveOrientation;
+    onToggleOrientation: () => void;
+    flipped: boolean;
+    onToggleFlip: () => void;
+  };
 }
 
 interface SilyankaHeaderProps {
@@ -374,6 +397,7 @@ export const Header = (props: HeaderProps) => {
     referenceWindowOpen, onToggleReferenceWindow,
     threads, onClearAllThreads,
     gridSidebarOpen, onToggleGridSidebar,
+    weaveMode, onToggleWeaveMode, weaveControls,
   } = props;
 
   const [hasEyeDropper] = useState(() => 'EyeDropper' in window);
@@ -450,8 +474,9 @@ export const Header = (props: HeaderProps) => {
   };
 
   const handleEyeDropper = async () => {
+    if (!window.EyeDropper) return;
     try {
-      const dropper = new (window as any).EyeDropper();
+      const dropper = new window.EyeDropper();
       const { sRGBHex } = await dropper.open();
       selectColor(sRGBHex);
       commitRecentColor(sRGBHex);
@@ -495,6 +520,9 @@ export const Header = (props: HeaderProps) => {
 
         <div className="header__divider" />
 
+        {/* Палитра и инструменты рисования в режиме плетения не показываются:
+            это отдельный мод, в нём холст ничего не рисует. */}
+        {!weaveMode && (
         <div className={`palette-widget${paletteOpen ? ' palette-widget--open' : ''}`} ref={paletteWidgetRef}>
           {/* Виден только на ≤479.98px — на более широких экранах палитра
               и так помещается в строку хедера (см. .palette-widget__trigger
@@ -599,9 +627,13 @@ export const Header = (props: HeaderProps) => {
             </div>
           </div>
         </div>
+        )}
 
-        <div className="header__divider header__divider--palette-tools" />
+        {weaveMode && <WeaveControls {...weaveControls} technique={technique} />}
 
+        {!weaveMode && <div className="header__divider header__divider--palette-tools" />}
+
+        {!weaveMode && (
         <div className="tool-group">
           <button
             onClick={() => setActiveTool('pencil')}
@@ -726,6 +758,7 @@ export const Header = (props: HeaderProps) => {
             </>
           )}
         </div>
+        )}
 
         <div className="header__divider header__divider--zoom-adjacent" />
 
@@ -851,16 +884,21 @@ export const Header = (props: HeaderProps) => {
               и переносится в 2 строки (3+3 silyanka, 3+2 crossWeave) — седьмой/
               шестой элемент внутри неё проваливался бы в одинокую 3-ю строку. */}
           <div className="header__end-icons">
-            <button
-              onClick={onToggleReferenceWindow}
-              className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
-              title="Reference image"
-              aria-pressed={referenceWindowOpen}
-            >
-              <Image size={14} />
-            </button>
+            {/* Референс, подвески и настройки сетки — редакторские панели, в
+                режиме плетения их кнопки скрыты (сами панели App закрывает при
+                входе в режим). */}
+            {!weaveMode && (
+              <button
+                onClick={onToggleReferenceWindow}
+                className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
+                title="Reference image"
+                aria-pressed={referenceWindowOpen}
+              >
+                <Image size={14} />
+              </button>
+            )}
 
-            {silyankaProps && (
+            {!weaveMode && silyankaProps && (
               <button
                 onClick={silyankaProps.onToggleSidebar}
                 className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
@@ -871,13 +909,27 @@ export const Header = (props: HeaderProps) => {
               </button>
             )}
 
+            {!weaveMode && (
+              <button
+                onClick={onToggleGridSidebar}
+                className={`tool-btn tool-btn--lg ${gridSidebarOpen ? 'tool-btn--active' : ''}`}
+                title="Grid settings"
+                aria-pressed={gridSidebarOpen}
+              >
+                <SlidersHorizontal size={20} />
+              </button>
+            )}
+
+            {/* Вход в режим плетения. Стоит здесь, а не в .tool-group: это не
+                инструмент рисования, а отдельный мод, который эти инструменты
+                как раз и выключает. */}
             <button
-              onClick={onToggleGridSidebar}
-              className={`tool-btn tool-btn--lg ${gridSidebarOpen ? 'tool-btn--active' : ''}`}
-              title="Grid settings"
-              aria-pressed={gridSidebarOpen}
+              onClick={onToggleWeaveMode}
+              className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
+              title={weaveMode ? 'Выйти из режима плетения' : 'Режим плетения: отмечать, что уже сплетено'}
+              aria-pressed={weaveMode}
             >
-              <SlidersHorizontal size={20} />
+              <ListChecks size={20} />
             </button>
           </div>
         </div>

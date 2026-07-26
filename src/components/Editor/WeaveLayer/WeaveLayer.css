@@ -1,0 +1,34 @@
+/* Отметки режима плетения. Единственный акцент проекта — циан #22d3ee (как у
+   .bead__highlight и активных инструментов); на светлом холсте — его тёмный
+   вариант #0891b2, уже используемый как цвет нити 2 светлой темы
+   (см. exportScheme.ts). Токены с фолбэком под тёмный холст — та же схема,
+   что в BeadView.css. */
+
+.canvas__svg {
+  --weave-woven-opacity: 0.24;
+  --weave-mark: #22d3ee;
+}
+
+.canvas__svg[data-canvas-theme="light"] {
+  --weave-woven-opacity: 0.3;
+  --weave-mark: #0891b2;
+}
+
+/* Проплетённая бисерина гаснет, но остаётся узнаваемой по своему цвету —
+   яркими остаются те, что ещё предстоит набрать. */
+.bead--woven .bead__body {
+  opacity: var(--weave-woven-opacity);
+}
+
+.bead--woven.bead--type-node .bead__body {
+  filter: none;
+}
+
+/* «Здесь я остановилась» — статичная рамка, видна пару секунд после кнопки
+   Locate (см. App), не горит и не пульсирует постоянно. */
+.weave-layer__last {
+  fill: none;
+  stroke: var(--weave-mark);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}

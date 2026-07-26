@@ -4,6 +4,7 @@ import { useDrawing } from './useDrawing';
 import { usePendants } from './usePendants';
 import { usePendantChains } from './usePendantChains';
 import { useThreads } from './useThreads';
+import { useWeaveProgress } from './useWeaveProgress';
 import { usePersistedState } from './usePersistedState';
 import { BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper, TaperSide } from '../types/bead';
@@ -43,28 +44,35 @@ const isEdgeExtension = (v: unknown): v is EdgeExtension =>
   typeof (v as EdgeExtension).left === 'boolean' &&
   typeof (v as EdgeExtension).right === 'boolean';
 
+// Целое неотрицательное. Строго, а не просто `typeof === 'number'`: NaN из
+// повреждённого файла проекта или Share-ссылки протекал в срез и обнулял
+// сравнения в generator.ts — на холсте не оставалось НИ ОДНОЙ бисерины.
+const isCount = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isInteger(v) && v >= 0;
+
 const isTaperSide = (v: unknown): v is TaperSide =>
-  typeof v === 'object' && v !== null &&
-  typeof (v as TaperSide).rows === 'number';
+  typeof v === 'object' && v !== null && isCount((v as TaperSide).rows);
 
 const isTaper = (v: unknown): v is Taper =>
   typeof v === 'object' && v !== null &&
   isTaperSide((v as Taper).top) && isTaperSide((v as Taper).bottom) &&
-  typeof (v as Taper).depth === 'number';
+  isCount((v as Taper).depth);
 
 // rows — сколько узловых рядов половины может занимать скос (+1, чтобы можно
-// было свести конец в точку). depth — общий для top/bottom пол ширины (в
-// половинках колонки, см. types/bead.ts) — специально не клэмпится к ширине:
-// срез позиционный (см. generator.ts), инсет сам клэмпится до половины
-// ширины полотна на каждой Y, так что сверхбольшой depth просто рано
-// «дорезает» клин до нуля, не ломая геометрию.
+// было свести конец в точку). depth — общий для top/bottom пол ширины в
+// половинках колонки (см. types/bead.ts), поэтому его потолок — width-1: на
+// нём полотно уже сведено к одной колонке по всей длине, и дальше степпер
+// менял бы только число на экране (см. spec.md).
 const taperRowsMax = (height: number): number => height + 1;
+
+const taperDepthMax = (width: number): number => Math.max(0, width - 1);
 
 const clampTaperSide = (side: TaperSide, height: number): TaperSide => ({
   rows: Math.max(0, Math.min(side.rows, taperRowsMax(height))),
 });
 
-const clampTaperDepth = (depth: number): number => Math.max(0, depth);
+const clampTaperDepth = (depth: number, width: number): number =>
+  Math.max(0, Math.min(depth, taperDepthMax(width)));
 
 const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
   if (typeof v !== 'object' || v === null) return false;
@@ -199,6 +207,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     pendantChains, setPendantChains, threads, setThreads, 'silyanka',
   );
   const threadControls = useThreads(threads, drawingControls.applyPatch);
+
+  // Прогресс плетения — отдельно от рисунка и от его истории Undo/Redo
+  // (см. useWeaveProgress).
+  const weave = useWeaveProgress('silyanka');
 
   // «Кисть» нитки — цвет/прозрачность, которыми ляжет СЛЕДУЮЩАЯ прокладываемая
   // нитка (аналог activeColor для рисования бусин, см. Header.tsx →
@@ -341,6 +353,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       setPendantPlacements(prev => prev.filter(p => p.col < newWidth));
       setPendantChains(prev => prev.filter(c => c.startCol < newWidth && c.endCol < newWidth));
     }
+    // Потолок Taper.depth зависит от ширины — подрезаем так же, как rows
+    // подрезаются под высоту (см. applyHeight), иначе на узкой сетке остаётся
+    // depth, который давно упёрся в клэмп и не отражает картинку.
+    setTaper(prev => ({ ...prev, depth: clampTaperDepth(prev.depth, newWidth) }));
     setGridSize(prev => ({ ...prev, width: newWidth }));
   };
 
@@ -404,13 +420,20 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setTaperRowsLinked(turningOn);
     // Включение синка сразу выравнивает стороны, иначе «синхронно» вводит в
     // заблуждение, пока обе стороны не станут равны следующим изменением.
+    // Равняем по БОЛЬШЕЙ из двух: копирование top в bottom молча стирало
+    // настроенную нижнюю сторону (в истории Undo параметров сетки нет,
+    // вернуть было нечем), а так ни одна сторона не пропадает — видно сразу,
+    // и откатывается тем же степпером.
     if (turningOn) {
-      setTaper(prev => ({ ...prev, bottom: { ...prev.top } }));
+      setTaper(prev => {
+        const rows = Math.max(prev.top.rows, prev.bottom.rows);
+        return { ...prev, top: { rows }, bottom: { rows } };
+      });
     }
   };
 
   const updateTaperDepth = (delta: number) => {
-    setTaper(prev => ({ ...prev, depth: clampTaperDepth(prev.depth + delta) }));
+    setTaper(prev => ({ ...prev, depth: clampTaperDepth(prev.depth + delta, gridSize.width) }));
   };
 
   const updateSpacing = (delta: number) => {
@@ -447,7 +470,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   };
 
   const setTaperDepthAbsolute = (v: number) => {
-    setTaper(prev => ({ ...prev, depth: clampTaperDepth(Math.round(v)) }));
+    setTaper(prev => ({ ...prev, depth: clampTaperDepth(Math.round(v), gridSize.width) }));
   };
 
   const resetTaperSide = (edge: 'top' | 'bottom') => {
@@ -722,10 +745,12 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     topEdgeEnabled, toggleTopEdgeEnabled,
     taper, updateTaperRows, setTaperRowsAbsolute, resetTaperSide,
     updateTaperDepth, setTaperDepthAbsolute, resetTaperDepth,
+    taperRowsMax: taperRowsMax(gridSize.height),
+    taperDepthMax: taperDepthMax(gridSize.width),
     taperRowsLinked, toggleTaperRowsLinked,
     pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, chainControls, chainPendingStart, setChainPendingStart,
-    threads, threadControls,
+    threads, threadControls, weave,
     activeThreadColor, setActiveThreadColor, activeThreadOpacity, setActiveThreadOpacity,
     beads, drawingControls, pendantControls,
     hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,

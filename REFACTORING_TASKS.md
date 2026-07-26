@@ -20,6 +20,21 @@ npm-зависимости — только после обсуждения; п�
 > (T4, T5, T6). Также логика, которая раньше жила в `App.tsx` (T3 в старой
 > версии документа), с тех пор переехала в `useSilyankaProject.ts` — ссылки
 > ниже актуализированы.
+>
+> Обновление 2026-07-26: с прошлой ревизии добавились нитки-трассировка
+> (`ThreadLayer`, `useThreads`, `threadPath.ts`, `threadGeometry.ts`,
+> `threadStyle.ts`), цепочки подвесок (`PendantChainLayer`, `usePendantChains`,
+> `pendantChain.ts`), режим отметки прогресса плетения (`WeaveLayer`,
+> `WeavePanel`, `useWeaveMarks`, `useWeaveProgress`, `weaveSegment.ts`),
+> симметризация (`symmetrize.ts`), обмен цвета (`colorSwap.ts`) и референс-окно
+> (`ReferenceWindow`, `useReferenceImage`). Проверено: нитки, симметризация,
+> обмен цвета и референс-окно уже сделаны как общий код для обеих техник (не
+> задваивались отдельно под CrossWeave); подвески/цепочки подвесок/режим
+> плетения — по дизайну только у силянки (как и было решено для T4 про
+> подвески), это не дублирование, а осознанная асимметрия. Новых задач по этим
+> модулям не заведено — если позже найдётся конкретное дублирование внутри
+> них, добавить отдельным пунктом. Также обновлён статус T12 (Pointer Events
+> частично уже реализованы) — см. ниже.
 
 ---
 
@@ -425,33 +440,33 @@ PNG; обновлён [spec.md](src/spec.md), если меняется смыс
 
 ---
 
-## T12 — Pointer Events на холсте (тач-поддержка) · P4
+## T12 — Pointer Events на холсте (тач-поддержка) · P4 · частично выполнено
 
-**Проблема.** Рисование на mouse-событиях:
-[CanvasView.tsx:333-336](src/components/Editor/CanvasView/CanvasView.tsx#L333-L336),
-[BeadView.tsx:39-40](src/components/Editor/BeadView/BeadView.tsx#L39-L40),
-[CrossWeaveCanvasView.tsx:169-172](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L169-L172),
-[CrossWeaveBeadView.tsx:40-41](src/components/Editor/BeadView/CrossWeaveBeadView.tsx#L40-L41),
-[PendantLayer.tsx](src/components/Editor/PendantLayer/PendantLayer.tsx). Сайдбар
-при этом уже на Pointer Events.
+**Факт (проверено 2026-07-26).** Основная покраска уже переведена на Pointer
+Events: `BeadView.tsx`, `CrossWeaveBeadView.tsx` (оба — `onPointerDown` +
+`onPointerEnter`, с явным `releasePointerCapture(e.target)`, чтобы протягивание
+пальцем не залипало на первой тронутой бисерине), `CanvasView.tsx`/
+`CrossWeaveCanvasView.tsx` (`onPointerDown` на контейнере + `touchGesture`).
+Похоже, сделано попутно с добавлением `useTouchPanZoom`, но документ это не
+отражал.
 
-**Почему важно.** На планшете/тач-экране покраска не работает; модель ввода
-несогласованна. Актуально для обеих техник разом — стоит делать одним заходом.
+**Осталось.** [PendantLayer.tsx:128](src/components/Editor/PendantLayer/PendantLayer.tsx#L128)
+всё ещё на `onMouseDownCapture` — но это не покраска, а десктопный жест
+«ПКМ по подвеске → удалить» (`e.button === 2` + `onContextMenu`). У правого
+клика нет прямого тач-аналога, поэтому перевод в Pointer Events сам по себе
+не даёт тач-эквивалента — нужно решить, каким жестом/кнопкой удалять подвеску
+на тач-экране (например, кнопка-крестик по аналогии с T15/T16), и только потом
+переводить обработчик.
 
-**Файлы.** `CanvasView.tsx`, `CrossWeaveCanvasView.tsx`, `BeadView.tsx`,
-`CrossWeaveBeadView.tsx`, `PendantLayer.tsx`.
+**Файлы.** `PendantLayer.tsx`.
 
-**План.** Перевести покраску на `onPointerDown/onPointerEnter` (+ `touch-action`
-для отмены скролла при рисовании). Аккуратно с наведением-покраской: на тач нет
-hover — рисование ведётся по «pointer down + move», возможно через
-`setPointerCapture` и hit-test координат. Если делать после T6 — правится в одном
-общем месте вместо четырёх файлов.
+**План.** Обсудить UX замены ПКМ-удаления на тач (кнопка/долгое нажатие), затем
+перевести обработчик на Pointer Events.
 
-**Критерии готовности.** Рисование/стирание/заливка работают мышью и пальцем;
-на десктопе поведение без регрессий (в обеих техниках).
+**Критерии готовности.** Удаление подвески доступно и мышью (как сейчас), и с
+тач-экрана; на десктопе поведение без регрессий.
 
-**Зависимости.** Дешевле после T6 (общий `BeadView`-скелет). Средний объём —
-уточнить, нужна ли тач-поддержка сейчас.
+**Зависимости.** Нет.
 
 ---
 

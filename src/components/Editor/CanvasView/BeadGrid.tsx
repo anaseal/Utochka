@@ -18,8 +18,6 @@ interface BeadGridProps {
   bottomSpan: number;
   rowSpanOverrides: Record<number, number>;
   onRowSpanChange: (spanRowIndex: number, delta: number) => void;
-  hoveredRow: number | null;
-  mirrorMode: boolean;
   width: number;
   topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
@@ -27,6 +25,7 @@ interface BeadGridProps {
   onBottomEdgeSpanChange: (delta: number) => void;
   spanControlsExpanded: boolean;
   gutterShiftX: number;
+  labelTransform?: (x: number, y: number) => string | undefined;
 }
 
 // Вынесено из CanvasView и обёрнуто в memo: колонка (hoveredCol), которую
@@ -47,8 +46,6 @@ export const BeadGrid = memo(({
   bottomSpan,
   rowSpanOverrides,
   onRowSpanChange,
-  hoveredRow,
-  mirrorMode,
   width,
   topEdgeEnabled,
   bottomEdgeEnabled,
@@ -56,6 +53,7 @@ export const BeadGrid = memo(({
   onBottomEdgeSpanChange,
   spanControlsExpanded,
   gutterShiftX,
+  labelTransform,
 }: BeadGridProps) => {
   return (
     <>
@@ -65,8 +63,6 @@ export const BeadGrid = memo(({
         bottomSpan={bottomSpan}
         rowSpanOverrides={rowSpanOverrides}
         onRowSpanChange={onRowSpanChange}
-        hoveredRow={hoveredRow}
-        mirrorMode={mirrorMode}
         width={width}
         topEdgeEnabled={topEdgeEnabled}
         bottomEdgeEnabled={bottomEdgeEnabled}
@@ -74,6 +70,7 @@ export const BeadGrid = memo(({
         onBottomEdgeSpanChange={onBottomEdgeSpanChange}
         spanControlsExpanded={spanControlsExpanded}
         gutterShiftX={gutterShiftX}
+        labelTransform={labelTransform}
       />
 
       {beads.map((bead) => (
