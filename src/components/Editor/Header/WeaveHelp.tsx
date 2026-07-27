@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   HelpCircle, Diamond, MousePointerClick, Eraser, Crosshair, Undo2, RotateCcw, FlipHorizontal,
+  Percent, MoveHorizontal,
 } from 'lucide-react';
 import './WeaveHelp.css';
 
@@ -37,12 +38,12 @@ export const WeaveHelp = ({ technique }: { technique: 'silyanka' | 'crossWeave' 
       <button
         ref={triggerRef}
         onClick={() => setOpen(o => !o)}
-        className={`grid-controls__btn ${open ? 'grid-controls__btn--on' : ''}`}
+        className={`tool-btn ${open ? 'tool-btn--active' : ''}`}
         title="How this mode works"
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <HelpCircle size={13} />
+        <HelpCircle size={14} />
       </button>
 
       {open && (
@@ -87,8 +88,8 @@ export const WeaveHelp = ({ technique }: { technique: 'silyanka' | 'crossWeave' 
           <h4 className="weave-help__title">Keeping your place</h4>
           <ul className="weave-help__list">
             <li>
-              <span className="weave-help__icon weave-help__icon--text">%</span>
-              <span><b>Woven</b> — how many beads are marked out of the whole piece.</span>
+              <Percent size={12} className="weave-help__icon" />
+              <span><b>Done</b> — how many beads are marked out of the whole piece.</span>
             </li>
             <li>
               <Crosshair size={12} className="weave-help__icon" />
@@ -109,7 +110,7 @@ export const WeaveHelp = ({ technique }: { technique: 'silyanka' | 'crossWeave' 
           <h4 className="weave-help__title">Turning the piece</h4>
           <ul className="weave-help__list">
             <li>
-              <span className="weave-help__icon weave-help__icon--text">↔</span>
+              <MoveHorizontal size={12} className="weave-help__icon" />
               <span>Lay the piece across the screen or stand it upright — whichever way it lies
                 in front of you.</span>
             </li>

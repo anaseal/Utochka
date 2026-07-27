@@ -119,6 +119,13 @@ export const useDrawing = (
       const changes = strokeChangesRef.current;
       const hasStagedChanges = changes.size > 0;
       if (hasStagedChanges) {
+        // Буфер под следующий мазок — новый Map, а не очистка текущего на
+        // месте. Обновление уходит в React функцией, и React не обязан
+        // вызывать её тут же: если вызов отложится, changes.clear() успеет
+        // опустошить как раз тот Map, который она читает, и весь мазок молча
+        // пропадёт — при том что снимок в историю уже положен.
+        // (Тот же приём уже используется в useWeaveProgress.endStroke.)
+        strokeChangesRef.current = new Map();
         setDesignMap((prev) => {
           const next = { ...prev };
           for (const [id, color] of changes) {
@@ -127,7 +134,6 @@ export const useDrawing = (
           }
           return next;
         });
-        changes.clear();
       }
       if (
         hasStagedChanges || pre.designMap !== designMap || pre.pendants !== pendantPlacements ||

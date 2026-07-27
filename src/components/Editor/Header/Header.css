@@ -820,7 +820,13 @@
   color: #22d3ee;
 }
 
-.weave-orientation-glyph {
-  font-size: 13px;
-  line-height: 1;
+/* Разрушающее действие (Reset прогресса в режиме плетения) — та же геометрия,
+   что у соседних иконочных кнопок, отличается только цветом на ховере.
+   Отдельно от .grid-controls__btn--reset: та задаёт ширину и паддинги под
+   текстовую CLEAR и рядом с иконками ломает ряд. Двойной класс-селектор — по
+   той же причине, что и у --reset:hover выше (специфичность против
+   .grid-controls__btn:hover из Stepper.css). */
+.grid-controls__btn.grid-controls__btn--danger:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
 }

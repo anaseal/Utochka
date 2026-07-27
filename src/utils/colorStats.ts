@@ -3,7 +3,7 @@
 // вызывающий код мог доусеять его дополнительными источниками (например,
 // подвесками у силянки) поверх базового прохода по beads.
 export const computeColorStats = <T extends { id: string }>(
-  items: T[],
+  items: readonly T[],
   designMap: Record<string, string>,
   defaultColorOf: (item: T) => string,
 ): Map<string, number> => {

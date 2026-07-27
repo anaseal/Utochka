@@ -4,6 +4,7 @@ import { RotateCcw } from 'lucide-react';
 import { Bead } from '../../types/bead';
 import { PendantPlacement, PendantTemplate, PendantChain } from '../../types/pendant';
 import { BEAD_THEME } from '../../config/theme';
+import { SectionHelp } from '../common/SectionHelp';
 import './Sidebar.css';
 import './PendantsSidebar.css';
 
@@ -276,7 +277,10 @@ export const PendantsSidebar = ({
           <section className="sidebar__section">
             <header className="sidebar__section-heading">
               <div className="sidebar__section-heading-row">
-                <h3 className="sidebar__section-title">Pendants</h3>
+                <span className="sidebar__section-heading-label">
+                  <h3 className="sidebar__section-title">Pendants</h3>
+                  <SectionHelp text="Drag a design onto a bottom-row bead." />
+                </span>
                 <button
                   type="button"
                   className="sidebar__section-clear"
@@ -288,7 +292,6 @@ export const PendantsSidebar = ({
                   <RotateCcw size={13} />
                 </button>
               </div>
-              <p className="sidebar__section-desc">Drag a template onto a bottom-row node</p>
             </header>
             <div className="pendants-sidebar__catalog">
               {templates.map((template) => {
@@ -321,7 +324,10 @@ export const PendantsSidebar = ({
           <section className="sidebar__section">
             <header className="sidebar__section-heading">
               <div className="sidebar__section-heading-row">
-                <h3 className="sidebar__section-title">Chains</h3>
+                <span className="sidebar__section-heading-label">
+                  <h3 className="sidebar__section-title">Chains</h3>
+                  <SectionHelp text="Link two bottom-row beads with a chain." />
+                </span>
                 <button
                   type="button"
                   className="sidebar__section-clear"
@@ -338,7 +344,7 @@ export const PendantsSidebar = ({
                   ? (chainPendingStart !== null
                     ? 'Click the end node on the bottom row'
                     : 'Click the start node on the bottom row')
-                  : 'Drape a chain between two bottom-row nodes'}
+                  : 'Tap "Pick chain nodes" to start'}
               </p>
             </header>
             <button
@@ -375,7 +381,10 @@ export const PendantsSidebar = ({
           <section className="sidebar__section">
             <header className="sidebar__section-heading">
               <div className="sidebar__section-heading-row">
-                <h3 className="sidebar__section-title">Decor</h3>
+                <span className="sidebar__section-heading-label">
+                  <h3 className="sidebar__section-title">Decor</h3>
+                  <SectionHelp text="Drag a band into a gap between rows." />
+                </span>
                 <button
                   type="button"
                   className="sidebar__section-clear"
@@ -387,7 +396,6 @@ export const PendantsSidebar = ({
                   <RotateCcw size={13} />
                 </button>
               </div>
-              <p className="sidebar__section-desc">Drag a band onto a gap between rows</p>
             </header>
             <div className="pendants-sidebar__catalog decor-catalog">
               <button

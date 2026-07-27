@@ -1,4 +1,7 @@
-import { Undo2, RotateCcw, Crosshair, FlipHorizontal, MousePointerClick, Eraser, Diamond } from 'lucide-react';
+import {
+  Undo2, RotateCcw, Crosshair, FlipHorizontal, MousePointerClick, Eraser, Diamond,
+  MoveHorizontal, MoveVertical,
+} from 'lucide-react';
 import { WeaveHelp } from './WeaveHelp';
 
 export type WeaveTool = 'segment' | 'bead' | 'erase';
@@ -25,6 +28,9 @@ interface WeaveControlsProps {
 // Контролы режима плетения. Живут в хедере на месте скрытых палитры и
 // инструментов рисования — те же классы (tool-btn / grid-controls), что и у
 // остального хедера, никакого собственного оформления поверх холста.
+// Размеры иконок тоже общие с хедером: 14 в .tool-btn (как Pencil/Eraser/
+// Stamp) и 14 в .grid-controls__btn (как Save/Load/Share) — своих размеров
+// режим не заводит.
 export const WeaveControls = ({
   technique,
   tool,
@@ -77,7 +83,7 @@ export const WeaveControls = ({
       {/* Прогресс — как блок Zoom: подпись сверху, значение под ней. */}
       <div className="grid-controls grid-controls--vertical-zoom">
         <div className="grid-controls__group weave-progress">
-          <span className="grid-controls__label">Woven</span>
+          <span className="grid-controls__label">Done</span>
           <span className="weave-progress__value">
             {markedCount} <span className="weave-progress__total">/ {totalCount}</span>
           </span>
@@ -104,7 +110,7 @@ export const WeaveControls = ({
               className="grid-controls__btn"
               title="Undo last mark"
             >
-              <Undo2 size={13} />
+              <Undo2 size={14} />
             </button>
             <button
               onClick={onLocate}
@@ -112,14 +118,17 @@ export const WeaveControls = ({
               className="grid-controls__btn"
               title="Show where I stopped"
             >
-              <Crosshair size={13} />
+              <Crosshair size={14} />
             </button>
+            {/* Стрелка поворота — иконка lucide, а не текстовые ↔/↕: у юникодных
+                стрелок своя высота и толщина внутри кегля, рядом с соседними
+                иконками они читались заметно мельче и тоньше. */}
             <button
               onClick={onToggleOrientation}
               className="grid-controls__btn"
               title={orientation === 'vertical' ? 'Lay the canvas horizontally' : 'Stand the canvas vertically'}
             >
-              <span className="weave-orientation-glyph">{orientation === 'vertical' ? '↔' : '↕'}</span>
+              {orientation === 'vertical' ? <MoveHorizontal size={14} /> : <MoveVertical size={14} />}
             </button>
             <button
               onClick={onToggleFlip}
@@ -127,20 +136,29 @@ export const WeaveControls = ({
               title="Mirror the canvas"
               aria-pressed={flipped}
             >
-              <FlipHorizontal size={13} />
+              <FlipHorizontal size={14} />
             </button>
+            {/* --danger, а не --reset: последний рассчитан на текстовую кнопку
+                CLEAR (width: auto + padding + border-left) и здесь делал
+                иконочный Reset шире соседей и с лишней разделительной чертой. */}
             <button
               onClick={onReset}
               disabled={markedCount === 0}
-              className="grid-controls__btn grid-controls__btn--reset"
+              className="grid-controls__btn grid-controls__btn--danger"
               title="Reset all progress"
             >
-              <RotateCcw size={13} />
+              <RotateCcw size={14} />
             </button>
-            <WeaveHelp technique={technique} />
           </div>
         </div>
       </div>
+
+      {/* «?» — вне таблетки с действиями: внутри неё он стоял сразу за Reset и
+          читался как ещё одно действие над схемой, хотя ничего не делает с
+          работой, а объясняет режим. Снаружи это круглый tool-btn — та же
+          категория, что кнопки референса и настроек: вспомогательное, не
+          инструмент и не действие. */}
+      <WeaveHelp technique={technique} />
     </>
   );
 };

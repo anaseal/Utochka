@@ -24,3 +24,34 @@ export interface Thread {
 /** id бусины-якоря нужного конца нитки (см. beginThreadReroute/ручки в ThreadLayer). */
 export const threadEndBeadId = (thread: Thread, end: 'start' | 'end'): string =>
   end === 'start' ? thread.beadIds[0] : thread.beadIds[thread.beadIds.length - 1];
+
+/**
+ * Незавершённая трассировка нитки — либо новая нитка (rerouting: null), либо
+ * перепрокладка одного конца существующей (см. useThreadTrace).
+ */
+export interface ThreadTrace {
+  beadIds: string[];
+  rerouting: { threadId: string; end: 'start' | 'end' } | null;
+}
+
+/**
+ * Живой курсор во время протяжки нитки: resolved-позиция (примагниченная к
+ * ближайшей бусине в пределах hitboxRadius, иначе — сырые координаты курсора)
+ * + id бусины-магнита, если попали в радиус. Используется и для «резиновой»
+ * линии за курсором, и для решения, показывать ли крестик отмены последней
+ * точки (см. ThreadLayer).
+ */
+export interface ThreadLiveCursor {
+  pos: { x: number; y: number };
+  magnetId: string | null;
+}
+
+/**
+ * Опции коммита нитки (см. useThreads.addThread). strand — только у крестика
+ * (силянка плетётся одной ниткой), color/opacity — «кисть» из хедера.
+ */
+export interface ThreadCommitOptions {
+  strand?: 1 | 2;
+  color?: string;
+  opacity?: number;
+}

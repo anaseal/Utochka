@@ -30,6 +30,14 @@
   color: #64748b;
 }
 
+/* Разделяет группы Rows/Depth внутри секции Taper — без него подсказка
+   и степпер Depth визуально не отличались от хвоста группы Rows над ними. */
+.grid-sidebar__subsection--divider {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
 /* Тумблер синхронизации Top/Bottom Rows секции Taper — рядом с лейблом
    «Rows», выровнен как кнопка-сброс (см. .sidebar__section-clear). */
 .grid-sidebar__link-btn {

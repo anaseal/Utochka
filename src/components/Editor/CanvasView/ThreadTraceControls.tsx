@@ -1,5 +1,5 @@
 import { X, Undo2 } from 'lucide-react';
-import { ThreadTrace } from '../ThreadLayer/ThreadLayer';
+import { ThreadTrace } from '../../../types/thread';
 
 interface ThreadTraceControlsProps {
   trace: ThreadTrace | null;

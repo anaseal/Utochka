@@ -1,5 +1,6 @@
 import { Link2, Unlink2 } from 'lucide-react';
 import { Stepper } from '../common/Stepper';
+import { SectionHelp } from '../common/SectionHelp';
 import { BEAD_THEME } from '../../config/theme';
 import { CROSS_WEAVE_THEME } from '../../config/crossWeaveTheme';
 import { Taper } from '../../types/bead';
@@ -99,6 +100,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
           <header className="sidebar__section-heading">
             <div className="sidebar__section-heading-row">
               <h3 className="sidebar__section-title">Size</h3>
+              <SectionHelp text="Width, height, and spacing of the grid." />
             </div>
           </header>
           <div className="grid-sidebar__steppers">
@@ -138,6 +140,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
               <header className="sidebar__section-heading">
                 <div className="sidebar__section-heading-row">
                   <h3 className="sidebar__section-title">Edges</h3>
+                  <SectionHelp text="Bead count on the top and bottom edge." />
                 </div>
               </header>
               <div className="grid-sidebar__steppers">
@@ -168,68 +171,73 @@ export const GridSidebar = (props: GridSidebarProps) => {
               <header className="sidebar__section-heading">
                 <div className="sidebar__section-heading-row">
                   <h3 className="sidebar__section-title">Taper</h3>
+                  <SectionHelp text="Narrows the ends, like decreasing rows toward a cord." />
                 </div>
-                <p className="sidebar__section-desc">
-                  Narrows the ends of the piece, the way decreasing beads towards the cord does.
-                </p>
               </header>
 
-              <div className="sidebar__section-heading-row grid-sidebar__subheading">
-                <h4 className="sidebar__section-title">Rows</h4>
-                <button
-                  type="button"
-                  className="grid-sidebar__link-btn"
-                  onClick={silyankaProps.onToggleTaperRowsLinked}
-                  aria-pressed={silyankaProps.taperRowsLinked}
-                  aria-label={silyankaProps.taperRowsLinked ? 'Unlink top/bottom rows' : 'Link top/bottom rows'}
-                  title={silyankaProps.taperRowsLinked ? 'Top and bottom change together — click to unlink' : 'Link top and bottom to change together (both take the larger value)'}
-                >
-                  {silyankaProps.taperRowsLinked ? <Link2 size={13} /> : <Unlink2 size={13} />}
-                </button>
-              </div>
-              <p className="grid-sidebar__hint">
-                How many rows that end takes to slope in. 0 leaves the end straight.
-              </p>
-              <div className="grid-sidebar__steppers">
-                <Stepper
-                  label="Top"
-                  value={silyankaProps.taper.top.rows}
-                  onDelta={(d) => silyankaProps.onTaperRowsChange('top', d)}
-                  onReset={() => silyankaProps.onTaperSideReset('top')}
-                  onSet={(v) => silyankaProps.onSetTaperRows('top', v)}
-                  inputValue={silyankaProps.taper.top.rows}
-                  min={0}
-                  max={silyankaProps.taperRowsMax}
-                />
-                <Stepper
-                  label="Bottom"
-                  value={silyankaProps.taper.bottom.rows}
-                  onDelta={(d) => silyankaProps.onTaperRowsChange('bottom', d)}
-                  onReset={() => silyankaProps.onTaperSideReset('bottom')}
-                  onSet={(v) => silyankaProps.onSetTaperRows('bottom', v)}
-                  inputValue={silyankaProps.taper.bottom.rows}
-                  min={0}
-                  max={silyankaProps.taperRowsMax}
-                />
+              <div className="grid-sidebar__subsection">
+                <div className="sidebar__section-heading-row grid-sidebar__subheading">
+                  <h4 className="sidebar__section-title">Rows</h4>
+                  <button
+                    type="button"
+                    className="grid-sidebar__link-btn"
+                    onClick={silyankaProps.onToggleTaperRowsLinked}
+                    aria-pressed={silyankaProps.taperRowsLinked}
+                    aria-label={silyankaProps.taperRowsLinked ? 'Unlink top/bottom rows' : 'Link top/bottom rows'}
+                    title={silyankaProps.taperRowsLinked ? 'Top and bottom change together — click to unlink' : 'Link top and bottom to change together (both take the larger value)'}
+                  >
+                    {silyankaProps.taperRowsLinked ? <Link2 size={13} /> : <Unlink2 size={13} />}
+                  </button>
+                </div>
+                <p className="grid-sidebar__hint">
+                  How many rows that end takes to slope in. 0 leaves the end straight.
+                </p>
+                <div className="grid-sidebar__steppers">
+                  <Stepper
+                    label="Top"
+                    value={silyankaProps.taper.top.rows}
+                    onDelta={(d) => silyankaProps.onTaperRowsChange('top', d)}
+                    onReset={() => silyankaProps.onTaperSideReset('top')}
+                    onSet={(v) => silyankaProps.onSetTaperRows('top', v)}
+                    inputValue={silyankaProps.taper.top.rows}
+                    min={0}
+                    max={silyankaProps.taperRowsMax}
+                  />
+                  <Stepper
+                    label="Bottom"
+                    value={silyankaProps.taper.bottom.rows}
+                    onDelta={(d) => silyankaProps.onTaperRowsChange('bottom', d)}
+                    onReset={() => silyankaProps.onTaperSideReset('bottom')}
+                    onSet={(v) => silyankaProps.onSetTaperRows('bottom', v)}
+                    inputValue={silyankaProps.taper.bottom.rows}
+                    min={0}
+                    max={silyankaProps.taperRowsMax}
+                  />
+                </div>
               </div>
 
-              <p className="grid-sidebar__hint">
-                {taperDepthEnabled
-                  ? 'How deep the narrowing goes: what stays cut off after the slope has run out, all along the piece. Counted in half columns — 2 takes off one whole column per side.'
-                  : 'Depth only limits an active slope — set Rows above 0 on at least one end first.'}
-              </p>
-              <div className="grid-sidebar__steppers">
-                <Stepper
-                  label="Depth"
-                  value={silyankaProps.taper.depth}
-                  onDelta={(d) => silyankaProps.onTaperDepthChange(d)}
-                  onReset={silyankaProps.onTaperDepthReset}
-                  onSet={(v) => silyankaProps.onSetTaperDepth(v)}
-                  inputValue={silyankaProps.taper.depth}
-                  min={0}
-                  max={silyankaProps.taperDepthMax}
-                  disabled={!taperDepthEnabled}
-                />
+              <div className="grid-sidebar__subsection grid-sidebar__subsection--divider">
+                <div className="grid-sidebar__subheading">
+                  <h4 className="sidebar__section-title">Depth</h4>
+                </div>
+                <p className="grid-sidebar__hint">
+                  {taperDepthEnabled
+                    ? 'How deep the narrowing goes: what stays cut off after the slope has run out, all along the piece. Counted in half columns — 2 takes off one whole column per side.'
+                    : 'Depth only limits an active slope — set Rows above 0 on at least one end first.'}
+                </p>
+                <div className="grid-sidebar__steppers">
+                  <Stepper
+                    label="Depth"
+                    value={silyankaProps.taper.depth}
+                    onDelta={(d) => silyankaProps.onTaperDepthChange(d)}
+                    onReset={silyankaProps.onTaperDepthReset}
+                    onSet={(v) => silyankaProps.onSetTaperDepth(v)}
+                    inputValue={silyankaProps.taper.depth}
+                    min={0}
+                    max={silyankaProps.taperDepthMax}
+                    disabled={!taperDepthEnabled}
+                  />
+                </div>
               </div>
 
               {taperActive && silyankaProps.hasPendants && (
@@ -244,8 +252,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
               <header className="sidebar__section-heading">
                 <div className="sidebar__section-heading-row">
                   <h3 className="sidebar__section-title">Top Chain</h3>
+                  <SectionHelp text="Decorative row above the first row." />
                 </div>
-                <p className="sidebar__section-desc">Decorative edge above the first row</p>
               </header>
               <div className="bottom-chain-control">
                 <button
@@ -262,8 +270,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
               <header className="sidebar__section-heading">
                 <div className="sidebar__section-heading-row">
                   <h3 className="sidebar__section-title">Bottom Chain</h3>
+                  <SectionHelp text="Decorative row below the last row." />
                 </div>
-                <p className="sidebar__section-desc">Decorative edge added below the last row</p>
               </header>
               <div className="bottom-chain-control">
                 <button
@@ -287,8 +295,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
               <header className="sidebar__section-heading">
                 <div className="sidebar__section-heading-row">
                   <h3 className="sidebar__section-title">Edge Extension</h3>
+                  <SectionHelp text="Adds a full diamond shape at the edge." />
                 </div>
-                <p className="sidebar__section-desc">Full diamond at the left/right edge, per side</p>
               </header>
               <div className="edge-extension-control">
                 <div className="edge-extension-control__row">

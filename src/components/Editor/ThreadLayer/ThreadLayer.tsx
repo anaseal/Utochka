@@ -1,23 +1,10 @@
 import { memo, useCallback } from 'react';
-import { Thread } from '../../../types/thread';
+import { Thread, ThreadLiveCursor, ThreadTrace } from '../../../types/thread';
 import { ThreadAnchor } from '../../../utils/beadPositions';
 import { buildThreadPathD } from '../../../utils/threadPath';
 import { threadColorStyle, ThreadStyleSource } from '../../../utils/threadStyle';
 import { BEAD_THEME } from '../../../config/theme';
 import './ThreadLayer.css';
-
-export interface ThreadTrace {
-  beadIds: string[];
-  rerouting: { threadId: string; end: 'start' | 'end' } | null;
-}
-
-export interface ThreadLiveCursor {
-  pos: { x: number; y: number };
-  // Заполнено, когда курсор попал в hitboxRadius существующей бусины
-  // (см. findNearestThreadAnchor в CanvasView) — используется, чтобы решить,
-  // показывать ли крестик отмены последней точки.
-  magnetId: string | null;
-}
 
 interface ThreadLayerProps {
   threads: Thread[];

@@ -25,15 +25,44 @@
   font-size: 11px;
   line-height: 1.5;
   text-align: left;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+/* Тот же скролл, что у сайдбара и окна референса: прозрачная дорожка,
+   полупрозрачный палец с циановым ховером. Без этого блока в пузырьке
+   оставался дефолтный системный скролл — светлая широкая полоса поверх
+   тёмной плашки. */
+.weave-help__bubble::-webkit-scrollbar {
+  width: 8px;
+}
+
+.weave-help__bubble::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.weave-help__bubble::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background var(--transition-speed) ease;
+}
+
+.weave-help__bubble::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.55);
+  background-clip: padding-box;
 }
 
 /* Хвостик — повёрнутый квадрат под кнопкой; верхние границы совпадают с
-   рамкой пузырька, нижние скрыты его же фоном. */
+   рамкой пузырька, нижние скрыты его же фоном. right: 8px — центр хвостика
+   (8 + половина его ширины) приходится на центр круглой кнопки .tool-btn
+   (26px, ≤1024px — 22px), у правого края которой висит пузырёк. */
 .weave-help__bubble::before {
   content: '';
   position: absolute;
   top: -5px;
-  right: 12px;
+  right: 8px;
   width: 9px;
   height: 9px;
   background: #0f172a;
@@ -75,15 +104,6 @@
   flex-shrink: 0;
   margin-top: 2px;
   opacity: 0.85;
-}
-
-/* Кнопки без иконки lucide (проценты, стрелка поворота) — тот же размер и
-   выравнивание, что у иконок, чтобы текст шёл одной колонкой. */
-.weave-help__icon--text {
-  width: 12px;
-  font-size: 11px;
-  line-height: 1;
-  text-align: center;
 }
 
 .weave-help__bubble b {

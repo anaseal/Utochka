@@ -520,6 +520,26 @@ export const Header = (props: HeaderProps) => {
 
         <div className="header__divider" />
 
+        {/* Вход в режим плетения — рядом с выбором техники, а не среди иконок
+            панелей справа. Причины: это не панель, а мод (техника отвечает
+            «что плету», режим — «рисую схему или отмечаю сплетённое»);
+            соседи справа (референс, подвески, сетка) в режиме скрываются, и
+            кнопка оставалась там одна, съезжая по строке при каждом входе и
+            выходе — искать «выход» приходилось на новом месте. Левый край
+            хедера одинаков в обоих режимах. Отдельной кнопкой, а не третьим
+            элементом .technique-switch: та группа — выбор одного из двух
+            полотен, тумблер внутри неё читался бы как третья техника. */}
+        <button
+          onClick={onToggleWeaveMode}
+          className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
+          title={weaveMode ? 'Exit weave mode' : 'Weave mode: mark your progress as you go'}
+          aria-pressed={weaveMode}
+        >
+          <ListChecks size={20} />
+        </button>
+
+        <div className="header__divider" />
+
         {/* Палитра и инструменты рисования в режиме плетения не показываются:
             это отдельный мод, в нём холст ничего не рисует. */}
         {!weaveMode && (
@@ -880,14 +900,16 @@ export const Header = (props: HeaderProps) => {
 
           <div className="header__divider header__divider--end-adjacent" />
 
-          {/* Стоит отдельно от .tool-group: та на ≤1024px зафиксирована по ширине
+          {/* Референс, подвески и настройки сетки — редакторские панели. В
+              режиме плетения группа скрыта целиком (сами панели App закрывает
+              при входе в режим), поэтому условие одно на всю обёртку: пустой
+              .header__end-icons на ≤767.98px всё равно занимал бы строку в
+              двухрядном .header__end-group.
+              Стоит отдельно от .tool-group: та на ≤1024px зафиксирована по ширине
               и переносится в 2 строки (3+3 silyanka, 3+2 crossWeave) — седьмой/
               шестой элемент внутри неё проваливался бы в одинокую 3-ю строку. */}
-          <div className="header__end-icons">
-            {/* Референс, подвески и настройки сетки — редакторские панели, в
-                режиме плетения их кнопки скрыты (сами панели App закрывает при
-                входе в режим). */}
-            {!weaveMode && (
+          {!weaveMode && (
+            <div className="header__end-icons">
               <button
                 onClick={onToggleReferenceWindow}
                 className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
@@ -896,20 +918,18 @@ export const Header = (props: HeaderProps) => {
               >
                 <Image size={14} />
               </button>
-            )}
 
-            {!weaveMode && silyankaProps && (
-              <button
-                onClick={silyankaProps.onToggleSidebar}
-                className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
-                title="Pendant library"
-                aria-pressed={silyankaProps.sidebarOpen}
-              >
-                <PendantIcon size={22} />
-              </button>
-            )}
+              {silyankaProps && (
+                <button
+                  onClick={silyankaProps.onToggleSidebar}
+                  className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
+                  title="Pendant library"
+                  aria-pressed={silyankaProps.sidebarOpen}
+                >
+                  <PendantIcon size={22} />
+                </button>
+              )}
 
-            {!weaveMode && (
               <button
                 onClick={onToggleGridSidebar}
                 className={`tool-btn tool-btn--lg ${gridSidebarOpen ? 'tool-btn--active' : ''}`}
@@ -918,20 +938,8 @@ export const Header = (props: HeaderProps) => {
               >
                 <SlidersHorizontal size={20} />
               </button>
-            )}
-
-            {/* Вход в режим плетения. Стоит здесь, а не в .tool-group: это не
-                инструмент рисования, а отдельный мод, который эти инструменты
-                как раз и выключает. */}
-            <button
-              onClick={onToggleWeaveMode}
-              className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
-              title={weaveMode ? 'Выйти из режима плетения' : 'Режим плетения: отмечать, что уже сплетено'}
-              aria-pressed={weaveMode}
-            >
-              <ListChecks size={20} />
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </nav>
     </header>

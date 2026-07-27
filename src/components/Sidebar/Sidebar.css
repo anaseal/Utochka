@@ -49,6 +49,17 @@
   gap: 6px;
 }
 
+/* Группирует заголовок с «?» в один flex-элемент, чтобы justify-content:
+   space-between на .sidebar__section-heading-row расталкивал только два
+   элемента (эту группу и кнопку-сброс), а не расставлял «?» посередине
+   пустого места между тремя равноправными детьми. */
+.sidebar__section-heading-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .sidebar__section-title {
   margin: 0;
   font-size: 11px;
