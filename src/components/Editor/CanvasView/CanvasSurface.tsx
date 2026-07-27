@@ -70,13 +70,31 @@ export const CanvasSurface = ({
       style={{ '--stats-reserve': `${statsReserve}px` } as React.CSSProperties}
       onPointerDownCapture={(e) => {
         touchGesture.onPointerDownCapture(e);
+        if (!weaveMode) return;
+        // Правая кнопка в режиме плетения означает «снять проход», и снимает
+        // его обработчик contextmenu холста. Гасим её здесь, не пуская дальше:
+        // иначе pointerdown дошёл бы до бисерины и пометил сегмент, а
+        // contextmenu тут же снял бы отметку — правый клик выглядел бы
+        // бездействием, и вдобавок клал бы в историю два мазка вместо одного.
+        if (e.button === 2) {
+          e.stopPropagation();
+          return;
+        }
         // Мазок плетения стартует в CAPTURE-фазе: pointerdown бисерины (bubble)
         // срабатывает раньше pointerdown контейнера, и без этого первый
         // weaveTouch клика шёл со старым набором задетых бисерин прошлого
         // мазка — общие с прошлым сегментом молча выпадали, а повторный клик
         // по тому же сегменту не делал ничего. Заодно отметки ложатся после
         // снимка истории, а не до него.
-        if (weaveMode) onWeaveStrokeStart();
+        //
+        // !isMultiTouch() — иначе второй палец (старт пинча/панорамы поверх
+        // уже идущего мазка) тоже доходит сюда и вызывает onWeaveStrokeStart()
+        // ЕЩЁ РАЗ поверх мазка первого пальца, стирая strokeSeenRef и
+        // preStrokeRef середины мазка (см. useWeaveCanvas/useWeaveProgress) —
+        // то, что первый палец успел отметить до касания вторым, беззвучно
+        // терялось: endStroke() на конце жеста видел пустой stroke и ничего
+        // не коммитил в state.
+        if (!touchGesture.isMultiTouch()) onWeaveStrokeStart();
       }}
       onPointerMove={touchGesture.onPointerMove}
       onPointerDown={() => {

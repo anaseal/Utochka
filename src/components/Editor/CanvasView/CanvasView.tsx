@@ -293,6 +293,13 @@ export const CanvasView = ({
     setSelectionRect(null);
     thread.cancelHandleDrag();
     thread.cancel();
+    // Второй палец обрывает и уже идущий мазок отметок (режим плетения) —
+    // без этого weaveCanvas.drawingRef оставался true во время всего
+    // пинч/панорама-жеста, и продолжающееся движение первого пальца по
+    // бисеринам продолжало бы их отмечать одновременно с зумом/панорамой
+    // (см. комментарий в CanvasSurface про !isMultiTouch()). endStroke() —
+    // no-op, если мазок и так не шёл.
+    weaveCanvas.endStroke();
   };
 
   // Шеврон (.span-controls-toggle) «пришвартован» к левому краю карточки

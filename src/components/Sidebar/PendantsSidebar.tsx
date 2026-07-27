@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { RotateCcw } from 'lucide-react';
 import { Bead } from '../../types/bead';
@@ -37,6 +37,13 @@ interface PendantsSidebarProps {
 }
 
 const ANCHOR_R = 18;
+
+// Порог смещения (в клиентских пикселях, без учёта zoom), с которого тач
+// на карточке подвески/декора считается драгом, а не листанием сайдбара —
+// то же значение и та же идея, что STAMP_DRAG_THRESHOLD_TOUCH в CanvasView.tsx.
+// На мыши порог не нужен (нет конкурирующего нативного скролла), там драг
+// стартует сразу по pointerdown, как раньше.
+const PENDANT_DRAG_THRESHOLD_TOUCH = 10;
 
 const PendantPreview = ({ template }: { template: PendantTemplate }) => {
   let minX = -ANCHOR_R;
@@ -136,6 +143,62 @@ export const PendantsSidebar = ({
 }: PendantsSidebarProps) => {
   const [drag, setDrag] = useState<{ templateId: string; x: number; y: number } | null>(null);
   const [decorDrag, setDecorDrag] = useState<{ x: number; y: number } | null>(null);
+
+  // Тач ещё не признан драгом (см. PENDANT_DRAG_THRESHOLD_TOUCH) — в ref, а
+  // не в state: пока порог не пройден, никакого ре-рендера быть не должно.
+  const pendingDragRef = useRef<{ templateId: string; x: number; y: number } | null>(null);
+  const pendingDecorDragRef = useRef<{ x: number; y: number } | null>(null);
+
+  const startPendantDrag = useCallback((e: React.PointerEvent, templateId: string) => {
+    if (e.pointerType === 'touch') {
+      // Не preventDefault и не setDrag сразу: touch-action:pan-y на карточке
+      // (см. PendantsSidebar.css) даёт браузеру шанс распознать это как
+      // вертикальный скролл сайдбара раньше, чем сработает наш порог ниже.
+      pendingDragRef.current = { templateId, x: e.clientX, y: e.clientY };
+      return;
+    }
+    e.preventDefault();
+    setDrag({ templateId, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const movePendantDrag = useCallback((e: React.PointerEvent) => {
+    const pending = pendingDragRef.current;
+    if (!pending) return;
+    const dx = e.clientX - pending.x;
+    const dy = e.clientY - pending.y;
+    if (Math.hypot(dx, dy) < PENDANT_DRAG_THRESHOLD_TOUCH) return;
+    pendingDragRef.current = null;
+    e.preventDefault();
+    setDrag({ templateId: pending.templateId, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const cancelPendantDrag = useCallback(() => {
+    pendingDragRef.current = null;
+  }, []);
+
+  const startDecorDrag = useCallback((e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      pendingDecorDragRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    e.preventDefault();
+    setDecorDrag({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const moveDecorDrag = useCallback((e: React.PointerEvent) => {
+    const pending = pendingDecorDragRef.current;
+    if (!pending) return;
+    const dx = e.clientX - pending.x;
+    const dy = e.clientY - pending.y;
+    if (Math.hypot(dx, dy) < PENDANT_DRAG_THRESHOLD_TOUCH) return;
+    pendingDecorDragRef.current = null;
+    e.preventDefault();
+    setDecorDrag({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const cancelDecorDrag = useCallback(() => {
+    pendingDecorDragRef.current = null;
+  }, []);
 
   const computeCol = useCallback((clientX: number, clientY: number): number | null => {
     const svg = canvasSvgRef.current;
@@ -304,9 +367,11 @@ export const PendantsSidebar = ({
                     aria-disabled={bottomEdgeEnabled}
                     onPointerDown={(e) => {
                       if (bottomEdgeEnabled) return;
-                      e.preventDefault();
-                      setDrag({ templateId: template.id, x: e.clientX, y: e.clientY });
+                      startPendantDrag(e, template.id);
                     }}
+                    onPointerMove={movePendantDrag}
+                    onPointerUp={cancelPendantDrag}
+                    onPointerCancel={cancelPendantDrag}
                   >
                     <div className="pendant-card__preview">
                       <PendantPreview template={template} />
@@ -401,10 +466,10 @@ export const PendantsSidebar = ({
               <button
                 type="button"
                 className="pendant-card"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  setDecorDrag({ x: e.clientX, y: e.clientY });
-                }}
+                onPointerDown={startDecorDrag}
+                onPointerMove={moveDecorDrag}
+                onPointerUp={cancelDecorDrag}
+                onPointerCancel={cancelDecorDrag}
               >
                 <div className="pendant-card__preview">
                   <BandPreview />

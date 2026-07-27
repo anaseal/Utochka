@@ -287,6 +287,16 @@
   font-size: 14px;
   transition: all 0.2s;
   opacity: 0.6;
+  /* Прямой flex-дитя .header__nav (сам или через display:contents у
+     .tool-group/.header__end-icons, см. .tool-group ниже) имеет
+     flex-shrink:1 по умолчанию — тот же эффект, что уже описан у
+     .grid-controls: браузер сжимает круглую кнопку по ширине (главная ось
+     флекс-строки), а высота (кросс-ось) не трогается, и на мобильном, где
+     сумма блоков хедера чуть шире экрана, иконки схлопывались в овал
+     вместо круга. Остальные круглые кнопки хедера (.palette__color,
+     .tool-btn-group, .mirror-menu, .technique-switch и т.д.) это уже имеют —
+     здесь был пропуск. */
+  flex-shrink: 0;
 }
 
 .tool-btn:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.2); }

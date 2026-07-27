@@ -164,6 +164,11 @@ export const CrossWeaveCanvasView = ({
     stopDrawing();
     thread.cancelHandleDrag();
     thread.cancel();
+    // Второй палец обрывает и уже идущий мазок отметок (режим плетения) —
+    // без этого weaveCanvas.drawingRef оставался true во время всего
+    // пинч/панорама-жеста (см. тот же комментарий в CanvasView.tsx).
+    // endStroke() — no-op, если мазок и так не шёл.
+    weaveCanvas.endStroke();
   };
 
   // --- Режим плетения -------------------------------------------------------

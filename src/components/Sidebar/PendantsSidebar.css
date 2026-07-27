@@ -17,7 +17,16 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   cursor: grab;
-  touch-action: none;
+  /* pan-y, не none: карточки заполняют почти всю ширину/высоту каталога
+     (gap всего 6px), поэтому touch-action:none на них означало, что ЛЮБОЙ
+     тач-скролл списка (палец почти всегда стартует на какой-то карточке)
+     браузер целиком отдавал под drag — сайдбар физически было нечем
+     пролистать. pan-y отдаёт браузеру только вертикальную прокрутку;
+     сам drag-жест (см. PendantsSidebar.tsx — startPendantDrag/
+     startDecorDrag) стартует по порогу смещения, а не сразу по pointerdown,
+     так что вертикальный тач по-прежнему успевает уйти в нативный скролл
+     раньше, чем сработает собственный JS-драг. */
+  touch-action: pan-y;
   transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
 }
 
