@@ -134,7 +134,15 @@ export const CrossWeaveCanvasView = ({
   // isMultiTouch отсюда — без ref эти два хука ссылались бы друг на друга.
   const cancelActiveStrokeRef = useRef<() => void>(() => {});
   const cancelActiveStroke = useCallback(() => cancelActiveStrokeRef.current(), []);
-  const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, dim, onSetZoom, cancelActiveStroke);
+  // См. тот же комментарий в CanvasView.tsx: в режиме плетения с
+  // горизонтальной ориентацией <svg> получает width/height от
+  // weaveCanvas.viewW/viewH (rotated меняет местами w/h), а не от dim
+  // напрямую — без этой поправки тач-жест писал бы в DOM не ту пару осей,
+  // и холст на время пинча/панорамы схлопывался бы и визуально «пропадал».
+  const touchDim = weaveMode && weaveOrientation === 'horizontal'
+    ? { w: dim.h, h: dim.w }
+    : dim;
+  const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
   // Плоская карта id → координаты — у CrossWeave один слой бусин без

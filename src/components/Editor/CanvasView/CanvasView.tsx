@@ -263,7 +263,18 @@ export const CanvasView = ({
     () => buildBeadPositionIndex(beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains),
     [beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains],
   );
-  const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, dim, onSetZoom, cancelActiveStroke);
+  // В режиме плетения с горизонтальной ориентацией полотно физически
+  // повёрнуто на 90° (см. useWeaveCanvas: rotated меняет местами viewW/viewH
+  // относительно dim.w/dim.h) — реальный <svg> ниже получает width/height
+  // именно от weaveCanvas.viewW/viewH, а не от dim. Без этой же поправки
+  // здесь тач-жест писал бы в DOM во время пинча/панорамы пару размеров по
+  // ДРУГОЙ оси, чем стоит в неизменном во время жеста viewBox — холст на
+  // время жеста схлопывался в исковерканный размер и визуально «пропадал»,
+  // пока жест не заканчивался и React не перерисовывал верные width/height.
+  const touchDim = weaveMode && weaveOrientation === 'horizontal'
+    ? { w: dim.h, h: dim.w }
+    : dim;
+  const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
   // Переводит client-координаты указателя в систему координат бисерин.

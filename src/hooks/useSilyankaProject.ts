@@ -6,7 +6,7 @@ import { usePendantChains } from './usePendantChains';
 import { useThreads } from './useThreads';
 import { useWeaveProgress } from './useWeaveProgress';
 import { usePersistedState } from './usePersistedState';
-import { BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
+import { APP_CONSTRAINTS, BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper, TaperSide } from '../types/bead';
 import { PendantPlacement, PendantChain } from '../types/pendant';
 import { Thread } from '../types/thread';
@@ -73,6 +73,12 @@ const clampTaperSide = (side: TaperSide, height: number): TaperSide => ({
 
 const clampTaperDepth = (depth: number, width: number): number =>
   Math.max(0, Math.min(depth, taperDepthMax(width)));
+
+// Сырые пределы под панельные APP_CONSTRAINTS.maxGridWidth/maxGridHeight —
+// с тем же сдвигом, что и во View (App.tsx: gridWidth = gridSize.width - 1,
+// gridHeight = gridSize.height + 1, см. комментарий там же).
+const MAX_RAW_WIDTH = APP_CONSTRAINTS.maxGridWidth + 1;
+const MAX_RAW_HEIGHT = APP_CONSTRAINTS.maxGridHeight - 1;
 
 const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
   if (typeof v !== 'object' || v === null) return false;
@@ -389,10 +395,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
 
   const updateDimension = (field: 'width' | 'height', delta: number) => {
     if (field === 'width') {
-      applyWidth(resizeWidthRelative(gridSize.width, delta, mirrorMode), mirrorMode);
+      applyWidth(resizeWidthRelative(gridSize.width, delta, mirrorMode, MAX_RAW_WIDTH), mirrorMode);
       return;
     }
-    applyHeight(Math.max(1, gridSize.height + delta));
+    applyHeight(clamp(gridSize.height + delta, 1, MAX_RAW_HEIGHT));
   };
 
   const updateTopSpan = (delta: number) => {
@@ -445,11 +451,11 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   };
 
   const setWidthAbsolute = (v: number) => {
-    applyWidth(resizeWidthAbsolute(gridSize.width, v, mirrorMode), mirrorMode);
+    applyWidth(resizeWidthAbsolute(gridSize.width, v, mirrorMode, MAX_RAW_WIDTH), mirrorMode);
   };
 
   const setHeightAbsolute = (v: number) => {
-    applyHeight(Math.max(1, Math.round(v)));
+    applyHeight(clamp(Math.round(v), 1, MAX_RAW_HEIGHT));
   };
 
   const setTopSpanAbsolute = (v: number) => {

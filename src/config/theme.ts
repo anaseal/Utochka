@@ -94,12 +94,18 @@ export const THREAD_STRAND_DEFAULT_COLORS: Record<1 | 2, string> = {
 };
 export const DEFAULT_THREAD_OPACITY = 0.85;
 
-// Zoom — общее понятие для обеих техник (Silyanka и CrossWeave), не силяночное,
-// поэтому вынесен из BEAD_THEME.constraints в отдельный объект.
+// Zoom и предел размера сетки — общие понятия для обеих техник (Silyanka и
+// CrossWeave), не силяночные, поэтому вынесены из BEAD_THEME.constraints в
+// отдельный объект. maxGridWidth/maxGridHeight — числа, которые видит и вводит
+// пользователь в панели Grid (то же, что подписывает линейка на холсте);
+// у силянки это со сдвигом от сырых gridSize.width/height (см. комментарий
+// в App.tsx, «Линейка на холсте — источник правды»), у CrossWeave — без сдвига.
 export const APP_CONSTRAINTS = {
   minZoom: 0.25,
   maxZoom: 3,
   zoomStep: 0.1,
+  maxGridWidth: 120,
+  maxGridHeight: 60,
 };
 
 // Reference Window — плавающее окно с картинкой-образцом, общее для обеих техник.

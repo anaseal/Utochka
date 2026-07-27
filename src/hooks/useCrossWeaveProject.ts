@@ -4,7 +4,7 @@ import { useThreads } from './useThreads';
 import { useWeaveProgress } from './useWeaveProgress';
 import { usePersistedState } from './usePersistedState';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../config/crossWeaveTheme';
-import { THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
+import { APP_CONSTRAINTS, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
 import { PendantPlacement, PendantChain } from '../types/pendant';
 import { Thread } from '../types/thread';
