@@ -463,36 +463,78 @@
    исключительно чтобы порядок в файле (общий → ≤1024 → ≤767.98) гарантированно
    давал победу самому узкому подходящему тиру.
 
-   Высота здесь тоже переопределена, а не унаследована из тиров выше — те
-   вычитают var(--stats-reserve), а хук useStatsReserve меряет расстояние от
-   ВЕРХА .stats до низа viewport. Раньше .stats была плашкой у самого низа
-   (bottom: 8px), и это расстояние примерно совпадало с её высотой. Теперь
-   .stats — верхняя из трёх иконок стека (bottom: 96px, см. CanvasStats.css) —
-   тот же замер даёт ~130px (её высота + пустота под ней до низа экрана),
-   хотя эта пустота уже ничем не занята: кнопки стека при своей ширине
-   учтены выше через резерв по ширине, а не по высоте. Подставлять
-   --stats-reserve в высоту здесь одновременно неверно (даёт вымышленный
-   резерв) и не нужно — заменяем на такой же плоский отступ 16px, что и в
-   .thread-trace-controls/.export-btn (bottom: 16px) у их нижнего края. */
+   Ширинный резерв (56px) остаётся привязан ИСКЛЮЧИТЕЛЬНО к ландшафту и
+   ширинным тирам ≥768px — на узких портретных экранах (<720px, см. блок
+   высоты ниже) от него сознательно отказались: 56px резерва при видимой
+   ширине ~240-260px карточки (320-360px viewport) — это четверть и больше
+   всей карточки, заметно бо́льшая доля, чем на широких landscape-вьюпортах,
+   для которых резерв изначально считался. Там, где карточка и так близка к
+   краю экрана (портрет, самые узкие устройства), три иконки стека просто
+   наплывают на её угол, как раньше делали .export-btn/.canvas-theme-toggle
+   на этих же ширинах до появления .stats в этом стеке — тот же приём, тот
+   же прецедент, лишний зазор не нужен.
+
+   Высота, в отличие от ширины, переопределена и для узких портретных
+   экранов (max-width: 720px, через запятую/OR с ландшафтным условием) — тут
+   выигрыш нужен независимо от заезда карточки под кнопки. Формула не
+   наследуется из тиров выше — те вычитают var(--stats-reserve), а хук
+   useStatsReserve меряет расстояние от ВЕРХА .stats до низа viewport. Раньше
+   .stats была плашкой у самого низа (bottom: 8px), и это расстояние примерно
+   совпадало с её высотой. Теперь .stats — верхняя из трёх иконок стека
+   (bottom: 96px, см. CanvasStats.css) — тот же замер даёт ~130px (её высота +
+   пустота под ней до низа экрана), хотя эта пустота уже ничем не занята (а
+   на портретных ширинах и подавно — там кнопки вообще не резервируют себе
+   отдельную полосу, см. выше). Подставлять --stats-reserve в высоту здесь
+   одновременно неверно (даёт вымышленный резерв) и не нужно — заменяем на
+   такой же плоский отступ 16px, что и в .thread-trace-controls/.export-btn
+   (bottom: 16px) у их нижнего края. */
 @media (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
     width: min(1200px, calc(100vw - 106px - var(--sidebar-width)));
+  }
+}
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
+  .canvas__svg-frame {
+    width: min(1200px, calc(100vw - 92px - var(--sidebar-width)));
+  }
+}
+@media (max-width: 767.98px) and (orientation: landscape) and (max-height: 500px) {
+  .canvas__svg-frame {
+    width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
+  }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .canvas__svg-frame {
     height: min(650px, calc(100vh - var(--palette-height) - 50px - 16px));
     height: min(650px, calc(100dvh - var(--palette-height) - 50px - 16px));
   }
 }
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    width: min(1200px, calc(100vw - 92px - var(--sidebar-width)));
     height: min(650px, calc(100vh - var(--palette-height) - 24px - 16px));
     height: min(650px, calc(100dvh - var(--palette-height) - 24px - 16px));
   }
 }
-@media (max-width: 767.98px) and (orientation: landscape) and (max-height: 500px) {
+@media (max-width: 767.98px) and (orientation: landscape) and (max-height: 500px), (max-width: 720px) {
   .canvas__svg-frame {
-    width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
     height: min(650px, calc(100vh - var(--palette-height) - 14px - 16px));
     height: min(650px, calc(100dvh - var(--palette-height) - 14px - 16px));
+  }
+}
+
+/* Узкий портретный экран (<720px, см. .canvas__svg-frame выше) — карточка
+   холста сама заметно уже (≤767.98px формула её не трогает, ~240-280px), и
+   ручка 28×48px на этом фоне непропорционально крупная. Сжимаем её и шеврон
+   внутри (svg — единственный способ переопределить lucide-иконку с фиксированным
+   size-пропом из CanvasView.tsx). */
+@media (max-width: 720px) {
+  .span-controls-toggle {
+    width: 16px;
+    height: 32px;
+  }
+  .span-controls-toggle svg {
+    width: 10px;
+    height: 10px;
   }
 }
 
