@@ -174,6 +174,32 @@
   background: none;
 }
 
+/* Обёртка тоггла + списка: на всех брейкпоинтах, кроме landscape-телефона
+   ниже, растворяется (список виден как раньше, кнопка-тоггл скрыта). */
+.stats__list-toggle {
+  display: contents;
+}
+
+.stats__toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.stats__toggle:hover {
+  color: #e2e8f0;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 /* Tablet (768–1023px): чуть просторнее мобильных отступов, 3 колонки бейджей */
 @media (min-width: 768px) {
   .stats {
@@ -245,5 +271,56 @@
 
   .stats__count {
     font-size: 13px;
+  }
+}
+
+/* Ландшафтный телефон (мало высоты, ширины хватает) — .stats занимает мало
+   вертикали и так (position: fixed, useStatsReserve меряет реальную высоту),
+   но список цветов сам по себе — grid высотой в 2 строки бейджей (~40-50px),
+   а не одна строка Total Count (~25px). На узком по высоте экране эта
+   разница ощутима (см. скриншот в задаче — от холста оставалась пара рядов
+   бисера), поэтому список прячется за кнопку-тоггл и раскрывается попапом
+   НАД плашкой по тапу — тот же паттерн, что у .mirror-menu/.header__overflow
+   в Header.tsx (кнопка + всплывающая панель), а не постоянно видимая лента.
+   Сама плашка становится однострочной (только Total Count) — вот это и
+   измеряет useStatsReserve, отдавая холсту всю освободившуюся высоту. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .stats {
+    padding: 4px 10px;
+    gap: 8px;
+  }
+
+  .stats__list-toggle {
+    display: block;
+  }
+
+  .stats__toggle {
+    display: flex;
+  }
+
+  .stats__list {
+    display: none;
+  }
+
+  /* Якорь позиционирования — .stats (position: fixed), а не .stats__list-toggle:
+     без собственного position у обёртки попап центрируется относительно всей
+     плашки (симметрично экрану), а не относительно маленькой кнопки-тоггла у
+     её края — так он не рискует вылезти за правый край экрана на узких
+     телефонах. */
+  .stats--list-open .stats__list {
+    display: grid;
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+    /* Шире, чем колоночные max-width на других брейкпоинтах — в попапе
+       ширина не так дефицитна, как высота, есть смысл показать больше
+       колонок сразу, а не сразу упираться в горизонтальный скролл. */
+    max-width: min(80vw, 320px);
   }
 }

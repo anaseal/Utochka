@@ -1,5 +1,5 @@
-import { forwardRef } from 'react';
-import { Replace } from 'lucide-react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
+import { Palette, Replace } from 'lucide-react';
 import './CanvasStats.css';
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
@@ -21,8 +21,36 @@ interface CanvasStatsProps {
 export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
   totalCount, colorStats, highlightedColor, onToggleHighlight, activeColor, onReplaceColor,
 }, ref) => {
+  // Раскрытие списка цветов попапом — реально используется только в
+  // landscape на телефоне (см. .stats__toggle/.stats--list-open в
+  // CanvasStats.css): на остальных брейкпоинтах CSS игнорирует этот стейт и
+  // список виден всегда, как раньше. Тот же паттерн клика-снаружи/Escape, что
+  // у MirrorMenu/ThreadMenu/header__overflow в Header.tsx.
+  const [listOpen, setListOpen] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!listOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) setListOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setListOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [listOpen]);
+
   return (
-    <aside className="stats" ref={ref}>
+    <aside className={`stats${listOpen ? ' stats--list-open' : ''}`} ref={ref}>
       <article className="stats__total">
         <h3 className="stats__label">Total Count</h3>
         <p className="stats__value">{totalCount}</p>
@@ -30,43 +58,57 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
 
       <span className="stats__divider" aria-hidden="true" />
 
-      <ul className="stats__list">
-        {colorStats.map(([color, count]) => {
-          const isReplaceable = HEX_RE.test(color);
-          const isHighlighted = highlightedColor === color;
-          const isActiveColor = isReplaceable && color.toLowerCase() === activeColor.toLowerCase();
-          return (
-            <li
-              key={color}
-              className={`stats__color-badge${isHighlighted ? ' stats__color-badge--active' : ''}`}
-            >
-              <button
-                type="button"
-                className="stats__indicator-btn"
-                onClick={() => onToggleHighlight(color)}
-                aria-pressed={isHighlighted}
-                aria-label={`Highlight beads of color ${color}`}
-                title="Highlight on canvas"
+      <div className="stats__list-toggle" ref={popupRef}>
+        <button
+          type="button"
+          ref={toggleRef}
+          className="stats__toggle"
+          onClick={() => setListOpen((o) => !o)}
+          aria-haspopup="true"
+          aria-expanded={listOpen}
+          title="Color breakdown"
+        >
+          <Palette size={12} />
+        </button>
+
+        <ul className="stats__list">
+          {colorStats.map(([color, count]) => {
+            const isReplaceable = HEX_RE.test(color);
+            const isHighlighted = highlightedColor === color;
+            const isActiveColor = isReplaceable && color.toLowerCase() === activeColor.toLowerCase();
+            return (
+              <li
+                key={color}
+                className={`stats__color-badge${isHighlighted ? ' stats__color-badge--active' : ''}`}
               >
-                <span className="stats__indicator" style={{ backgroundColor: color }} />
-              </button>
-              <span className="stats__count">{count}</span>
-              {isReplaceable && (
                 <button
                   type="button"
-                  className="stats__replace-btn"
-                  onClick={() => onReplaceColor(color)}
-                  disabled={isActiveColor}
-                  title={isActiveColor ? 'This is already the current color' : `Replace with current color (${activeColor})`}
-                  aria-label={`Replace color ${color} with the currently selected one`}
+                  className="stats__indicator-btn"
+                  onClick={() => onToggleHighlight(color)}
+                  aria-pressed={isHighlighted}
+                  aria-label={`Highlight beads of color ${color}`}
+                  title="Highlight on canvas"
                 >
-                  <Replace size={11} aria-hidden="true" />
+                  <span className="stats__indicator" style={{ backgroundColor: color }} />
                 </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                <span className="stats__count">{count}</span>
+                {isReplaceable && (
+                  <button
+                    type="button"
+                    className="stats__replace-btn"
+                    onClick={() => onReplaceColor(color)}
+                    disabled={isActiveColor}
+                    title={isActiveColor ? 'This is already the current color' : `Replace with current color (${activeColor})`}
+                    aria-label={`Replace color ${color} with the currently selected one`}
+                  >
+                    <Replace size={11} aria-hidden="true" />
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </aside>
   );
 });

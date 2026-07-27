@@ -48,25 +48,14 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border: 1px solid var(--canvas-border);
 
-  /* Адаптивный размер: до 1200x650, но сжимается чтобы влезать в viewport
-     (учитываем padding-left 50px у .canvas + правый отступ ~30px,
-     и сверху var(--palette-height) + padding-top 50px + место под .stats снизу).
-     --stats-reserve — реально измеренная высота .stats (useStatsReserve,
-     ResizeObserver) вместо захардкоженной константы: при большом числе
-     цветов .stats__list переносится на несколько строк и вырастает выше
-     140px, наезжая на нижние ряды бисера — особенно на мобильном.
-     Финальные -50px — это padding-top у .canvas (см. выше): он лежит МЕЖДУ
-     var(--palette-height) и самой карточкой .canvas__svg, но раньше не
-     вычитался из высоты — карточка была ровно на padding-top длиннее
-     доступного места и своим нижним краем наезжала на .stats. */
-  width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
-  height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
-  /* dvh вместо vh — см. index.css: на мобильном 100vh игнорирует
-     показ/скрытие адресной строки, а .stats (position:fixed) считается от
-     реального видимого viewport, отсюда наезд total count на холст, даже
-     когда --stats-reserve уже верно посчитан. Вторая строка переопределяет
-     первую там, где dvh поддерживается, иначе браузер её просто отбрасывает. */
-  height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
+  /* Размер самой карточки задаёт .canvas__svg-frame (см. её правило ниже) —
+     эта формула переехала туда без изменений, здесь вместо неё */
+  /* На устройствах с тач-скроллбаром (CanvasScrollbars) карточка на
+     var(--canvas-scrollbar-gutter) уже фрейма — освобождает полосу под
+     бегунком (.canvas-scrollbar), чтобы та не перекрывала бисерины у края.
+     На мыши/трекпаде gutter — 0, карточка занимает весь фрейм, как раньше. */
+  width: calc(100% - var(--canvas-scrollbar-gutter, 0px));
+  height: calc(100% - var(--canvas-scrollbar-gutter, 0px));
 
   overflow: auto;
   position: relative;
@@ -106,11 +95,14 @@
   overflow: visible;
 }
 
-/* Оболочка карточки холста только для позиционирующего контекста ручки
-   (.span-controls-toggle) — размер в точности повторяет .canvas__svg
-   (inline-block, никаких собственных width/height), но, в отличие от неё,
-   не имеет overflow:auto — ручка внутри неё лежит поверх карточки и не
-   уезжает при скролле сетки бисерин. align-self: flex-start обязателен —
+/* Оболочка карточки холста — позиционирующий контекст для ручки
+   (.span-controls-toggle) и тач-скроллбара (.canvas-scrollbar), и владелец
+   адаптивного размера холста (см. формулу width/height ниже — раньше жила
+   на .canvas__svg, теперь здесь без изменений: сама карточка .canvas__svg
+   лишь занимает часть фрейма, отступая от .canvas-scrollbar-gutter, чтобы
+   бегунок сидел рядом с бисеринами, а не поверх них). display:inline-block
+   без overflow:auto — ручка и бегунок лежат поверх карточки и не уезжают
+   при скролле сетки бисерин. align-self: flex-start обязателен —
    .canvas это display:flex, и без него рамка растягивается на всю высоту
    флекс-контейнера (а тот — на всю высоту .editor__viewport), из-за чего
    top:50% у ручки считался от невидимой растянутой рамки, а не от видимой
@@ -119,6 +111,26 @@
   position: relative;
   display: inline-block;
   align-self: flex-start;
+
+  /* Адаптивный размер: до 1200x650, но сжимается чтобы влезать в viewport
+     (учитываем padding-left 50px у .canvas + правый отступ ~30px,
+     и сверху var(--palette-height) + padding-top 50px + место под .stats снизу).
+     --stats-reserve — реально измеренная высота .stats (useStatsReserve,
+     ResizeObserver) вместо захардкоженной константы: при большом числе
+     цветов .stats__list переносится на несколько строк и вырастает выше
+     140px, наезжая на нижние ряды бисера — особенно на мобильном.
+     Финальные -50px — это padding-top у .canvas (см. выше): он лежит МЕЖДУ
+     var(--palette-height) и самой карточкой .canvas__svg, но раньше не
+     вычитался из высоты — карточка была ровно на padding-top длиннее
+     доступного места и своим нижним краем наезжала на .stats. */
+  width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
+  height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
+  /* dvh вместо vh — см. index.css: на мобильном 100vh игнорирует
+     показ/скрытие адресной строки, а .stats (position:fixed) считается от
+     реального видимого viewport, отсюда наезд total count на холст, даже
+     когда --stats-reserve уже верно посчитан. Вторая строка переопределяет
+     первую там, где dvh поддерживается, иначе браузер её просто отбрасывает. */
+  height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
 }
 
 .editor__viewport--flood-fill .canvas__svg,
@@ -305,10 +317,14 @@
    ::-webkit-scrollbar выше не является перетаскиваемым пальцем виджетом на
    мобильных WebKit/Blink (в отличие от десктопа), поэтому листать зумленный
    холст было нечем, кроме неудобного для точной прокрутки двупальцевого
-   жеста (useTouchPanZoom). Трек — прозрачная полоса-хитбокс вдоль края
-   карточки (сам клики не ловит, pointer-events:none), бегунок внутри —
-   видимый и перетаскиваемый. Лежит в .canvas__svg-frame (см. комментарий
-   у .span-controls-toggle) — поверх карточки, не уезжая при скролле сетки. */
+   жеста (useTouchPanZoom). Живёт СНАРУЖИ карточки .canvas__svg, а не поверх
+   неё: .canvas__svg на touch на var(--canvas-scrollbar-gutter) уже фрейма
+   (см. правило .canvas__svg выше) — эта полоса и есть трек скроллбара,
+   поэтому бегунок не перекрывает бисерины у края и не путается с
+   iOS/Android-индикатором скролла, который рисуется НАД самой .canvas__svg.
+   Трек сам клики не ловит (pointer-events:none), бегунок внутри — ловит.
+   Лежит в .canvas__svg-frame (см. комментарий у .span-controls-toggle) —
+   поверх фрейма, не уезжая при скролле сетки бисерин. */
 .canvas-scrollbar {
   position: absolute;
   z-index: 6;
@@ -317,14 +333,14 @@
 .canvas-scrollbar--x {
   left: 0;
   right: 0;
-  bottom: 2px;
-  height: 12px;
+  bottom: 0;
+  height: var(--canvas-scrollbar-gutter, 0px);
 }
 .canvas-scrollbar--y {
   top: 0;
   bottom: 0;
-  right: 2px;
-  width: 12px;
+  right: 0;
+  width: var(--canvas-scrollbar-gutter, 0px);
 }
 .canvas-scrollbar__thumb {
   position: absolute;
@@ -340,13 +356,17 @@
   cursor: grabbing;
   background: rgba(34, 211, 238, 0.7);
 }
-.canvas-scrollbar--x .canvas-scrollbar__thumb { top: 0; left: 0; height: 100%; }
-.canvas-scrollbar--y .canvas-scrollbar__thumb { left: 0; top: 0; width: 100%; }
+/* Толщина бегунка (10px) тоньше трека (var(--canvas-scrollbar-gutter)) —
+   отцентрирована внутри него margin-ом в половину толщины. Длина и сдвиг
+   вдоль оси скролла — инлайн-стилем из CanvasScrollbars.tsx (width/translateX
+   или height/translateY, см. компонент). */
+.canvas-scrollbar--x .canvas-scrollbar__thumb { left: 0; top: 50%; height: 10px; margin-top: -5px; }
+.canvas-scrollbar--y .canvas-scrollbar__thumb { left: 50%; top: 0; width: 10px; margin-left: -5px; }
 
 /* Увеличенная невидимая зона захвата — тот же приём, что у бейджей штампа
    (Header.css, .tool-btn-group__badge::before): видимая толщина бегунка
-   всего 12px, чтобы не быть навязчивым поверх сетки бисерин, но реальная
-   зона пальца шире (итог ~24px, тот же масштаб, что hitboxRadius бисерин). */
+   всего 10px, чтобы не быть навязчивым, но реальная зона пальца шире (итог
+   ~22px, тот же масштаб, что hitboxRadius бисерин). */
 .canvas-scrollbar__thumb::before {
   content: '';
   position: absolute;
@@ -355,13 +375,16 @@
 
 /* Скроллбар нужен только там, где нативный не перетащить пальцем — на
    устройствах с точным hover-указателем (мышь/трекпад) прячем его и не
-   трогаем родной ::-webkit-scrollbar (он там уже перетаскивается как есть).
-   На touch, наоборот, прячем родной — иначе в одном месте рисовались бы
-   две полосы друг на друге. */
+   трогаем родной ::-webkit-scrollbar (там он и так перетаскивается, а
+   var(--canvas-scrollbar-gutter) остаётся 0 — карточка занимает весь фрейм,
+   как до этой фичи). На touch, наоборот: резервируем полосу под кастомный
+   бегунок и прячем родной ::-webkit-scrollbar — иначе поверх .canvas__svg
+   рисовались бы ещё и его штрихи вплотную к нашему бегунку. */
 @media (hover: hover) and (pointer: fine) {
   .canvas-scrollbar { display: none; }
 }
 @media (hover: none), (pointer: coarse) {
+  :root { --canvas-scrollbar-gutter: 14px; }
   .canvas__svg::-webkit-scrollbar { display: none; }
 }
 
@@ -373,12 +396,14 @@
     padding-top: 24px;
     padding-left: 36px;
   }
-  .canvas__svg {
+  .canvas__svg-frame {
     width: min(1200px, calc(100vw - 60px));
     /* -24px = padding-top у .canvas на этом брейкпоинте (см. ниже) — та же
        поправка, что и в базовой формуле выше. */
     height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
     height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
+  }
+  .canvas__svg {
     padding: 20px;
     border-radius: 18px;
   }
@@ -394,10 +419,12 @@
     padding-top: 14px;
     padding-left: 24px;
   }
-  .canvas__svg {
+  .canvas__svg-frame {
     width: min(1200px, calc(100vw - 40px));
     height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
     height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
+  }
+  .canvas__svg {
     padding: 14px;
     border-radius: 14px;
   }

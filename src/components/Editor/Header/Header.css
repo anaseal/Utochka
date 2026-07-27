@@ -840,3 +840,21 @@
   color: #f87171;
   background: rgba(248, 113, 113, 0.12);
 }
+
+/* Ландшафтный телефон (мало высоты, ширины хватает, см. --palette-height в
+   index.css) — .header__end-group на ≤767.98px (см. выше) складывает
+   grid-controls__toolbar (уже 2 ряда, ~59px) и header__end-icons (~36px) в
+   ОДНУ колонку высотой под 100px, что рассчитано на портретный мобильный, где
+   вертикали в избытке. В landscape ширины достаточно, чтобы вернуть их в один
+   ряд бок о бок — тот же приём, что desktop-вариант этих же классов
+   (display: contents), только header__end-icons остаётся компактным блоком
+   (не рассыпается на 3 отдельных элемента с зазорами между ними, как на
+   десктопе) — это дешевле по ширине на телефоне. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .header__end-group {
+    display: contents;
+  }
+  .header__divider--end-adjacent {
+    display: block;
+  }
+}
