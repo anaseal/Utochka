@@ -174,9 +174,17 @@
   background: none;
 }
 
-/* Обёртка тоггла + списка: на всех брейкпоинтах, кроме landscape-телефона
-   ниже, растворяется (список виден как раньше, кнопка-тоггл скрыта). */
+/* Чисто разметочная обёртка (группирует кнопку-тоггл и попап под одним DOM-
+   узлом для клика-снаружи, см. popupRef в CanvasStats.tsx) — растворяется на
+   всех брейкпоинтах, содержимое ведёт себя как её прямые дети .stats. */
 .stats__list-toggle {
+  display: contents;
+}
+
+/* .stats__panel оборачивает total/divider/list, чтобы не дублировать их в
+   JSX для инлайн-вида и для попапа landscape-телефона (см. ниже) отдельно —
+   растворяется везде, кроме этого попапа. */
+.stats__panel {
   display: contents;
 }
 
@@ -184,8 +192,6 @@
   display: none;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
   padding: 0;
   flex-shrink: 0;
   background: none;
@@ -274,53 +280,147 @@
   }
 }
 
-/* Ландшафтный телефон (мало высоты, ширины хватает) — .stats занимает мало
-   вертикали и так (position: fixed, useStatsReserve меряет реальную высоту),
-   но список цветов сам по себе — grid высотой в 2 строки бейджей (~40-50px),
-   а не одна строка Total Count (~25px). На узком по высоте экране эта
-   разница ощутима (см. скриншот в задаче — от холста оставалась пара рядов
-   бисера), поэтому список прячется за кнопку-тоггл и раскрывается попапом
-   НАД плашкой по тапу — тот же паттерн, что у .mirror-menu/.header__overflow
-   в Header.tsx (кнопка + всплывающая панель), а не постоянно видимая лента.
-   Сама плашка становится однострочной (только Total Count) — вот это и
-   измеряет useStatsReserve, отдавая холсту всю освободившуюся высоту. */
+/* Ландшафтный телефон (мало высоты, ширины хватает) — .stats перестаёт быть
+   текстовой плашкой по центру снизу и становится такой же квадратной
+   иконкой-кнопкой, что и .export-btn/.canvas-theme-toggle (CanvasView.css),
+   в том же вертикальном стеке у правого края холста (96px — следующий шаг
+   после canvas-theme-toggle на 56px, с тем же интервалом 40px). Так она
+   никогда не может визуально наезжать на холст, как и её соседи по стеку —
+   в отличие от прежней центрированной плашки, чья ширина (растущая от
+   количества цветов) в принципе не гарантировала зазор от карточки холста.
+   Total Count и список цветов уходят в попап, раскрывающийся по тапу вверх
+   от кнопки — тот же паттерн, что у .mirror-menu/.header__overflow в
+   Header.tsx (кнопка + всплывающая панель). */
 @media (orientation: landscape) and (max-height: 500px) {
   .stats {
-    padding: 4px 10px;
-    gap: 8px;
+    position: fixed;
+    bottom: 96px;
+    left: auto;
+    right: calc(var(--sidebar-width) + 16px);
+    transform: none;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    background: #111727;
+    border: 1px solid #607086;
+    border-radius: 8px;
+    backdrop-filter: none;
+    max-width: none;
+    transition: color 0.15s, border-color 0.15s, right var(--transition-speed) ease;
   }
 
-  .stats__list-toggle {
-    display: block;
+  .stats:hover {
+    border-color: #21cfe9;
   }
 
   .stats__toggle {
     display: flex;
+    width: 100%;
+    height: 100%;
+    color: #607086;
   }
 
-  .stats__list {
+  .stats__toggle:hover {
+    color: #21cfe9;
+    background: none;
+  }
+
+  .stats__panel {
     display: none;
   }
 
-  /* Якорь позиционирования — .stats (position: fixed), а не .stats__list-toggle:
-     без собственного position у обёртки попап центрируется относительно всей
-     плашки (симметрично экрану), а не относительно маленькой кнопки-тоггла у
-     её края — так он не рискует вылезти за правый край экрана на узких
-     телефонах. */
-  .stats--list-open .stats__list {
-    display: grid;
+  /* Якорь позиционирования — .stats (сама иконка-кнопка, position: fixed) —
+     попап раскрывается вверх и прижат к правому краю кнопки, чтобы не
+     вылезать за правый край экрана. Попап нередко перекрывает правый край
+     холста (та же логика, что у .mirror-menu__panel/.header__overflow-panel —
+     всплывающая панель поверх содержимого, а не отдельная зона) — фон
+     должен быть СПЛОШНЫМ (#0f172a, без alpha, как у них), а не
+     полупрозрачным: rgba(...0.95) — унаследованный от старой, буквально
+     полупрозрачной плашки под холстом — на 5% пропускал яркие номера
+     линейки холста сквозь себя (заметная "тень" цифры поверх Total Count). */
+  .stats--list-open .stats__panel {
+    display: flex;
     position: absolute;
-    left: 50%;
-    bottom: calc(100% + 10px);
-    transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.95);
+    bottom: calc(100% + 8px);
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    background: #0f172a;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 8px;
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-    /* Шире, чем колоночные max-width на других брейкпоинтах — в попапе
-       ширина не так дефицитна, как высота, есть смысл показать больше
-       колонок сразу, а не сразу упираться в горизонтальный скролл. */
-    max-width: min(80vw, 320px);
+    /* Попап открывается по тапу для быстрого просмотра, а не как постоянная
+       панель — компактный размер даже на широких ширинных тирах (768/1024px),
+       чьи увеличенные шрифты/паддинги здесь избыточны. */
+    max-width: min(60vw, 220px);
+  }
+
+  /* Внутри вертикального попапа разделитель — горизонтальная линия между
+     Total Count и списком цветов, а не вертикальная (как в инлайн-плашке
+     на остальных брейкпоинтах, где total/divider/list стоят в ряд). */
+  .stats--list-open .stats__divider {
+    width: auto;
+    height: 1px;
+    align-self: stretch;
+  }
+
+  /* Столбик из инлайн-вида внутри широкой панели попапа съезжал влево —
+     разворачиваем в строку: подпись слева, значение справа.
+     align-items: center, а не baseline — подпись переносится на 2 строки
+     ("TOTAL"/"COUNT"), с baseline число рядом с ней «плыло» не по центру. */
+  .stats--list-open .stats__total {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  /* Форсируем компактные размеры вне зависимости от ширинного тира.
+     max-width: 50% — надёжный перенос на "TOTAL"/"COUNT": в один ряд с
+     числом ширины впритык не хватает, но это на грани точных px шрифта;
+     жёсткий потолок в половину строки переносит гарантированно. */
+  .stats--list-open .stats__label {
+    font-size: 7px;
+    max-width: 50%;
+  }
+  .stats--list-open .stats__value {
+    font-size: 10px;
+    color: #64748b;
+  }
+
+  /* Одна колонка вместо нескольких — попап и так всплывает поверх
+     содержимого, лишняя ширина не нужна. */
+  .stats--list-open .stats__list {
+    /* Без этого список — flex-элемент .stats__panel (align-items: stretch)
+       и сжимается до ширины строки .stats__total вместо своей — колонка
+       minmax(0, 100px) схлопывается к 0, бейджи налезают друг на друга. */
+    width: max-content;
+    max-width: none;
+    grid-template-columns: minmax(0, 100px);
+    grid-template-rows: none;
+    grid-auto-flow: row;
+    gap: 4px;
+    max-height: 83px; /* 3 бейджа по 25px + 2 gap по 4px, дальше скролл */
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .stats--list-open .stats__color-badge {
+    padding: 3px 6px;
+    gap: 5px;
+    min-width: 0;
+  }
+  .stats--list-open .stats__replace-btn {
+    margin-left: auto;
+  }
+  .stats--list-open .stats__indicator {
+    width: 8px;
+    height: 8px;
+  }
+  .stats--list-open .stats__count {
+    font-size: 11px;
   }
 }
