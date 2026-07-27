@@ -301,6 +301,70 @@
   border-radius: 10px;
 }
 
+/* Тач-скроллбар (CanvasScrollbars.tsx, useCanvasScrollbars.ts) — нативный
+   ::-webkit-scrollbar выше не является перетаскиваемым пальцем виджетом на
+   мобильных WebKit/Blink (в отличие от десктопа), поэтому листать зумленный
+   холст было нечем, кроме неудобного для точной прокрутки двупальцевого
+   жеста (useTouchPanZoom). Трек — прозрачная полоса-хитбокс вдоль края
+   карточки (сам клики не ловит, pointer-events:none), бегунок внутри —
+   видимый и перетаскиваемый. Лежит в .canvas__svg-frame (см. комментарий
+   у .span-controls-toggle) — поверх карточки, не уезжая при скролле сетки. */
+.canvas-scrollbar {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+}
+.canvas-scrollbar--x {
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 12px;
+}
+.canvas-scrollbar--y {
+  top: 0;
+  bottom: 0;
+  right: 2px;
+  width: 12px;
+}
+.canvas-scrollbar__thumb {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  background: rgba(148, 163, 184, 0.55);
+  border: 1px solid rgba(15, 23, 42, 0.4);
+  border-radius: 999px;
+  cursor: grab;
+  transition: background 0.15s;
+}
+.canvas-scrollbar__thumb:active {
+  cursor: grabbing;
+  background: rgba(34, 211, 238, 0.7);
+}
+.canvas-scrollbar--x .canvas-scrollbar__thumb { top: 0; left: 0; height: 100%; }
+.canvas-scrollbar--y .canvas-scrollbar__thumb { left: 0; top: 0; width: 100%; }
+
+/* Увеличенная невидимая зона захвата — тот же приём, что у бейджей штампа
+   (Header.css, .tool-btn-group__badge::before): видимая толщина бегунка
+   всего 12px, чтобы не быть навязчивым поверх сетки бисерин, но реальная
+   зона пальца шире (итог ~24px, тот же масштаб, что hitboxRadius бисерин). */
+.canvas-scrollbar__thumb::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+/* Скроллбар нужен только там, где нативный не перетащить пальцем — на
+   устройствах с точным hover-указателем (мышь/трекпад) прячем его и не
+   трогаем родной ::-webkit-scrollbar (он там уже перетаскивается как есть).
+   На touch, наоборот, прячем родной — иначе в одном месте рисовались бы
+   две полосы друг на друге. */
+@media (hover: hover) and (pointer: fine) {
+  .canvas-scrollbar { display: none; }
+}
+@media (hover: none), (pointer: coarse) {
+  .canvas__svg::-webkit-scrollbar { display: none; }
+}
+
 /* ≤1024px: сжатые отступы, edge-swipe safe. Без нижней границы —
    иначе на 767px и уже отступы резко возвращались к десктопным
    (см. аналогичный фикс в Header.css). */

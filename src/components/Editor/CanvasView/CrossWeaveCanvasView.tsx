@@ -6,6 +6,7 @@ import { CrossWeaveBeadView } from '../BeadView/CrossWeaveBeadView';
 import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
+import { CanvasScrollbars } from './CanvasScrollbars';
 import { CanvasSurface } from './CanvasSurface';
 import { WeaveTool, WeaveOrientation } from '../Header/WeaveControls';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
@@ -332,74 +333,82 @@ export const CrossWeaveCanvasView = ({
       onCommitThreadTrace={thread.commit}
     >
       <section className="canvas">
-        <div
-          className="canvas__svg"
-          data-canvas-theme={canvasTheme}
-          ref={canvasContainerRef}
-          onPointerMove={thread.handlePointerMove}
-          onPointerLeave={thread.clearCursor}
-        >
-          <svg
-            ref={canvasSvgRef}
-            width={weaveCanvas.viewW * zoom}
-            height={weaveCanvas.viewH * zoom}
-            viewBox={`0 0 ${weaveCanvas.viewW} ${weaveCanvas.viewH}`}
-            className="canvas__svg-content"
+        {/* .canvas__svg-frame — тот же позиционирующий контекст, что и у
+            силянки (CanvasView.tsx): размер в точности как .canvas__svg, но
+            без overflow:auto, поэтому тач-скроллбар (CanvasScrollbars) лежит
+            поверх карточки, не уезжая при скролле сетки бисерин. */}
+        <div className="canvas__svg-frame">
+          <div
+            className="canvas__svg"
+            data-canvas-theme={canvasTheme}
+            ref={canvasContainerRef}
+            onPointerMove={thread.handlePointerMove}
+            onPointerLeave={thread.clearCursor}
           >
-            <g transform={weaveCanvas.transform}>
-            <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
-              <CrossWeaveRulers beads={beads} width={width} height={height} labelTransform={weaveCanvas.labelTransform} />
+            <svg
+              ref={canvasSvgRef}
+              width={weaveCanvas.viewW * zoom}
+              height={weaveCanvas.viewH * zoom}
+              viewBox={`0 0 ${weaveCanvas.viewW} ${weaveCanvas.viewH}`}
+              className="canvas__svg-content"
+            >
+              <g transform={weaveCanvas.transform}>
+              <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
+                <CrossWeaveRulers beads={beads} width={width} height={height} labelTransform={weaveCanvas.labelTransform} />
 
-              {mirrorAxis && (
-                <line
-                  x1={mirrorAxis.x}
-                  y1={mirrorAxis.yTop}
-                  x2={mirrorAxis.x}
-                  y2={mirrorAxis.yBottom}
-                  className="canvas__mirror-axis"
-                  pointerEvents="none"
+                {mirrorAxis && (
+                  <line
+                    x1={mirrorAxis.x}
+                    y1={mirrorAxis.yTop}
+                    x2={mirrorAxis.x}
+                    y2={mirrorAxis.yBottom}
+                    className="canvas__mirror-axis"
+                    pointerEvents="none"
+                  />
+                )}
+
+                {beads.map((bead) => (
+                  <CrossWeaveBeadView
+                    key={bead.id}
+                    id={bead.id}
+                    x={bead.x}
+                    y={bead.y}
+                    orientation={bead.orientation}
+                    color={designMap[bead.id]}
+                    defaultColor={defaultColorForCrossWeave()}
+                    highlighted={highlightedBeadIds?.has(bead.id) ?? false}
+                    onPointerEnter={handlePointerEnter}
+                    onPointerDown={handlePointerDown}
+                  />
+                ))}
+
+                <WeaveLayer
+                  positions={weaveCanvas.positions}
+                  lastSegment={weave.lastSegment}
+                  active={weaveMode}
+                  showLast={weaveShowLast}
                 />
-              )}
 
-              {beads.map((bead) => (
-                <CrossWeaveBeadView
-                  key={bead.id}
-                  id={bead.id}
-                  x={bead.x}
-                  y={bead.y}
-                  orientation={bead.orientation}
-                  color={designMap[bead.id]}
-                  defaultColor={defaultColorForCrossWeave()}
-                  highlighted={highlightedBeadIds?.has(bead.id) ?? false}
-                  onPointerEnter={handlePointerEnter}
-                  onPointerDown={handlePointerDown}
+                <ThreadLayer
+                  threads={threads}
+                  positionIndex={beadPositionIndex}
+                  liveTrace={thread.trace}
+                  liveCursor={thread.cursor}
+                  liveTraceSource={thread.liveTraceSource}
+                  interactive={!weaveMode && activeTool === 'thread'}
+                  onHandlePointerDown={thread.handleEndPointerDown}
+                  onHandlePointerMove={thread.handleEndPointerMove}
+                  onHandlePointerUp={thread.handleEndPointerUp}
+                  onHandlePointerCancel={thread.cancelHandleDrag}
+                  onRemove={onRemoveThread}
+                  onRemoveLastTracePoint={thread.removeLastPoint}
                 />
-              ))}
+              </g>
+              </g>
+            </svg>
+          </div>
 
-              <WeaveLayer
-                positions={weaveCanvas.positions}
-                lastSegment={weave.lastSegment}
-                active={weaveMode}
-                showLast={weaveShowLast}
-              />
-
-              <ThreadLayer
-                threads={threads}
-                positionIndex={beadPositionIndex}
-                liveTrace={thread.trace}
-                liveCursor={thread.cursor}
-                liveTraceSource={thread.liveTraceSource}
-                interactive={!weaveMode && activeTool === 'thread'}
-                onHandlePointerDown={thread.handleEndPointerDown}
-                onHandlePointerMove={thread.handleEndPointerMove}
-                onHandlePointerUp={thread.handleEndPointerUp}
-                onHandlePointerCancel={thread.cancelHandleDrag}
-                onRemove={onRemoveThread}
-                onRemoveLastTracePoint={thread.removeLastPoint}
-              />
-            </g>
-            </g>
-          </svg>
+          <CanvasScrollbars containerRef={canvasContainerRef} />
         </div>
       </section>
 

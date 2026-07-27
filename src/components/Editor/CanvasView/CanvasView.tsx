@@ -13,6 +13,7 @@ import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { PendantChainLayer } from '../PendantChainLayer/PendantChainLayer';
 import { ThreadLayer } from '../ThreadLayer/ThreadLayer';
 import { CanvasChrome } from './CanvasChrome';
+import { CanvasScrollbars } from './CanvasScrollbars';
 import { CanvasSurface } from './CanvasSurface';
 import { ThreadTraceControls } from './ThreadTraceControls';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
@@ -821,6 +822,8 @@ export const CanvasView = ({
               </g>
             </svg>
           </div>
+
+          <CanvasScrollbars containerRef={canvasContainerRef} />
 
           {/* Ручка выдвижной панели редактора количества бисерин (per-row span
               controls в CanvasRulers) — видна на всех ширинах экрана: эти
