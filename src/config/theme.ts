@@ -104,8 +104,8 @@ export const APP_CONSTRAINTS = {
   minZoom: 0.25,
   maxZoom: 3,
   zoomStep: 0.1,
-  maxGridWidth: 120,
-  maxGridHeight: 60,
+  maxGridWidth: 100,
+  maxGridHeight: 30,
 };
 
 // Reference Window — плавающее окно с картинкой-образцом, общее для обеих техник.

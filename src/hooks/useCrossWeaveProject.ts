@@ -191,19 +191,19 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
 
   const updateDimension = (field: 'width' | 'height', delta: number) => {
     if (field === 'width') {
-      applyWidth(resizeWidthRelative(gridSize.width, delta, mirrorMode), mirrorMode);
+      applyWidth(resizeWidthRelative(gridSize.width, delta, mirrorMode, APP_CONSTRAINTS.maxGridWidth), mirrorMode);
       return;
     }
-    const newVal = Math.max(1, gridSize[field] + delta);
-    setGridSize(prev => ({ ...prev, [field]: newVal }));
+    const newVal = clamp(gridSize.height + delta, 1, APP_CONSTRAINTS.maxGridHeight);
+    setGridSize(prev => ({ ...prev, height: newVal }));
   };
 
   const setWidthAbsolute = (v: number) => {
-    applyWidth(resizeWidthAbsolute(gridSize.width, v, mirrorMode), mirrorMode);
+    applyWidth(resizeWidthAbsolute(gridSize.width, v, mirrorMode, APP_CONSTRAINTS.maxGridWidth), mirrorMode);
   };
 
   const setHeightAbsolute = (v: number) => {
-    setGridSize(prev => ({ ...prev, height: Math.max(1, Math.round(v)) }));
+    setGridSize(prev => ({ ...prev, height: clamp(Math.round(v), 1, APP_CONSTRAINTS.maxGridHeight) }));
   };
 
   const updateSpacing = (delta: number) => {

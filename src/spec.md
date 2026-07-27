@@ -513,7 +513,7 @@
 | Reference Window Zoom | 25%–400% | 10% |
 | Top Span / Bottom Span (глобально и per-row) | 3–10 | 1 |
 | Bottom Chain Span (`bottomEdgeDecor.span`) | 3–10 | 1 |
-| Width / Height | ≥ 1 (без верхнего предела) | 1 |
+| Width / Height | 1–100 / 1–30 (панельные числа, `APP_CONSTRAINTS.maxGridWidth/maxGridHeight`) | 1 |
 | Декор-полоса (per-row) | 0–10 | 1 |
 | История (Undo/Redo) | до 30 снимков | — |
 | Recent Colors | до `BEAD_THEME.ui.recentColorsLimit` (5) | — |

@@ -1,7 +1,7 @@
 import { Link2, Unlink2 } from 'lucide-react';
 import { Stepper } from '../common/Stepper';
 import { SectionHelp } from '../common/SectionHelp';
-import { BEAD_THEME } from '../../config/theme';
+import { APP_CONSTRAINTS, BEAD_THEME } from '../../config/theme';
 import { CROSS_WEAVE_THEME } from '../../config/crossWeaveTheme';
 import { Taper } from '../../types/bead';
 import './Sidebar.css';
@@ -111,6 +111,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
               onSet={silyankaProps ? silyankaProps.onSetWidth : crossWeaveProps!.onSetWidth}
               inputValue={width}
               min={1}
+              max={APP_CONSTRAINTS.maxGridWidth}
             />
             <Stepper
               label="Height"
@@ -119,6 +120,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
               onSet={silyankaProps ? silyankaProps.onSetHeight : crossWeaveProps!.onSetHeight}
               inputValue={height}
               min={silyankaProps ? 2 : 1}
+              max={APP_CONSTRAINTS.maxGridHeight}
             />
             <Stepper
               label="Spacing"
