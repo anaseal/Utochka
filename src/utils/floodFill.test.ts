@@ -13,8 +13,6 @@ const bottomNodes = beads.filter(
 
 const noPendants: PendantPlacement[] = [];
 const noTemplates: Record<string, PendantTemplate> = {};
-const noDecorTails: DecorTailPlacement[] = [];
-
 describe('computeUnifiedFloodFill — basic grid behavior', () => {
   it('startColor === activeColor → empty result (nothing to fill)', () => {
     const res = computeUnifiedFloodFill(

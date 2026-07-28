@@ -7,6 +7,20 @@
   --transition-speed: 0.2s;
   --palette-height: 84px;
   --sidebar-width: 0px;
+  /* Потолок карточки холста (.canvas__svg-frame, CanvasView.css) — на обычной
+     странице сознательно ограничен, чтобы холст не расползался на весь экран
+     на больших мониторах. В полноэкранном режиме (Fullscreen API, режим
+     плетения — см. useFullscreen) эта причина не действует: там весь смысл
+     в том, чтобы отдать холсту максимум места, поэтому :fullscreen ниже
+     поднимает потолок настолько, что реальный calc() внутри min() упирается
+     в размер экрана раньше, чем в переменную. */
+  --canvas-frame-max-w: 1200px;
+  --canvas-frame-max-h: 650px;
+}
+
+:fullscreen {
+  --canvas-frame-max-w: 2400px;
+  --canvas-frame-max-h: 1400px;
 }
 
 .editor--sidebar-open {

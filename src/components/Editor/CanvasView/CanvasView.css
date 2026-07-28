@@ -112,9 +112,14 @@
   display: inline-block;
   align-self: flex-start;
 
-  /* Адаптивный размер: до 1200x650, но сжимается чтобы влезать в viewport
-     (учитываем padding-left 50px у .canvas + правый отступ ~30px,
-     и сверху var(--palette-height) + padding-top 50px + место под .stats снизу).
+  /* Адаптивный размер: до var(--canvas-frame-max-w/-h) (1200x650 в обычном
+     режиме, index.css), но сжимается чтобы влезать в viewport (учитываем
+     padding-left 50px у .canvas + правый отступ ~30px, и сверху
+     var(--palette-height) + padding-top 50px + место под .stats снизу).
+     Потолок сознательно поднят в полноэкранном режиме (`:fullscreen` в
+     index.css, режим плетения — см. useFullscreen) — там реальным лимитом
+     остаётся только calc() по фактическому viewport, без вырезанной браузером
+     полосы под адресную строку/вкладки.
      --stats-reserve — реально измеренная высота .stats (useStatsReserve,
      ResizeObserver) вместо захардкоженной константы: при большом числе
      цветов .stats__list переносится на несколько строк и вырастает выше
@@ -123,14 +128,14 @@
      var(--palette-height) и самой карточкой .canvas__svg, но раньше не
      вычитался из высоты — карточка была ровно на padding-top длиннее
      доступного места и своим нижним краем наезжала на .stats. */
-  width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
-  height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
+  width: min(var(--canvas-frame-max-w), calc(100vw - 80px - var(--sidebar-width)));
+  height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
   /* dvh вместо vh — см. index.css: на мобильном 100vh игнорирует
      показ/скрытие адресной строки, а .stats (position:fixed) считается от
      реального видимого viewport, отсюда наезд total count на холст, даже
      когда --stats-reserve уже верно посчитан. Вторая строка переопределяет
      первую там, где dvh поддерживается, иначе браузер её просто отбрасывает. */
-  height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
+  height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
 }
 
 .editor__viewport--flood-fill .canvas__svg,
@@ -397,11 +402,11 @@
     padding-left: 36px;
   }
   .canvas__svg-frame {
-    width: min(1200px, calc(100vw - 60px));
+    width: min(var(--canvas-frame-max-w), calc(100vw - 60px));
     /* -24px = padding-top у .canvas на этом брейкпоинте (см. ниже) — та же
        поправка, что и в базовой формуле выше. */
-    height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
-    height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
   }
   .canvas__svg {
     padding: 20px;
@@ -420,9 +425,9 @@
     padding-left: 24px;
   }
   .canvas__svg-frame {
-    width: min(1200px, calc(100vw - 40px));
-    height: min(650px, calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
-    height: min(650px, calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
+    width: min(var(--canvas-frame-max-w), calc(100vw - 40px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
   }
   .canvas__svg {
     padding: 14px;
@@ -490,35 +495,35 @@
    (bottom: 16px) у их нижнего края. */
 @media (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    width: min(1200px, calc(100vw - 106px - var(--sidebar-width)));
+    width: min(var(--canvas-frame-max-w), calc(100vw - 106px - var(--sidebar-width)));
   }
 }
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    width: min(1200px, calc(100vw - 92px - var(--sidebar-width)));
+    width: min(var(--canvas-frame-max-w), calc(100vw - 92px - var(--sidebar-width)));
   }
 }
 @media (max-width: 767.98px) and (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    width: min(1200px, calc(100vw - 80px - var(--sidebar-width)));
+    width: min(var(--canvas-frame-max-w), calc(100vw - 80px - var(--sidebar-width)));
   }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    height: min(650px, calc(100vh - var(--palette-height) - 50px - 16px));
-    height: min(650px, calc(100dvh - var(--palette-height) - 50px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - 50px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - 50px - 16px));
   }
 }
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    height: min(650px, calc(100vh - var(--palette-height) - 24px - 16px));
-    height: min(650px, calc(100dvh - var(--palette-height) - 24px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - 24px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - 24px - 16px));
   }
 }
 @media (max-width: 767.98px) and (orientation: landscape) and (max-height: 500px), (max-width: 720px) {
   .canvas__svg-frame {
-    height: min(650px, calc(100vh - var(--palette-height) - 14px - 16px));
-    height: min(650px, calc(100dvh - var(--palette-height) - 14px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - 14px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - 14px - 16px));
   }
 }
 
