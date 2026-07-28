@@ -4,6 +4,7 @@ import { resolveSpanCount } from './spans';
 import { encode } from './beadId';
 import { getColumnRange } from './columnRange';
 import { getTaperColumnCuts, TaperColumnCuts } from './taper';
+import { getDecorRowStep } from './decorGeometry';
 
 type SpanCoords = Pick<Bead, 'x' | 'y'>;
 
@@ -48,18 +49,10 @@ export const generateSilyankaGrid = (
   const getYStep = (r: number): number =>
     (getInternalCount(r) + 1) * (spacing * verticalCompression);
 
-  // Промежуточный декор: шаг между декор-рядами полосы. В отличие от обычных
-  // пролётов сетки (где соседние ряды всегда разнесены ещё и по X на stepX/2,
-  // что само по себе не даёт бисеринам наложиться), бисерины полосы стоят
-  // строго друг под другом по одному X — единственный запас между ними это
-  // сам decorRowStep. При spacing*verticalCompression меньше диаметра бисерины
-  // (spanRadius*2) соседние ряды полосы физически наезжают друг на друга —
-  // поэтому шаг не может быть меньше минимального пиксельного пролёта между
-  // бисеринами (тот же принцип, что и pitch в pendantChain.ts).
-  const decorRowStep = Math.max(
-    spacing * verticalCompression,
-    BEAD_THEME.sizes.spanRadius * 2 + 2
-  );
+  // Промежуточный декор: шаг между декор-рядами полосы (см. decorGeometry.ts —
+  // общая формула с индивидуальным хвостом decorTail.ts, чтобы обе разновидности
+  // декора выглядели одинаково по плотности).
+  const decorRowStep = getDecorRowStep(spacing);
   // Число декор-рядов полосы после узлового ряда r (0 — полосы нет)
   const getDecorRows = (r: number): number => {
     const n = decorBands[r];
@@ -105,8 +98,31 @@ export const generateSilyankaGrid = (
     }
     cutByRow.push({ left: Math.max(0, l), right: Math.max(0, rt) });
   }
+  // «Висячий угол»: крайний узел границы (r=0 или r=2·height) в крайней
+  // колонке (c=minC(r) или c=maxC(r)), у которого при одновременно
+  // выключенных цепочке (top/bottom chain) и расширении этой стороны
+  // осталась бы только ОДНА диагональ вместо двух — у рядов внутри полотна
+  // недостающую сторону всегда закрывает диагональ соседнего ряда с другой
+  // стороны, а у самой границы компенсировать нечем (см. spec.md, Edge
+  // Extension). Без этой проверки такой узел рисовался бы с единственной,
+  // ничем не уравновешенной диагональю — видимый обрубок нити вместо точки
+  // ромба. Проверка симметрична для всех 4 углов.
+  const isDanglingCorner = (r: number, c: number): boolean => {
+    if (r === 0 && !topEdgeEnabled) {
+      if (c === minC(0) && !extendLeftEdge) return true;
+      if (c === maxC(0) && !extendRightEdge) return true;
+    }
+    if (r === 2 * height && !bottomEdgeEnabled) {
+      if (c === minC(r) && !extendLeftEdge) return true;
+      if (c === maxC(r) && !extendRightEdge) return true;
+    }
+    return false;
+  };
+
   const nodeSurvives = (r: number, c: number): boolean =>
-    c >= minC(r) + cutByRow[r].left && c <= maxC(r) - cutByRow[r].right;
+    c >= minC(r) + cutByRow[r].left &&
+    c <= maxC(r) - cutByRow[r].right &&
+    !isDanglingCorner(r, c);
 
   const nodeGrid: SpanCoords[][] = []; // nodeGrid[r][c - minC(r)]
   // decorGrid[r] — декор-ряды (сверху вниз) полосы между узловым рядом r и r+1

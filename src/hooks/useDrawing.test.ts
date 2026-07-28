@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useState } from 'react';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { useDrawing } from './useDrawing';
-import { PendantPlacement, PendantChain } from '../types/pendant';
+import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
 
 const PERSIST_MS = 300;
@@ -11,17 +11,19 @@ const RECENT_LIMIT = 5; // BEAD_THEME.ui.recentColorsLimit
 const PALETTE: readonly string[] = ['#000000', '#ffffff'];
 const BLACK = PALETTE[0];
 
-// Подвески, цепочки и нитки живут снаружи useDrawing (их состояние в
-// use*Project.ts), но откатываются его же историей — харнесс повторяет эту
-// сборку, иначе Undo/Redo нечем проверить.
+// Подвески, цепочки, декор-хвосты и нитки живут снаружи useDrawing (их
+// состояние в use*Project.ts), но откатываются его же историей — харнесс
+// повторяет эту сборку, иначе Undo/Redo нечем проверить.
 const useDrawingHarness = () => {
   const [pendants, setPendants] = useState<PendantPlacement[]>([]);
   const [chains, setChains] = useState<PendantChain[]>([]);
+  const [decorTails, setDecorTails] = useState<DecorTailPlacement[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
   const drawing = useDrawing(
-    BLACK, PALETTE, pendants, setPendants, chains, setChains, threads, setThreads, 'silyanka',
+    BLACK, PALETTE, pendants, setPendants, chains, setChains,
+    decorTails, setDecorTails, threads, setThreads, 'silyanka',
   );
-  return { drawing, pendants, chains, threads, setPendants, setChains, setThreads };
+  return { drawing, pendants, chains, decorTails, threads, setPendants, setChains, setDecorTails, setThreads };
 };
 
 type Harness = { current: ReturnType<typeof useDrawingHarness> };
@@ -43,6 +45,9 @@ const pendant = (id: string, colorMap: Record<number, string> = {}): PendantPlac
 
 const chain = (id: string, colorMap: Record<number, string> = {}): PendantChain =>
   ({ placementId: id, startCol: 0, endCol: 2, colorMap });
+
+const decorTail = (id: string, colorMap: Record<number, string> = {}): DecorTailPlacement =>
+  ({ placementId: id, col: 0, rows: 3, colorMap });
 
 const thread = (id: string): Thread => ({ id, beadIds: ['node-0-0', 'node-1-0'] });
 
@@ -209,13 +214,14 @@ describe('undo / redo', () => {
     expect(result.current.drawing.designMap).toEqual({ 'node-0-0': BLACK });
   });
 
-  // Заливка может за один клик задеть сетку, подвеску, цепочку и нитку —
-  // один Undo обязан откатить всё четыре разом, иначе схема разъедется.
-  it('один шаг истории откатывает сетку, подвески, цепочки и нитки вместе', () => {
+  // Заливка может за один клик задеть сетку, подвеску, цепочку, хвост и нитку —
+  // один Undo обязан откатить всё пять разом, иначе схема разъедется.
+  it('один шаг истории откатывает сетку, подвески, цепочки, хвосты и нитки вместе', () => {
     const { result } = setup();
     act(() => {
       result.current.setPendants([pendant('p1')]);
       result.current.setChains([chain('c1')]);
+      result.current.setDecorTails([decorTail('d1')]);
     });
 
     act(() => {
@@ -224,32 +230,36 @@ describe('undo / redo', () => {
         ps => ps.map(p => ({ ...p, colorMap: { 0: '#ff0000' } })),
         cs => cs.map(c => ({ ...c, colorMap: { 0: '#ff0000' } })),
         () => [thread('t1')],
+        ds => ds.map(d => ({ ...d, colorMap: { 0: '#ff0000' } })),
       );
     });
     expect(result.current.drawing.designMap).toEqual({ 'node-0-0': '#ff0000' });
     expect(result.current.pendants[0].colorMap).toEqual({ 0: '#ff0000' });
+    expect(result.current.decorTails[0].colorMap).toEqual({ 0: '#ff0000' });
 
     act(() => { result.current.drawing.undo(); });
 
     expect(result.current.drawing.designMap).toEqual({});
     expect(result.current.pendants[0].colorMap).toEqual({});
     expect(result.current.chains[0].colorMap).toEqual({});
+    expect(result.current.decorTails[0].colorMap).toEqual({});
     expect(result.current.threads).toEqual([]);
   });
 
   it('applyPatch, который ничего не изменил, не пишется в историю', () => {
     const { result } = setup();
-    act(() => { result.current.drawing.applyPatch(m => m, null, null, null); });
+    act(() => { result.current.drawing.applyPatch(m => m, null, null, null, null); });
     expect(result.current.drawing.canUndo).toBe(false);
   });
 });
 
 describe('очистка', () => {
-  it('стирает и сетку, и цвета подвесок с цепочками, и нитки', () => {
+  it('стирает и сетку, и цвета подвесок, цепочек, хвостов, и нитки', () => {
     const { result } = setup();
     act(() => {
       result.current.setPendants([pendant('p1', { 0: '#ff0000' })]);
       result.current.setChains([chain('c1', { 0: '#00ff00' })]);
+      result.current.setDecorTails([decorTail('d1', { 0: '#0000ff' })]);
       result.current.setThreads([thread('t1')]);
     });
     paintStroke(result, ['node-0-0']);
@@ -259,6 +269,7 @@ describe('очистка', () => {
     expect(result.current.drawing.designMap).toEqual({});
     expect(result.current.pendants[0].colorMap).toEqual({});
     expect(result.current.chains[0].colorMap).toEqual({});
+    expect(result.current.decorTails[0].colorMap).toEqual({});
     expect(result.current.threads).toEqual([]);
   });
 

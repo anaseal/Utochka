@@ -21,8 +21,6 @@ interface BeadGridProps {
   width: number;
   topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
-  bottomEdgeSpan: number;
-  onBottomEdgeSpanChange: (delta: number) => void;
   spanControlsExpanded: boolean;
   gutterShiftX: number;
   labelTransform?: (x: number, y: number) => string | undefined;
@@ -49,8 +47,6 @@ export const BeadGrid = memo(({
   width,
   topEdgeEnabled,
   bottomEdgeEnabled,
-  bottomEdgeSpan,
-  onBottomEdgeSpanChange,
   spanControlsExpanded,
   gutterShiftX,
   labelTransform,
@@ -66,8 +62,6 @@ export const BeadGrid = memo(({
         width={width}
         topEdgeEnabled={topEdgeEnabled}
         bottomEdgeEnabled={bottomEdgeEnabled}
-        bottomEdgeSpan={bottomEdgeSpan}
-        onBottomEdgeSpanChange={onBottomEdgeSpanChange}
         spanControlsExpanded={spanControlsExpanded}
         gutterShiftX={gutterShiftX}
         labelTransform={labelTransform}

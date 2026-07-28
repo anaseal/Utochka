@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSilyankaProject } from './hooks/useSilyankaProject';
 import { useCrossWeaveProject } from './hooks/useCrossWeaveProject';
 import { usePersistedState } from './hooks/usePersistedState';
+import { useFullscreen } from './hooks/useFullscreen';
 import { CanvasView } from './components/Editor/CanvasView/CanvasView';
 import { CrossWeaveCanvasView } from './components/Editor/CanvasView/CrossWeaveCanvasView';
 import { Header, Technique } from './components/Editor/Header/Header';
@@ -62,6 +63,10 @@ function App() {
   const toggleWeaveOrientation = () => {
     setWeaveOrientation((o) => (o === 'vertical' ? 'horizontal' : 'vertical'));
   };
+  // Полноэкранный режим (Fullscreen API) — независимый тумблер внутри режима
+  // плетения, не персистится (браузер и не даёт восстановить его без
+  // пользовательского жеста при перезагрузке страницы).
+  const { isFullscreen, toggleFullscreen, exitFullscreen } = useFullscreen();
   // Рамка «здесь я остановилась» не горит постоянно: показывается на пару
   // секунд после нажатия Locate (WeaveControls) и гаснет сама.
   const [weaveShowLast, setWeaveShowLast] = useState(false);
@@ -297,6 +302,8 @@ function App() {
     onToggleOrientation: toggleWeaveOrientation,
     flipped: weaveFlipped,
     onToggleFlip: () => setWeaveFlipped((f) => !f),
+    isFullscreen,
+    onToggleFullscreen: toggleFullscreen,
   };
 
   // Панели «Pendants & Decor» и «Grid» делят один и тот же правый слот
@@ -313,6 +320,10 @@ function App() {
     if (!weaveMode) {
       setActiveSidebar(null);
       setReferenceOpen(false);
+    } else {
+      // Полноэкранный режим был "для режима плетения" — выходим из него
+      // вместе с самим режимом, а не оставляем висеть без своих контролов.
+      exitFullscreen();
     }
     setWeaveMode(!weaveMode);
   };
@@ -446,6 +457,7 @@ function App() {
             bottomEdgeEnabled: silyanka.bottomEdgeDecor.enabled,
             onBottomEdgeToggle: silyanka.toggleBottomEdgeEnabled,
             hasPendants: silyanka.pendantPlacements.length > 0,
+            hasDecorTails: silyanka.decorTailPlacements.length > 0,
             extendLeftEdge: silyanka.edgeExtension.left,
             extendRightEdge: silyanka.edgeExtension.right,
             onToggleExtendLeftEdge: silyanka.toggleExtendLeftEdge,
@@ -507,12 +519,18 @@ function App() {
           pendantPlacements={silyanka.pendantPlacements}
           pendantTemplates={PENDANT_TEMPLATES_BY_ID}
           bottomNodes={silyanka.bottomNodes}
+          pendantAnchors={silyanka.pendantAnchors}
           hoveredCol={silyanka.hoveredCol}
           onPaintPendantBead={silyanka.handlePendantPaint}
           onRemovePlacement={silyanka.pendantControls.removePlacement}
           pendantChains={silyanka.pendantChains}
           onPaintChainBead={silyanka.handleChainPaint}
           onRemoveChain={silyanka.chainControls.removeChain}
+          decorTailPlacements={silyanka.decorTailPlacements}
+          decorRowStep={silyanka.decorRowStep}
+          hoveredDecorTailCol={silyanka.hoveredDecorTailCol}
+          onPaintDecorTailBead={silyanka.handleDecorTailPaint}
+          onRemoveDecorTail={silyanka.decorTailControls.removePlacement}
           threads={silyanka.threads}
           onAddThread={silyanka.threadControls.addThread}
           onRerouteThreadEnd={silyanka.threadControls.rerouteThreadEnd}
@@ -525,8 +543,6 @@ function App() {
           onFloodFill={silyanka.handleFloodFill}
           topEdgeEnabled={silyanka.topEdgeEnabled}
           bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
-          bottomEdgeSpan={silyanka.bottomEdgeDecor.span}
-          onBottomEdgeSpanChange={silyanka.updateBottomEdgeSpan}
           stampPattern={silyanka.stampPattern}
           stampPreviewPatch={silyanka.stampPreviewPatch}
           onStampSelect={silyanka.handleStampSelect}
@@ -594,6 +610,12 @@ function App() {
           onDecorCount={silyanka.updateDecorBand}
           onClearDecor={silyanka.handleClearDecor}
           onHoveredRowChange={silyanka.setHoveredRow}
+          decorTailPlacements={silyanka.decorTailPlacements}
+          onAddDecorTail={silyanka.decorTailControls.addPlacement}
+          onUpdateDecorTailLength={silyanka.decorTailControls.updateLength}
+          onRemoveDecorTail={silyanka.decorTailControls.removePlacement}
+          onClearDecorTails={silyanka.decorTailControls.clearAllPlacements}
+          onHoveredDecorTailColChange={silyanka.setHoveredDecorTailCol}
           bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
           pendantChains={silyanka.pendantChains}
           chainToolActive={silyanka.drawingControls.activeTool === 'pendant-chain'}

@@ -34,6 +34,7 @@ interface SilyankaGridSidebarProps {
   bottomEdgeEnabled: boolean;
   onBottomEdgeToggle: () => void;
   hasPendants: boolean;
+  hasDecorTails: boolean;
   extendLeftEdge: boolean;
   extendRightEdge: boolean;
   onToggleExtendLeftEdge: () => void;
@@ -242,10 +243,10 @@ export const GridSidebar = (props: GridSidebarProps) => {
                 </div>
               </div>
 
-              {taperActive && silyankaProps.hasPendants && (
+              {taperActive && (silyankaProps.hasPendants || silyankaProps.hasDecorTails) && (
                 <p className="grid-sidebar__hint">
-                  Pendants on the columns the taper cuts away are hidden, not deleted — lower Rows
-                  or Depth and they come back.
+                  Pendants and tails on the columns the taper cuts away are hidden, not deleted —
+                  lower Rows or Depth and they come back.
                 </p>
               )}
             </section>
@@ -282,12 +283,12 @@ export const GridSidebar = (props: GridSidebarProps) => {
                   onClick={silyankaProps.onBottomEdgeToggle}
                   aria-pressed={silyankaProps.bottomEdgeEnabled}
                   aria-label="Toggle Bottom Chain"
-                  disabled={!silyankaProps.bottomEdgeEnabled && silyankaProps.hasPendants}
-                  title={!silyankaProps.bottomEdgeEnabled && silyankaProps.hasPendants ? 'Clear pendants to enable Bottom Chain' : undefined}
+                  disabled={!silyankaProps.bottomEdgeEnabled && (silyankaProps.hasPendants || silyankaProps.hasDecorTails)}
+                  title={!silyankaProps.bottomEdgeEnabled && (silyankaProps.hasPendants || silyankaProps.hasDecorTails) ? 'Clear pendants and tails to enable Bottom Chain' : undefined}
                 />
-                {!silyankaProps.bottomEdgeEnabled && silyankaProps.hasPendants && (
+                {!silyankaProps.bottomEdgeEnabled && (silyankaProps.hasPendants || silyankaProps.hasDecorTails) && (
                   <p className="bottom-chain-control__hint">
-                    Clear pendants (Pendants &amp; Decor panel) to enable Bottom Chain
+                    Clear pendants and tails (Pendants &amp; Decor panel) to enable Bottom Chain
                   </p>
                 )}
               </div>

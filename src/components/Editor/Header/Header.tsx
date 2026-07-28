@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   MoreHorizontal, FlipHorizontal, PaintBucket, Stamp, Pencil,
   ArrowUpToLine, ArrowDownToLine, X, Image, Download, Upload, Share2, Palette,
-  Check, SlidersHorizontal, Trash2, ListChecks,
+  Check, SlidersHorizontal, Trash2, ListChecks, RotateCcw, Maximize2, Minimize2,
 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import './Header.css';
@@ -16,6 +16,7 @@ import { StampAnchorEdge } from '../../../utils/stamp';
 import { APP_CONSTRAINTS, BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS } from '../../../config/theme';
 import { ThreadStyleFields } from './ThreadStyleFields';
 import { WeaveControls, WeaveTool, WeaveOrientation } from './WeaveControls';
+import { WeaveHelp } from './WeaveHelp';
 
 
 export type Technique = 'silyanka' | 'crossWeave';
@@ -71,6 +72,8 @@ interface SharedHeaderProps {
     onToggleOrientation: () => void;
     flipped: boolean;
     onToggleFlip: () => void;
+    isFullscreen: boolean;
+    onToggleFullscreen: () => void;
   };
 }
 
@@ -495,7 +498,7 @@ export const Header = (props: HeaderProps) => {
   const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
 
   return (
-    <header className="header">
+    <header className={`header${weaveMode ? ' header--weave' : ''}`}>
       <nav className="header__nav">
         <div className="technique-switch" role="group" aria-label="Switch technique">
           <button
@@ -846,37 +849,83 @@ export const Header = (props: HeaderProps) => {
                     </button>
                   </div>
                 </div>
+                {/* Reset/«?» режима плетения: на ≤767.98px их дубли в основной
+                    строке скрыты (см. .header__weave-desktop-only, Header.css) —
+                    строка WeaveControls не помещается в хедер даже после
+                    разбивки на 2 ряда. Тот же приём переноса в overflow, что и
+                    у Save/Load/Share выше. */}
+                {weaveMode && (
+                  <div className="header__overflow-row">
+                    <span className="header__overflow-label">Weave mode</span>
+                    <div className="grid-controls__actions">
+                      <button
+                        onClick={weaveControls.onToggleFullscreen}
+                        className={`grid-controls__btn ${weaveControls.isFullscreen ? 'grid-controls__btn--on' : ''}`}
+                        title={weaveControls.isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                        aria-pressed={weaveControls.isFullscreen}
+                      >
+                        {weaveControls.isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                      </button>
+                      <button
+                        onClick={weaveControls.onReset}
+                        disabled={weaveControls.markedCount === 0}
+                        className="grid-controls__btn grid-controls__btn--danger"
+                        title="Reset all progress"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                      <WeaveHelp technique={technique} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        <div className="header__divider" />
+        {/* header__divider--before-end: на ≤767.98px в режиме плетения весь
+            header__end-group скрыт целиком (см. .header--weave в Header.css) —
+            без класса этот разделитель повисал бы одиноким штрихом в конце
+            строки, ни от чего не отделяя. */}
+        <div className="header__divider header__divider--before-end" />
 
         {/* На ≤767.98px тулбар Undo/Redo/Clear и иконки Reference/Pendant/
             Grid Settings не помещаются в одну строку хедера и обрезаются за
             краем экрана (нет ни переноса, ни скролла у .header__nav) — эта
             обёртка сворачивает их в 2 внутренних ряда (тот же приём, что уже
             даёт двухрядность .tool-group), не трогая раскладку на десктопе/
-            планшете (display: contents там "растворяет" обёртку). */}
+            планшете (display: contents там "растворяет" обёртку). Целиком
+            скрыта на ≤767.98px в режиме плетения (.header--weave, Header.css) —
+            Undo/Redo/Clear ниже относятся к рисунку, а не к отметкам прогресса
+            (см. WeaveHelp: "Progress has its own undo and never touches your
+            drawing history"), и не помещаются в бюджет строки вместе с
+            WeaveControls; Save/Load/Share остаются доступны через overflow "⋯"
+            (уже дублируются туда на этой ширине независимо от режима). */}
         <div className="header__end-group">
           <div className="grid-controls">
             <div className="grid-controls__toolbar">
-              <div className="grid-controls__actions-row">
-                <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
-                <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
-                <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">
-                  <Trash2 size={12} className="grid-controls__btn-reset-icon" />
-                  <span className="grid-controls__btn-reset-label">CLEAR</span>
-                </button>
-              </div>
-              {/* Полноразмерный разделитель (как .header__divider), а не border
-                  на кнопке Save — border-left внутри маленькой 24px-кнопки
-                  визуально терялся рядом с бордером самой таблетки. Виден
-                  только на десктопе/планшете (>1024px) — на ≤1024px тулбар
-                  становится двухэтажным и ряды разделяет border-top (см. медиа-
-                  запрос ниже), там этот разделитель скрыт. */}
-              <span className="grid-controls__toolbar-divider" aria-hidden="true" />
+              {/* Скрыты целиком в режиме плетения (на всех ширинах, не только
+                  мобильных) — та же причина, что и выше: это Undo/Redo рисунка,
+                  не отметок, и во время плетения не имеют смысла. */}
+              {!weaveMode && (
+                <>
+                  <div className="grid-controls__actions-row">
+                    <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
+                    <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
+                    <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">
+                      <Trash2 size={12} className="grid-controls__btn-reset-icon" />
+                      <span className="grid-controls__btn-reset-label">CLEAR</span>
+                    </button>
+                  </div>
+                  {/* Полноразмерный разделитель (как .header__divider), а не border
+                      на кнопке Save — border-left внутри маленькой 24px-кнопки
+                      визуально терялся рядом с бордером самой таблетки. Виден
+                      только на десктопе/планшете (>1024px) — на ≤1024px тулбар
+                      становится двухэтажным и ряды разделяет border-top (см. медиа-
+                      запрос ниже), там этот разделитель скрыт. */}
+                  <span className="grid-controls__toolbar-divider" aria-hidden="true" />
+                </>
+              )}
               <div className="grid-controls__actions-row grid-controls__actions-row--files">
                 <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
                   <Download size={14} />
@@ -898,7 +947,10 @@ export const Header = (props: HeaderProps) => {
             </div>
           </div>
 
-          <div className="header__divider header__divider--end-adjacent" />
+          {/* Без !weaveMode рядом с этим разделителем в режиме плетения он
+              повисал бы одиноким штрихом в конце строки — header__end-icons
+              следом за ним скрыт условием ниже. */}
+          {!weaveMode && <div className="header__divider header__divider--end-adjacent" />}
 
           {/* Референс, подвески и настройки сетки — редакторские панели. В
               режиме плетения группа скрыта целиком (сами панели App закрывает

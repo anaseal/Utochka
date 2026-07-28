@@ -1,8 +1,9 @@
 import { Bead } from '../types/bead';
 import { defaultColorFor } from '../config/theme';
-import { PendantPlacement, PendantTemplate, PendantChain } from '../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../types/pendant';
 import { decode, encode } from './beadId';
 import { chainBeadId, isChainBeadId, parseChainBeadId, chainBeadCountBetween } from './pendantChain';
+import { decorTailBeadId, isDecorTailBeadId, parseDecorTailBeadId } from './decorTail';
 
 type AdjMap = Map<string, string[]>;
 
@@ -145,15 +146,24 @@ interface ChainHit {
   index: number;
 }
 
+interface DecorTailHit {
+  placementId: string;
+  index: number;
+}
+
 interface UnifiedFloodFillResult {
   gridIds: string[];
   pendantHits: PendantHit[];
   chainHits: ChainHit[];
+  decorTailHits: DecorTailHit[];
 }
 
-// Заливка через сетку, подвески и цепочки-подвески как единый граф: подвеска
-// соединена с сеткой через свою якорную ноду (beads[0] всегда касается ноды
-// нижнего ряда), цепочка — через оба конца (startCol/endCol на нижнем ряду).
+// Заливка через сетку, подвески, цепочки-подвески и декор-хвосты как единый
+// граф: подвеска соединена с сеткой через свою якорную ноду (beads[0] всегда
+// касается ноды нижнего ряда — или кончика декор-хвоста той же колонки, если
+// он есть, см. pendantAnchorNodes), цепочка — через оба конца (startCol/endCol
+// на нижнем ряду), хвост — через свою якорную ноду (всегда настоящую, хвост
+// не может расти из другого хвоста).
 export function computeUnifiedFloodFill(
   startId: string,
   beads: Bead[],
@@ -161,18 +171,29 @@ export function computeUnifiedFloodFill(
   activeColor: string,
   placements: PendantPlacement[],
   templates: Record<string, PendantTemplate>,
+  // Якорь ПОДВЕСКИ на колонку: настоящая нода нижнего ряда, либо — если на
+  // этой колонке есть декор-хвост — его последняя бисерина (см.
+  // pendantAnchors в useSilyankaProject.ts). Позволяет подвеске «висеть на
+  // хвосте, как на ноде», не меняя код ниже.
+  pendantAnchorNodes: Bead[],
+  // Настоящие ноды нижнего ряда — якорь цепочек и декор-хвостов (те всегда
+  // растут из ноды, а не из другого декора).
   bottomNodes: Bead[],
   chains: PendantChain[] = [],
+  decorTails: DecorTailPlacement[] = [],
 ): UnifiedFloodFillResult {
   const beadMap = new Map(beads.map(b => [b.id, b]));
-  const nodeByCol = new Map<number, Bead>();
-  bottomNodes.forEach(n => nodeByCol.set(n.logicalIndex.col, n));
+  const pendantAnchorByCol = new Map<number, Bead>();
+  pendantAnchorNodes.forEach(n => pendantAnchorByCol.set(n.logicalIndex.col, n));
+  const bottomNodeByCol = new Map<number, Bead>();
+  bottomNodes.forEach(n => bottomNodeByCol.set(n.logicalIndex.col, n));
   const placementById = new Map(placements.map(p => [p.placementId, p]));
   const chainById = new Map(chains.map(c => [c.placementId, c]));
+  const decorTailById = new Map(decorTails.map(t => [t.placementId, t]));
 
   const anchorPendants = (nodeId: string): PendantPlacement[] =>
     placements.filter(p => {
-      const anchor = nodeByCol.get(p.col);
+      const anchor = pendantAnchorByCol.get(p.col);
       return anchor?.id === nodeId && templates[p.templateId];
     });
 
@@ -180,8 +201,8 @@ export function computeUnifiedFloodFill(
   const anchorChains = (nodeId: string): { chain: PendantChain; isStart: boolean }[] => {
     const result: { chain: PendantChain; isStart: boolean }[] = [];
     for (const chain of chains) {
-      const start = nodeByCol.get(chain.startCol);
-      const end = nodeByCol.get(chain.endCol);
+      const start = bottomNodeByCol.get(chain.startCol);
+      const end = bottomNodeByCol.get(chain.endCol);
       if (start?.id === nodeId) result.push({ chain, isStart: true });
       if (end?.id === nodeId) result.push({ chain, isStart: false });
     }
@@ -189,11 +210,15 @@ export function computeUnifiedFloodFill(
   };
 
   const chainCount = (chain: PendantChain): number => {
-    const start = nodeByCol.get(chain.startCol);
-    const end = nodeByCol.get(chain.endCol);
+    const start = bottomNodeByCol.get(chain.startCol);
+    const end = bottomNodeByCol.get(chain.endCol);
     if (!start || !end) return 0;
     return chainBeadCountBetween(start, end);
   };
+
+  // Хвосты, у которых нода nodeId — якорь (col).
+  const anchorDecorTails = (nodeId: string): DecorTailPlacement[] =>
+    decorTails.filter(t => bottomNodeByCol.get(t.col)?.id === nodeId);
 
   const parsePendantId = (id: string): [string, number] => {
     const [, placementId, idxStr] = id.split(':');
@@ -211,11 +236,15 @@ export function computeUnifiedFloodFill(
       const [placementId, index] = parseChainBeadId(id);
       return chainById.get(placementId)?.colorMap[index] ?? defaultColorFor('SPAN');
     }
+    if (isDecorTailBeadId(id)) {
+      const [placementId, index] = parseDecorTailBeadId(id);
+      return decorTailById.get(placementId)?.colorMap[index] ?? defaultColorFor('SPAN');
+    }
     return designMap[id] ?? defaultColorFor(beadMap.get(id)?.type ?? 'SPAN');
   };
 
   const startColor = effectiveColor(startId);
-  if (startColor === activeColor) return { gridIds: [], pendantHits: [], chainHits: [] };
+  if (startColor === activeColor) return { gridIds: [], pendantHits: [], chainHits: [], decorTailHits: [] };
 
   const adjMap = buildAdjacencyMap(beads);
 
@@ -231,7 +260,7 @@ export function computeUnifiedFloodFill(
         else if (b === index) result.push(pendantBeadId(placementId, a));
       }
       if (index === 0) {
-        const anchor = nodeByCol.get(p.col);
+        const anchor = pendantAnchorByCol.get(p.col);
         if (anchor) result.push(anchor.id);
       }
       return result;
@@ -245,14 +274,35 @@ export function computeUnifiedFloodFill(
       if (index > 0) {
         result.push(chainBeadId(placementId, index - 1));
       } else {
-        const startAnchor = nodeByCol.get(chain.startCol);
+        const startAnchor = bottomNodeByCol.get(chain.startCol);
         if (startAnchor) result.push(startAnchor.id);
       }
       if (index < count - 1) {
         result.push(chainBeadId(placementId, index + 1));
       } else {
-        const endAnchor = nodeByCol.get(chain.endCol);
+        const endAnchor = bottomNodeByCol.get(chain.endCol);
         if (endAnchor) result.push(endAnchor.id);
+      }
+      return result;
+    }
+    if (isDecorTailBeadId(id)) {
+      const [placementId, index] = parseDecorTailBeadId(id);
+      const tail = decorTailById.get(placementId);
+      if (!tail) return [];
+      const result: string[] = [];
+      if (index > 0) {
+        result.push(decorTailBeadId(placementId, index - 1));
+      } else {
+        const anchor = bottomNodeByCol.get(tail.col);
+        if (anchor) result.push(anchor.id);
+      }
+      if (index < tail.rows - 1) {
+        result.push(decorTailBeadId(placementId, index + 1));
+      } else {
+        // Кончик хвоста — сам якорь для обычной подвески той же колонки
+        // (см. pendantAnchorNodes выше) — подвеска «висит на хвосте, как на ноде».
+        const pendantRoots = anchorPendants(id).map(p => pendantBeadId(p.placementId, 0));
+        result.push(...pendantRoots);
       }
       return result;
     }
@@ -260,7 +310,8 @@ export function computeUnifiedFloodFill(
     const pendantRoots = anchorPendants(id).map(p => pendantBeadId(p.placementId, 0));
     const chainRoots = anchorChains(id).map(({ chain, isStart }) =>
       chainBeadId(chain.placementId, isStart ? 0 : Math.max(0, chainCount(chain) - 1)));
-    return [...gridNeighbors, ...pendantRoots, ...chainRoots];
+    const decorTailRoots = anchorDecorTails(id).map(t => decorTailBeadId(t.placementId, 0));
+    return [...gridNeighbors, ...pendantRoots, ...chainRoots, ...decorTailRoots];
   };
 
   const visited = new Set([startId]);
@@ -268,6 +319,7 @@ export function computeUnifiedFloodFill(
   const gridIds: string[] = [];
   const pendantHits: PendantHit[] = [];
   const chainHits: ChainHit[] = [];
+  const decorTailHits: DecorTailHit[] = [];
 
   while (queue.length > 0) {
     const current = queue.shift()!;
@@ -277,6 +329,9 @@ export function computeUnifiedFloodFill(
     } else if (isChainBeadId(current)) {
       const [placementId, index] = parseChainBeadId(current);
       chainHits.push({ placementId, index });
+    } else if (isDecorTailBeadId(current)) {
+      const [placementId, index] = parseDecorTailBeadId(current);
+      decorTailHits.push({ placementId, index });
     } else {
       gridIds.push(current);
     }
@@ -288,5 +343,5 @@ export function computeUnifiedFloodFill(
     }
   }
 
-  return { gridIds, pendantHits, chainHits };
+  return { gridIds, pendantHits, chainHits, decorTailHits };
 }

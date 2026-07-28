@@ -3,12 +3,13 @@ import { useGrid } from './useGrid';
 import { useDrawing } from './useDrawing';
 import { usePendants } from './usePendants';
 import { usePendantChains } from './usePendantChains';
+import { useDecorTails } from './useDecorTails';
 import { useThreads } from './useThreads';
 import { useWeaveProgress } from './useWeaveProgress';
 import { usePersistedState } from './usePersistedState';
 import { APP_CONSTRAINTS, BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper, TaperSide } from '../types/bead';
-import { PendantPlacement, PendantChain } from '../types/pendant';
+import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
 import { PENDANT_TEMPLATES_BY_ID } from '../data/pendantTemplates';
 import { clampSpan, resolveSpanCount } from '../utils/spans';
@@ -19,6 +20,8 @@ import { mirrorBeadId } from '../utils/mirror';
 import { fillMissingMirror } from '../utils/symmetrize';
 import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
 import { chainBeadId } from '../utils/pendantChain';
+import { decorTailBeadId } from '../utils/decorTail';
+import { getDecorRowStep } from '../utils/decorGeometry';
 import {
   StampPattern, StampContext, StampAnchorEdge, captureStampPattern, applyStampPattern,
 } from '../utils/stamp';
@@ -36,8 +39,7 @@ const isGridConfig = (v: unknown): v is GridConfig => {
 
 const isBottomEdgeDecor = (v: unknown): v is BottomEdgeDecor =>
   typeof v === 'object' && v !== null &&
-  typeof (v as BottomEdgeDecor).enabled === 'boolean' &&
-  typeof (v as BottomEdgeDecor).span === 'number';
+  typeof (v as BottomEdgeDecor).enabled === 'boolean';
 
 const isEdgeExtension = (v: unknown): v is EdgeExtension =>
   typeof v === 'object' && v !== null &&
@@ -138,6 +140,14 @@ const isPendantChains = (v: unknown): v is PendantChain[] =>
     typeof c.endCol === 'number' &&
     typeof c.colorMap === 'object' && c.colorMap !== null);
 
+const isDecorTailPlacements = (v: unknown): v is DecorTailPlacement[] =>
+  Array.isArray(v) && v.every(t =>
+    typeof t === 'object' && t !== null &&
+    typeof t.placementId === 'string' &&
+    typeof t.col === 'number' &&
+    typeof t.rows === 'number' &&
+    typeof t.colorMap === 'object' && t.colorMap !== null);
+
 const isThreads = (v: unknown): v is Thread[] =>
   Array.isArray(v) && v.every(t =>
     typeof t === 'object' && t !== null &&
@@ -171,7 +181,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   );
   const [bottomEdgeDecor, setBottomEdgeDecor] = usePersistedState<BottomEdgeDecor>(
     'silyanka:bottomEdgeDecor',
-    { enabled: false, span: BEAD_THEME.gridDefaults.beadsInSpan },
+    { enabled: false },
     isBottomEdgeDecor,
   );
   const [edgeExtension, setEdgeExtension] = usePersistedState<EdgeExtension>(
@@ -203,6 +213,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     'silyanka:pendantChains', [], isPendantChains,
   );
 
+  const [decorTailPlacements, setDecorTailPlacements] = usePersistedState<DecorTailPlacement[]>(
+    'silyanka:decorTailPlacements', [], isDecorTailPlacements,
+  );
+
   const [threads, setThreads] = usePersistedState<Thread[]>(
     'silyanka:threads', [], isThreads,
   );
@@ -210,7 +224,8 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension, topEdgeEnabled, taper);
   const drawingControls = useDrawing(
     palette[0], palette, pendantPlacements, setPendantPlacements,
-    pendantChains, setPendantChains, threads, setThreads, 'silyanka',
+    pendantChains, setPendantChains, decorTailPlacements, setDecorTailPlacements,
+    threads, setThreads, 'silyanka',
   );
   const threadControls = useThreads(threads, drawingControls.applyPatch);
 
@@ -231,6 +246,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
 
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  // Драг карточки «Tail» (декор-хвост) — своя колонка-наведение, отдельная от
+  // hoveredCol (тот подсвечивает цель драга ПОДВЕСКИ) и от hoveredRow (тот —
+  // цель драга полосы Decor Bands на зазор между рядами).
+  const [hoveredDecorTailCol, setHoveredDecorTailCol] = useState<number | null>(null);
   // Незавершённый выбор узла-начала цепочки (инструмент 'pendant-chain') —
   // null, пока не кликнули по первому узлу нижнего ряда.
   const [chainPendingStart, setChainPendingStart] = useState<number | null>(null);
@@ -269,15 +288,42 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     mirrorMode, gridSize.width,
   );
 
+  const decorTailControls = useDecorTails(
+    decorTailPlacements, setDecorTailPlacements,
+    drawingControls.activeColor, drawingControls.activeTool,
+    mirrorMode, gridSize.width,
+  );
+
   const bottomNodes = useMemo(() => beads.filter(
     b => b.type === 'NODE' && b.logicalIndex.row === 2 * gridSize.height,
   ), [beads, gridSize.height]);
+
+  // Якорь ПОДВЕСКИ на колонку: настоящая нода нижнего ряда — либо, если на
+  // этой колонке есть декор-хвост, его последняя бисерина. Единая точка
+  // подмены: все потребители якоря подвески (PendantLayer, floodFill,
+  // beadPositions, высота канваса в CanvasView) получают этот массив ВМЕСТО
+  // bottomNodes, поэтому подвеска «висит на хвосте, как на ноде», не меняя
+  // код ни в одном из них (см. spec.md, «Декор-хвост»). Цепочки-подвески и
+  // сам DecorTailLayer в эту подмену НЕ входят — они всегда крепятся к
+  // настоящей ноде (см. bottomNodes ниже).
+  const decorRowStep = getDecorRowStep(gridSize.spacing);
+  const pendantAnchors = useMemo(() => bottomNodes.map(n => {
+    const tail = decorTailPlacements.find(t => t.col === n.logicalIndex.col);
+    if (!tail) return n;
+    return {
+      ...n,
+      id: decorTailBeadId(tail.placementId, tail.rows - 1),
+      y: n.y + tail.rows * decorRowStep,
+    };
+  }), [bottomNodes, decorTailPlacements, decorRowStep]);
 
   const internalTop = topEdgeEnabled
     ? Math.max(0, resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2)
     : 0;
 
-  const internalBottom = Math.max(0, bottomEdgeDecor.span - 2);
+  const internalBottom = Math.max(
+    0, resolveSpanCount(-2, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2,
+  );
 
   // Контекст трансляции id для штампа — та же геометрия, что видит generator.ts.
   const stampCtx = useMemo<StampContext>(() => ({
@@ -354,10 +400,15 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       setPendantChains(prev => prev
         .map(c => ({ ...c, startCol: c.startCol + mirrorDelta, endCol: c.endCol + mirrorDelta }))
         .filter(c => c.startCol >= 0 && c.endCol < newWidth));
+      // Декор-хвосты сдвигаем вместе с рисунком той же логикой, что и подвески.
+      setDecorTailPlacements(prev => prev
+        .map(t => ({ ...t, col: t.col + mirrorDelta }))
+        .filter(t => t.col >= 0 && t.col < newWidth));
     } else if (newWidth < gridSize.width) {
-      // При сужении сетки убираем подвески/цепочки с исчезнувших колонок.
+      // При сужении сетки убираем подвески/цепочки/хвосты с исчезнувших колонок.
       setPendantPlacements(prev => prev.filter(p => p.col < newWidth));
       setPendantChains(prev => prev.filter(c => c.startCol < newWidth && c.endCol < newWidth));
+      setDecorTailPlacements(prev => prev.filter(t => t.col < newWidth));
     }
     // Потолок Taper.depth зависит от ширины — подрезаем так же, как rows
     // подрезаются под высоту (см. applyHeight), иначе на узкой сетке остаётся
@@ -499,7 +550,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
 
   const toggleBottomEdgeEnabled = () => {
     setBottomEdgeDecor(prev => {
-      if (!prev.enabled && pendantPlacements.length > 0) return prev;
+      // Bottom Chain, подвески и декор-хвосты не могут быть включены
+      // одновременно — все три стартуют от той же ноды нижнего ряда, которую
+      // трогает дуга Bottom Chain (см. spec.md, «Взаимоисключение с подвесками»).
+      if (!prev.enabled && (pendantPlacements.length > 0 || decorTailPlacements.length > 0)) return prev;
       return { ...prev, enabled: !prev.enabled };
     });
   };
@@ -507,15 +561,6 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   const toggleTopEdgeEnabled = () => {
     setTopEdgeEnabled(prev => !prev);
   };
-
-  // useCallback: без него функция получала бы новую ссылку на каждый
-  // рендер useSilyankaProject (т.е. от любого клика где угодно в
-  // приложении) — а это проп BeadGrid (onBottomEdgeSpanChange), и
-  // нестабильная ссылка пробивала бы его memo, пересобирая весь список
-  // из тысяч бисерин на совершенно не связанные действия.
-  const updateBottomEdgeSpan = useCallback((delta: number) => {
-    setBottomEdgeDecor(prev => ({ ...prev, span: clampSpan(prev.span + delta) }));
-  }, [setBottomEdgeDecor]);
 
   const toggleExtendLeftEdge = () => {
     setEdgeExtension(prev => ({ ...prev, left: !prev.left }));
@@ -525,8 +570,13 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setEdgeExtension(prev => ({ ...prev, right: !prev.right }));
   };
 
-  // useCallback — см. updateBottomEdgeSpan выше, тот же проп BeadGrid
-  // (onRowSpanChange) с той же проблемой нестабильной ссылки.
+  // useCallback: без него функция получала бы новую ссылку на каждый
+  // рендер useSilyankaProject (т.е. от любого клика где угодно в
+  // приложении) — а это проп BeadGrid (onRowSpanChange), и нестабильная
+  // ссылка пробивала бы его memo, пересобирая весь список из тысяч бисерин
+  // на совершенно не связанные действия. Обслуживает и обычные ряды, и
+  // горизонтальные цепочки (r=-1 Top Chain, r=-2 Bottom Chain) — они лежат
+  // в тех же rowSpanOverrides (см. resolveSpanCount).
   const updateRowSpan = useCallback((spanRowIndex: number, delta: number) => {
     setRowSpanOverrides(prev => {
       const current = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, prev);
@@ -574,23 +624,30 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setDecorBands({});
   };
 
-  // Заливка — единый граф сетки, подвесок и цепочек: подвеска соединена со
-  // своей якорной нодой, цепочка — с обоими концами, поэтому цвет может
-  // «перетекать» между сеткой и любым декором.
+  // Заливка — единый граф сетки, подвесок, цепочек и декор-хвостов: подвеска
+  // соединена со своей якорной нодой (или кончиком хвоста той же колонки,
+  // если он есть — см. pendantAnchors), цепочка — с обоими концами, хвост —
+  // со своей якорной нодой, поэтому цвет может «перетекать» между сеткой и
+  // любым декором.
   const applyUnifiedFloodFill = useCallback((startId: string, mirrorStartId: string | null) => {
     const args = [
       beads, drawingControls.designMap, drawingControls.activeColor,
-      pendantPlacements, PENDANT_TEMPLATES_BY_ID, bottomNodes, pendantChains,
+      pendantPlacements, PENDANT_TEMPLATES_BY_ID, pendantAnchors, bottomNodes,
+      pendantChains, decorTailPlacements,
     ] as const;
     const r1 = computeUnifiedFloodFill(startId, ...args);
     const r2 = mirrorStartId
       ? computeUnifiedFloodFill(mirrorStartId, ...args)
-      : { gridIds: [], pendantHits: [], chainHits: [] };
+      : { gridIds: [], pendantHits: [], chainHits: [], decorTailHits: [] };
 
     const gridIds = [...new Set([...r1.gridIds, ...r2.gridIds])];
     const pendantHits = [...r1.pendantHits, ...r2.pendantHits];
     const chainHits = [...r1.chainHits, ...r2.chainHits];
-    if (gridIds.length === 0 && pendantHits.length === 0 && chainHits.length === 0) return;
+    const decorTailHits = [...r1.decorTailHits, ...r2.decorTailHits];
+    if (
+      gridIds.length === 0 && pendantHits.length === 0 &&
+      chainHits.length === 0 && decorTailHits.length === 0
+    ) return;
 
     const activeColor = drawingControls.activeColor;
     drawingControls.applyPatch(
@@ -619,8 +676,18 @@ export const useSilyankaProject = (palette: readonly string[]) => {
           return { ...c, colorMap };
         })
         : null,
+      null,
+      decorTailHits.length > 0
+        ? (prev) => prev.map((t) => {
+          const hits = decorTailHits.filter(h => h.placementId === t.placementId);
+          if (hits.length === 0) return t;
+          const colorMap = { ...t.colorMap };
+          for (const h of hits) colorMap[h.index] = activeColor;
+          return { ...t, colorMap };
+        })
+        : null,
     );
-  }, [beads, drawingControls, pendantPlacements, bottomNodes, pendantChains]);
+  }, [beads, drawingControls, pendantPlacements, pendantAnchors, bottomNodes, pendantChains, decorTailPlacements]);
 
   const handleFloodFill = useCallback((startId: string) => {
     const mirrorId = mirrorMode
@@ -680,6 +747,29 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     applyUnifiedFloodFill(startId, mirrorStartId);
   }, [drawingControls.activeTool, chainControls, mirrorMode, gridSize.width, pendantChains, applyUnifiedFloodFill]);
 
+  const handleDecorTailPaint = useCallback((placementId: string, beadIndex: number) => {
+    if (drawingControls.activeTool !== 'flood-fill') {
+      decorTailControls.paintBead(placementId, beadIndex);
+      return;
+    }
+    const startId = decorTailBeadId(placementId, beadIndex);
+    let mirrorStartId: string | null = null;
+    if (mirrorMode && gridSize.width > 1) {
+      const tail = decorTailPlacements.find(t => t.placementId === placementId);
+      const mirrorCol = tail ? gridSize.width - 1 - tail.col : null;
+      const mirrorTail = mirrorCol !== null
+        ? decorTailPlacements.find(t => t.col === mirrorCol)
+        : undefined;
+      if (mirrorTail && mirrorTail.placementId !== placementId) {
+        mirrorStartId = decorTailBeadId(mirrorTail.placementId, beadIndex);
+      }
+    }
+    applyUnifiedFloodFill(startId, mirrorStartId);
+  }, [
+    drawingControls.activeTool, decorTailControls, mirrorMode, gridSize.width,
+    decorTailPlacements, applyUnifiedFloodFill,
+  ]);
+
   // Инструмент 'pendant-chain': клик по узлу нижнего ряда отмечает начало,
   // следующий клик по другому узлу — конец и создаёт цепочку. Повторный клик
   // по той же ноде отменяет незавершённый выбор.
@@ -708,7 +798,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     taper.top.rows === 0 && taper.bottom.rows === 0 && taper.depth === 0 &&
     !taperRowsLinked &&
     topEdgeEnabled &&
-    !bottomEdgeDecor.enabled && bottomEdgeDecor.span === BEAD_THEME.gridDefaults.beadsInSpan &&
+    !bottomEdgeDecor.enabled &&
     edgeExtension.left && edgeExtension.right
   );
 
@@ -724,7 +814,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setTaper({ top: { rows: 0 }, bottom: { rows: 0 }, depth: 0 });
     setTaperRowsLinked(false);
     setTopEdgeEnabled(true);
-    setBottomEdgeDecor({ enabled: false, span: BEAD_THEME.gridDefaults.beadsInSpan });
+    setBottomEdgeDecor({ enabled: false });
     setEdgeExtension({ left: true, right: true });
   };
 
@@ -756,19 +846,22 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     taperRowsLinked, toggleTaperRowsLinked,
     pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, chainControls, chainPendingStart, setChainPendingStart,
+    decorTailPlacements, setDecorTailPlacements, decorTailControls,
     threads, threadControls, weave,
     activeThreadColor, setActiveThreadColor, activeThreadOpacity, setActiveThreadOpacity,
     beads, drawingControls, pendantControls,
     hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
+    hoveredDecorTailCol, setHoveredDecorTailCol,
     stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewPatch,
     stampAnchorEdge, toggleStampAnchorEdge,
-    canvasSvgRef, rowGaps, bottomNodes, internalTop, internalBottom,
+    canvasSvgRef, rowGaps, bottomNodes, pendantAnchors, decorRowStep, internalTop, internalBottom,
     handleStampSelect, handleStampPlace,
     updateDimension, updateTopSpan, updateBottomSpan, updateSpacing,
     setWidthAbsolute, setHeightAbsolute, setTopSpanAbsolute, setBottomSpanAbsolute, setSpacingAbsolute,
-    toggleBottomEdgeEnabled, updateBottomEdgeSpan, updateRowSpan,
+    toggleBottomEdgeEnabled, updateRowSpan,
     updateDecorBand, handleDecorDrop, handleClearDecor,
-    handleFloodFill, handlePendantPaint, handleChainPaint, handleChainNodeClick, resetEdge,
+    handleFloodFill, handlePendantPaint, handleChainPaint, handleDecorTailPaint,
+    handleChainNodeClick, resetEdge,
     makeSymmetric, resetGridAll, gridIsDefault,
   };
 };

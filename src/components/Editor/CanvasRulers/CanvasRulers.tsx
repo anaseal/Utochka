@@ -14,8 +14,6 @@ interface CanvasRulersProps {
   width: number;
   topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
-  bottomEdgeSpan: number;
-  onBottomEdgeSpanChange: (delta: number) => void;
   // Ряд ±/счётчик на каждый span-ряд сворачивается по умолчанию на всех
   // ширинах экрана (см. CanvasView.tsx) — раскрывается тогглом
   // .span-controls-toggle (см. CanvasRulers.css).
@@ -71,7 +69,7 @@ const SpanCtrlButton = ({
   </g>
 );
 
-export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, width, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange, spanControlsExpanded, gutterShiftX, labelTransform }: CanvasRulersProps) => {
+export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onRowSpanChange, width, topEdgeEnabled, bottomEdgeEnabled, spanControlsExpanded, gutterShiftX, labelTransform }: CanvasRulersProps) => {
   // На ≤767.98px шрифт подписей мельче (CanvasRulers.css), а margin чуть
   // больше — левее для номеров рядов (baselineX=-axisMarginX, text-anchor
   // end — больше margin = левее), выше для номеров колонн (baselineY=
@@ -148,7 +146,6 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
       count: number;
       isOverridden: boolean;
       isBottom: boolean;
-      onDelta?: (delta: number) => void;
     }[] = rows.slice(0, -1).map(r => {
       const y = rowYMap.get(r)!;
       const nextY = rowYMap.get(r + 1)!;
@@ -176,22 +173,22 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
       });
     }
 
-    // Нижняя горизонтальная цепочка (r=-2) — независимый BottomEdgeDecor,
-    // не связан с rowSpanOverrides; располагается под последним рядом.
+    // Нижняя горизонтальная цепочка (r=-2) — тот же rowSpanOverrides, что и
+    // верхняя (r=-1): по умолчанию равна bottomSpan (см. resolveSpanCount),
+    // располагается под последним рядом.
     if (bottomEdgeEnabled && rows.length > 0 && (rowNodeCounts.get(rows[rows.length - 1]) ?? 0) >= 2) {
       const lastRowY = rowYMap.get(rows[rows.length - 1])!;
       controls.push({
         r: -2,
         midY: lastRowY + minGap / 2,
-        count: bottomEdgeSpan,
-        isOverridden: false,
+        count: resolveSpanCount(-2, topSpan, bottomSpan, rowSpanOverrides),
+        isOverridden: rowSpanOverrides[-2] !== undefined,
         isBottom: true,
-        onDelta: onBottomEdgeSpanChange,
       });
     }
 
     return controls;
-  }, [rowYMap, rowNodeCounts, rowSpanOverrides, topSpan, bottomSpan, topEdgeEnabled, bottomEdgeEnabled, bottomEdgeSpan, onBottomEdgeSpanChange]);
+  }, [rowYMap, rowNodeCounts, rowSpanOverrides, topSpan, bottomSpan, topEdgeEnabled, bottomEdgeEnabled]);
 
   const ctrlCenterX = baselineX - 60;
 
@@ -238,9 +235,9 @@ export const CanvasRulers = ({ beads, topSpan, bottomSpan, rowSpanOverrides, onR
         ))}
 
         <g className={`span-ctrl-layer${spanControlsExpanded ? '' : ' span-ctrl-layer--collapsed'}`}>
-          {spanRowControls.map(({ r, midY, count, isOverridden, isBottom, onDelta }) => {
+          {spanRowControls.map(({ r, midY, count, isOverridden, isBottom }) => {
             const type = isBottom ? 'bottom' : 'top';
-            const changeBy = onDelta ?? ((delta: number) => onRowSpanChange(r, delta));
+            const changeBy = (delta: number) => onRowSpanChange(r, delta);
             return (
               <g key={`span-ctrl-${r}`}>
                 <SpanCtrlButton

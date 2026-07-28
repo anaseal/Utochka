@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Bead, BottomEdgeDecor, EdgeExtension, GridConfig, Taper } from '../types/bead';
 import { generateSilyankaGrid } from '../utils/generator';
+import { resolveSpanCount } from '../utils/spans';
 
 export const useGrid = (
   config: GridConfig,
@@ -12,6 +13,10 @@ export const useGrid = (
   taper: Taper,
 ): Bead[] => {
   return useMemo(() => {
+    // Нижняя горизонтальная цепочка (r=-2) — тот же rowSpanOverrides, что и
+    // верхняя (r=-1): по умолчанию равна bottomSpan, override — как у любого
+    // ряда (см. resolveSpanCount, useSilyankaProject.ts → internalBottom).
+    const bottomEdgeSpan = resolveSpanCount(-2, config.topSpan, config.bottomSpan, rowSpanOverrides);
     return generateSilyankaGrid(
       config.width,
       config.height,
@@ -21,7 +26,7 @@ export const useGrid = (
       rowSpanOverrides,
       decorBands,
       bottomEdgeDecor.enabled,
-      bottomEdgeDecor.span,
+      bottomEdgeSpan,
       edgeExtension.left,
       edgeExtension.right,
       topEdgeEnabled,

@@ -1,6 +1,6 @@
 import {
   Undo2, RotateCcw, Crosshair, FlipHorizontal, MousePointerClick, Eraser, Diamond,
-  MoveHorizontal, MoveVertical,
+  MoveHorizontal, MoveVertical, Maximize2, Minimize2,
 } from 'lucide-react';
 import { WeaveHelp } from './WeaveHelp';
 
@@ -23,6 +23,8 @@ interface WeaveControlsProps {
   onToggleOrientation: () => void;
   flipped: boolean;
   onToggleFlip: () => void;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
 }
 
 // Контролы режима плетения. Живут в хедере на месте скрытых палитры и
@@ -46,12 +48,14 @@ export const WeaveControls = ({
   onToggleOrientation,
   flipped,
   onToggleFlip,
+  isFullscreen,
+  onToggleFullscreen,
 }: WeaveControlsProps) => {
   const percent = totalCount > 0 ? Math.round((markedCount / totalCount) * 100) : 0;
 
   return (
     <>
-      <div className="tool-group">
+      <div className="tool-group tool-group--weave">
         <button
           onClick={() => onToolChange('segment')}
           className={`tool-btn ${tool === 'segment' ? 'tool-btn--active' : ''}`}
@@ -103,6 +107,11 @@ export const WeaveControls = ({
 
       <div className="grid-controls">
         <div className="grid-controls__toolbar">
+          {/* Undo/Locate/Поворот — 2 строки по тому же приёму, что уже даёт
+              компактность Undo/Redo/Clear/Save/Load/Share в Header.tsx
+              (см. .grid-controls__actions-row/-divider в Header.css): на
+              десктопе/планшете обе строки "растворяются" в один ряд
+              (display: contents), на ≤1024px становятся физическими рядами. */}
           <div className="grid-controls__actions-row">
             <button
               onClick={onUndo}
@@ -130,6 +139,9 @@ export const WeaveControls = ({
             >
               {orientation === 'vertical' ? <MoveHorizontal size={14} /> : <MoveVertical size={14} />}
             </button>
+          </div>
+          <span className="grid-controls__toolbar-divider" aria-hidden="true" />
+          <div className="grid-controls__actions-row">
             <button
               onClick={onToggleFlip}
               className={`grid-controls__btn ${flipped ? 'grid-controls__btn--on' : ''}`}
@@ -138,13 +150,32 @@ export const WeaveControls = ({
             >
               <FlipHorizontal size={14} />
             </button>
+            {/* Полноэкранный режим браузера — максимум места на экране при
+                работе с изделием в руках (телефон/планшет). Независимый
+                тумблер, не завязан на вход/выход из режима плетения самого
+                по себе, но выключается вместе с ним (см. App.tsx,
+                toggleWeaveMode). header__weave-desktop-only — тот же приём,
+                что у Reset ниже: на ≤767.98px строка не помещается, дубль
+                живёт в overflow-меню "⋯" (Header.tsx). */}
+            <button
+              onClick={onToggleFullscreen}
+              className={`grid-controls__btn header__weave-desktop-only ${isFullscreen ? 'grid-controls__btn--on' : ''}`}
+              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+              aria-pressed={isFullscreen}
+            >
+              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
             {/* --danger, а не --reset: последний рассчитан на текстовую кнопку
                 CLEAR (width: auto + padding + border-left) и здесь делал
-                иконочный Reset шире соседей и с лишней разделительной чертой. */}
+                иконочный Reset шире соседей и с лишней разделительной чертой.
+                header__weave-desktop-only: на ≤767.98px строка контролов не
+                помещается даже после разбивки на 2 ряда (см. Header.css) — Reset
+                прячется отсюда, дубль живёт в overflow-меню "⋯" (Header.tsx),
+                том же, где уже дублируются Zoom/Save/Load/Share. */}
             <button
               onClick={onReset}
               disabled={markedCount === 0}
-              className="grid-controls__btn grid-controls__btn--danger"
+              className="grid-controls__btn grid-controls__btn--danger header__weave-desktop-only"
               title="Reset all progress"
             >
               <RotateCcw size={14} />
@@ -157,8 +188,9 @@ export const WeaveControls = ({
           читался как ещё одно действие над схемой, хотя ничего не делает с
           работой, а объясняет режим. Снаружи это круглый tool-btn — та же
           категория, что кнопки референса и настроек: вспомогательное, не
-          инструмент и не действие. */}
-      <WeaveHelp technique={technique} />
+          инструмент и не действие. Прячется на ≤767.98px по той же причине,
+          что и Reset выше — дубль в overflow-меню. */}
+      <WeaveHelp technique={technique} className="header__weave-desktop-only" />
     </>
   );
 };

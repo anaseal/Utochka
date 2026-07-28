@@ -18,7 +18,6 @@ export interface GridConfig {
 
 export interface BottomEdgeDecor {
   enabled: boolean;
-  span: number;
 }
 
 // Регулирует, заходят ли нечётные (сдвинутые) ряды на полшага левее/правее

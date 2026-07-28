@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { swapColorInMap, swapColorInPendants, swapColorInChains } from './colorSwap';
-import { PendantPlacement, PendantChain } from '../types/pendant';
+import { swapColorInMap, swapColorInPendants, swapColorInChains, swapColorInDecorTails } from './colorSwap';
+import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
 
 describe('swapColorInMap', () => {
   it('replaces every matching value, leaves others untouched', () => {
@@ -93,5 +93,40 @@ describe('swapColorInChains', () => {
   it('returns the same reference when oldColor === newColor', () => {
     const chains = [makeChain({ 0: '#ff0000' })];
     expect(swapColorInChains(chains, '#ff0000', '#ff0000')).toBe(chains);
+  });
+});
+
+describe('swapColorInDecorTails', () => {
+  const makeTail = (colorMap: Record<number, string>): DecorTailPlacement => ({
+    placementId: 'd1',
+    col: 0,
+    rows: 3,
+    colorMap,
+  });
+
+  it('replaces matching colors inside decor tail colorMaps', () => {
+    const tails = [makeTail({ 0: '#ff0000', 1: '#00ff00' })];
+    const next = swapColorInDecorTails(tails, '#ff0000', '#0000ff');
+    expect(next[0].colorMap).toEqual({ 0: '#0000ff', 1: '#00ff00' });
+  });
+
+  it('only replaces tails that changed, leaving unaffected ones by reference', () => {
+    const untouched = makeTail({ 0: '#00ff00' });
+    const touched = makeTail({ 0: '#ff0000' });
+    const tails = [untouched, touched];
+    const next = swapColorInDecorTails(tails, '#ff0000', '#0000ff');
+    expect(next[0]).toBe(untouched);
+    expect(next[1]).not.toBe(touched);
+    expect(next[1].colorMap).toEqual({ 0: '#0000ff' });
+  });
+
+  it('returns the same reference when nothing matches', () => {
+    const tails = [makeTail({ 0: '#00ff00' })];
+    expect(swapColorInDecorTails(tails, '#ff0000', '#0000ff')).toBe(tails);
+  });
+
+  it('returns the same reference when oldColor === newColor', () => {
+    const tails = [makeTail({ 0: '#ff0000' })];
+    expect(swapColorInDecorTails(tails, '#ff0000', '#ff0000')).toBe(tails);
   });
 });

@@ -637,6 +637,26 @@
     display: none;
   }
 
+  /* Reset/«?» режима плетения (WeaveControls) — дубли живут в overflow-меню
+     "⋯" (см. .header__overflow-mobile-extra в Header.tsx), тем же приёмом,
+     что Zoom/Save-Load-Share выше. */
+  .header__weave-desktop-only {
+    display: none;
+  }
+
+  /* В режиме плетения (.header--weave) на этой ширине тулбар Undo/Redo/Clear/
+     Save/Load/Share и его разделитель убраны целиком: Undo/Redo/Clear уже
+     скрыты в разметке (см. !weaveMode в Header.tsx) как не относящиеся к
+     плетению, а оставшийся Save/Load/Share задизейблен этим же ≤767.98px
+     блоком выше (.grid-controls__actions-row--files) — без этого правила
+     здесь оставалась бы пустая "таблетка" без единой кнопки. Save/Load/Share
+     по-прежнему доступны через overflow "⋯" (дублируются туда независимо
+     от режима). */
+  .header--weave .header__end-group,
+  .header--weave .header__divider--before-end {
+    display: none;
+  }
+
   .header__divider--palette-tools {
     display: block;
   }
@@ -783,6 +803,22 @@
   .header__overflow-trigger { width: 24px; height: 24px; }
 
   .tool-btn--lg { width: 1.75rem; height: 1.75rem; }
+
+  /* Режим плетения (WeaveControls) на этой ширине: tool-group под сегмент/
+     бусина/ластик всегда ровно 3 кнопки (в отличие от .tool-group с рисованием,
+     где бывает до 7 и нужна фиксированная ширина под перенос по 3) — ширина
+     под содержимое, а не общий бюджет 68px. weave-progress уже узкий на всех
+     ширинах (см. .weave-progress выше) — здесь для него ничего доп. не нужно. */
+  .tool-group--weave { width: auto; gap: 2px; }
+
+  /* Дополнительное дожатие только для режима плетения (.header--weave) —
+     после переноса Reset/«?» в overflow строка всё ещё плотная на 320px:
+     обычная (не плетение) строка эти правки не задевает. */
+  .header--weave .header__nav { gap: 0.25rem; }
+  .header--weave .grid-controls__toolbar { gap: 3px; }
+  .header--weave .technique-switch { padding: 1px; }
+  .header--weave .technique-switch__btn { padding: 0 5px; }
+  .header--weave .tool-btn--lg { width: 1.5rem; height: 1.5rem; }
 }
 /* --- Режим плетения (WeaveControls) -----------------------------------------
    Контролы стоят в хедере на месте скрытых палитры/инструментов и целиком
@@ -794,7 +830,17 @@
   flex-direction: column;
   align-items: stretch;
   gap: 2px;
-  min-width: 84px;
+}
+
+/* Своя, более узкая рамка вместо унаследованной от Zoom (.grid-controls--vertical-zoom
+   .grid-controls__group, padding: 4px 8px, см. выше) — там паддинг рассчитан
+   на короткое "100%", здесь же раньше был ещё и min-width: 84px "про запас"
+   под большие схемы ("9999 / 9999"-подобные значения), из-за чего блок
+   держал эту ширину всегда, даже при "10 / 1823" — content-based ширина уже
+   сама растёт под длинные числа (min-width был полом, а не потолком, поэтому
+   уборка его безопасна и для крупных схем). */
+.grid-controls--vertical-zoom .weave-progress {
+  padding: 4px 6px;
 }
 
 .weave-progress__value {

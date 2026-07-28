@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   HelpCircle, Diamond, MousePointerClick, Eraser, Crosshair, Undo2, RotateCcw, FlipHorizontal,
-  Percent, MoveHorizontal,
+  Percent, MoveHorizontal, Maximize2,
 } from 'lucide-react';
 import './WeaveHelp.css';
 
@@ -9,7 +9,7 @@ import './WeaveHelp.css';
 // а не модалка: режим и так занимает весь экран, а подсказку читают одним
 // глазом, не прерывая работу. Открытие/закрытие — как у MirrorMenu
 // (клик снаружи + Escape), текст английский, как и весь UI.
-export const WeaveHelp = ({ technique }: { technique: 'silyanka' | 'crossWeave' }) => {
+export const WeaveHelp = ({ technique, className }: { technique: 'silyanka' | 'crossWeave'; className?: string }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -34,7 +34,7 @@ export const WeaveHelp = ({ technique }: { technique: 'silyanka' | 'crossWeave' 
   }, [open]);
 
   return (
-    <div className="weave-help" ref={ref}>
+    <div className={`weave-help${className ? ` ${className}` : ''}`} ref={ref}>
       <button
         ref={triggerRef}
         onClick={() => setOpen(o => !o)}
@@ -120,6 +120,11 @@ export const WeaveHelp = ({ technique }: { technique: 'silyanka' | 'crossWeave' 
                 <b>Mirror</b> — flips it left to right, for weaving the other way round.
                 {technique === 'silyanka' && ' It also switches the side each step takes, so the marks follow your hand.'}
               </span>
+            </li>
+            <li>
+              <Maximize2 size={12} className="weave-help__icon" />
+              <span><b>Fullscreen</b> — hides the browser's own bars for more room, handy on a
+                phone or tablet.</span>
             </li>
           </ul>
           <p className="weave-help__note">

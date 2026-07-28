@@ -2,7 +2,7 @@
 import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
-import { PendantPlacement, PendantTemplate, PendantChain } from '../../../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../../../types/pendant';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BeadGrid } from './BeadGrid';
@@ -11,6 +11,7 @@ import { WeaveTool, WeaveOrientation } from '../Header/WeaveControls';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { PendantChainLayer } from '../PendantChainLayer/PendantChainLayer';
+import { DecorTailLayer } from '../DecorTailLayer/DecorTailLayer';
 import { ThreadLayer } from '../ThreadLayer/ThreadLayer';
 import { CanvasChrome } from './CanvasChrome';
 import { CanvasScrollbars } from './CanvasScrollbars';
@@ -37,7 +38,9 @@ import { useFrameThrottle } from '../../../hooks/useFrameThrottle';
 import { useThreadTrace } from '../../../hooks/useThreadTrace';
 import { useColorHighlight } from '../../../hooks/useColorHighlight';
 import { computeCanvasDim } from '../../../utils/canvasDim';
-import { swapColorInMap, swapColorInPendants, swapColorInChains } from '../../../utils/colorSwap';
+import {
+  swapColorInMap, swapColorInPendants, swapColorInChains, swapColorInDecorTails,
+} from '../../../utils/colorSwap';
 import './CanvasView.css';
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
@@ -80,12 +83,21 @@ interface CanvasViewProps {
   pendantPlacements: PendantPlacement[];
   pendantTemplates: Record<string, PendantTemplate>;
   bottomNodes: Bead[];
+  // Якорь ПОДВЕСКИ на колонку: bottomNodes либо (для колонок с декор-хвостом)
+  // кончик хвоста — см. pendantAnchors в useSilyankaProject.ts. bottomNodes
+  // остаётся настоящим якорем для цепочек и самого DecorTailLayer.
+  pendantAnchors: Bead[];
   hoveredCol: number | null;
   onPaintPendantBead: (placementId: string, beadIndex: number) => void;
   onRemovePlacement: (placementId: string) => void;
   pendantChains: PendantChain[];
   onPaintChainBead: (placementId: string, beadIndex: number) => void;
   onRemoveChain: (placementId: string) => void;
+  decorTailPlacements: DecorTailPlacement[];
+  decorRowStep: number;
+  hoveredDecorTailCol: number | null;
+  onPaintDecorTailBead: (placementId: string, beadIndex: number) => void;
+  onRemoveDecorTail: (placementId: string) => void;
   threads: Thread[];
   onAddThread: (beadIds: string[], options?: ThreadCommitOptions) => void;
   onRerouteThreadEnd: (threadId: string, end: 'start' | 'end', traceBeadIds: string[]) => void;
@@ -99,8 +111,6 @@ interface CanvasViewProps {
   canvasSvgRef: React.RefObject<SVGSVGElement | null>;
   topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
-  bottomEdgeSpan: number;
-  onBottomEdgeSpanChange: (delta: number) => void;
   stampPattern: StampPattern | null;
   stampPreviewPatch: Record<string, string> | null;
   onStampSelect: (ids: string[]) => void;
@@ -110,6 +120,8 @@ interface CanvasViewProps {
     designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
     pendantsFn: ((p: PendantPlacement[]) => PendantPlacement[]) | null,
     chainsFn?: ((c: PendantChain[]) => PendantChain[]) | null,
+    threadsFn?: ((t: Thread[]) => Thread[]) | null,
+    decorTailsFn?: ((d: DecorTailPlacement[]) => DecorTailPlacement[]) | null,
   ) => void;
   // Режим плетения: холст перестаёт рисовать и только отмечает прогресс.
   // Контролы режима живут в хедере (WeaveControls) — сюда приходят лишь
@@ -154,12 +166,18 @@ export const CanvasView = ({
   pendantPlacements,
   pendantTemplates,
   bottomNodes,
+  pendantAnchors,
   hoveredCol,
   onPaintPendantBead,
   onRemovePlacement,
   pendantChains,
   onPaintChainBead,
   onRemoveChain,
+  decorTailPlacements,
+  decorRowStep,
+  hoveredDecorTailCol,
+  onPaintDecorTailBead,
+  onRemoveDecorTail,
   threads,
   onAddThread,
   onRerouteThreadEnd,
@@ -171,8 +189,6 @@ export const CanvasView = ({
   canvasSvgRef,
   topEdgeEnabled,
   bottomEdgeEnabled,
-  bottomEdgeSpan,
-  onBottomEdgeSpanChange,
   stampPattern,
   stampPreviewPatch,
   onStampSelect,
@@ -218,10 +234,12 @@ export const CanvasView = ({
 
   const dim = useMemo(() => {
     // Подвески свисают ниже сетки — учитываем их глубину в высоте SVG.
+    // Якорь — pendantAnchors, а не bottomNodes: на колонке с декор-хвостом
+    // подвеска висит от его кончика и уходит ниже, чем от голой ноды.
     let pendantMaxY = 0;
     for (const p of pendantPlacements) {
       const t = pendantTemplates[p.templateId];
-      const anchor = bottomNodes.find(n => n.logicalIndex.col === p.col);
+      const anchor = pendantAnchors.find(n => n.logicalIndex.col === p.col);
       if (!t || !anchor) continue;
       let depth = -Infinity;
       for (const b of t.beads) {
@@ -233,6 +251,8 @@ export const CanvasView = ({
     }
 
     // Цепочки-подвески тоже провисают ниже сетки — учитываем глубину дуги.
+    // Цепочки крепятся к настоящей ноде независимо от декор-хвоста на той
+    // же колонке (см. spec.md, «Декор-хвост»), поэтому якорь — bottomNodes.
     let chainMaxY = 0;
     for (const c of pendantChains) {
       const start = bottomNodes.find(n => n.logicalIndex.col === c.startCol);
@@ -243,10 +263,21 @@ export const CanvasView = ({
       chainMaxY = Math.max(chainMaxY, maxY + 26);
     }
 
+    // Декор-хвосты — прямая колонка вниз от настоящей ноды.
+    let decorTailMaxY = 0;
+    for (const t of decorTailPlacements) {
+      const anchor = bottomNodes.find(n => n.logicalIndex.col === t.col);
+      if (!anchor) continue;
+      decorTailMaxY = Math.max(decorTailMaxY, anchor.y + t.rows * decorRowStep + 26);
+    }
+
     return computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, {
-      extraMaxY: Math.max(pendantMaxY, chainMaxY),
+      extraMaxY: Math.max(pendantMaxY, chainMaxY, decorTailMaxY),
     });
-  }, [beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates, bottomNodes, pendantChains]);
+  }, [
+    beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates,
+    pendantAnchors, bottomNodes, pendantChains, decorTailPlacements, decorRowStep,
+  ]);
 
   useWheelZoom(canvasContainerRef, onZoomChange);
 
@@ -258,11 +289,18 @@ export const CanvasView = ({
   const cancelActiveStrokeRef = useRef<() => void>(() => {});
   const cancelActiveStroke = useCallback(() => cancelActiveStrokeRef.current(), []);
 
-  // Единая карта id → координаты по сетке, подвескам и цепочкам-подвесок —
-  // нитка магнитится к любой бусине любого слоя (см. spec.md, «Нитка»).
+  // Единая карта id → координаты по сетке, подвескам, цепочкам-подвесок и
+  // декор-хвостам — нитка магнитится к любой бусине любого слоя (см.
+  // spec.md, «Нитка»).
   const beadPositionIndex = useMemo(
-    () => buildBeadPositionIndex(beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains),
-    [beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains],
+    () => buildBeadPositionIndex(
+      beads, pendantPlacements, pendantTemplates, pendantAnchors,
+      pendantChains, bottomNodes, decorTailPlacements, decorRowStep,
+    ),
+    [
+      beads, pendantPlacements, pendantTemplates, pendantAnchors,
+      pendantChains, bottomNodes, decorTailPlacements, decorRowStep,
+    ],
   );
   // В режиме плетения с горизонтальной ориентацией полотно физически
   // повёрнуто на 90° (см. useWeaveCanvas: rotated меняет местами viewW/viewH
@@ -355,8 +393,15 @@ export const CanvasView = ({
       .filter((v): v is { chain: PendantChain; count: number } => v !== null);
   }, [pendantChains, bottomNodes]);
 
-  // Подвески и цепочки-подвески — тоже бисерины проекта, поэтому досеиваются
-  // в общую сводку по цветам поверх прохода по сетке.
+  // Хвост учитывается в статистике, только если у него жива нода-якорь на
+  // нижнем ряду (та же проверка, что и у validPendantPlacements).
+  const validDecorTailPlacements = useMemo(() => {
+    const bottomCols = new Set(bottomNodes.map(n => n.logicalIndex.col));
+    return decorTailPlacements.filter((t) => bottomCols.has(t.col));
+  }, [decorTailPlacements, bottomNodes]);
+
+  // Подвески, цепочки-подвески и декор-хвосты — тоже бисерины проекта,
+  // поэтому досеиваются в общую сводку по цветам поверх прохода по сетке.
   const extendStats = useCallback((stats: Map<string, number>) => {
     validPendantPlacements.forEach((p) => {
       const template = pendantTemplates[p.templateId];
@@ -371,7 +416,13 @@ export const CanvasView = ({
         stats.set(color, (stats.get(color) || 0) + 1);
       }
     });
-  }, [validPendantPlacements, pendantTemplates, validPendantChains]);
+    validDecorTailPlacements.forEach((t) => {
+      for (let i = 0; i < t.rows; i++) {
+        const color = t.colorMap[i] ?? defaultColorFor('SPAN');
+        stats.set(color, (stats.get(color) || 0) + 1);
+      }
+    });
+  }, [validPendantPlacements, pendantTemplates, validPendantChains, validDecorTailPlacements]);
 
   const defaultColorOf = useCallback((bead: Bead) => defaultColorFor(bead.type), []);
 
@@ -380,6 +431,8 @@ export const CanvasView = ({
       (m) => swapColorInMap(m, oldColor, activeColor),
       (p) => swapColorInPendants(p, oldColor, activeColor),
       (c) => swapColorInChains(c, oldColor, activeColor),
+      null,
+      (t) => swapColorInDecorTails(t, oldColor, activeColor),
     );
   }, [applyPatch, activeColor]);
 
@@ -400,8 +453,9 @@ export const CanvasView = ({
       0,
     );
     const chainBeadCount = validPendantChains.reduce((sum, { count }) => sum + count, 0);
-    return beads.length + pendantBeadCount + chainBeadCount;
-  }, [beads.length, validPendantPlacements, pendantTemplates, validPendantChains]);
+    const decorTailBeadCount = validDecorTailPlacements.reduce((sum, t) => sum + t.rows, 0);
+    return beads.length + pendantBeadCount + chainBeadCount + decorTailBeadCount;
+  }, [beads.length, validPendantPlacements, pendantTemplates, validPendantChains, validDecorTailPlacements]);
 
   const highlightedNodeIds = useMemo(() => {
     if (hoveredRow === null) return null;
@@ -754,8 +808,6 @@ export const CanvasView = ({
                   width={width}
                   topEdgeEnabled={topEdgeEnabled}
                   bottomEdgeEnabled={bottomEdgeEnabled}
-                  bottomEdgeSpan={bottomEdgeSpan}
-                  onBottomEdgeSpanChange={onBottomEdgeSpanChange}
                   spanControlsExpanded={spanControlsExpanded}
                   gutterShiftX={dim.shiftX}
                   labelTransform={weaveCanvas.labelTransform}
@@ -774,7 +826,7 @@ export const CanvasView = ({
                 <PendantLayer
                   placements={pendantPlacements}
                   templates={pendantTemplates}
-                  bottomNodes={bottomNodes}
+                  bottomNodes={pendantAnchors}
                   isDrawing={isDrawing}
                   onPaintBead={onPaintPendantBead}
                   onRemove={onRemovePlacement}
@@ -792,6 +844,21 @@ export const CanvasView = ({
                   isDrawing={isDrawing}
                   onPaintBead={onPaintChainBead}
                   onRemove={onRemoveChain}
+                  highlightedColor={highlightedColor}
+                  threadToolActive={activeTool === 'thread'}
+                  onThreadPoint={thread.addPoint}
+                />
+
+                <DecorTailLayer
+                  placements={decorTailPlacements}
+                  bottomNodes={bottomNodes}
+                  decorRowStep={decorRowStep}
+                  isDrawing={isDrawing}
+                  onPaintBead={onPaintDecorTailBead}
+                  onRemove={onRemoveDecorTail}
+                  hoveredCol={hoveredDecorTailCol}
+                  mirrorMode={mirrorMode}
+                  width={width}
                   highlightedColor={highlightedColor}
                   threadToolActive={activeTool === 'thread'}
                   onThreadPoint={thread.addPoint}

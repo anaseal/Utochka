@@ -170,10 +170,27 @@ export interface WeavePassOptions {
  * клика — она выводится из сетки (`weavingSide`): проход нового столбика
  * всегда цепляется парой граней с той стороны, откуда пришло плетение. У
  * крайних узлов этой пары нет вовсе — их проход идёт другой стороной (старт
- * полотна, шаг 1 разметки: node-1--1). Узел нижнего ряда — разворот: обе
- * верхние грани с их дальними узлами (шаг 1: node-8-0, шаг 9: node-8-1);
- * нижняя цепочка в разворот не входит — её пролёты отмечаются кликами по ним
- * самим (разметки для неё нет).
+ * полотна, шаг 1 разметки: node-1--1).
+ *
+ * Узел нижнего ряда (зубец полотна без нижней цепочки) — разворот: сторона
+ * `weavingSide` (откуда пришло плетение) — просто закрывающий стежок, её
+ * дальний узел уже был началом соседнего прохода, поэтому она остаётся
+ * усечённой на 1 звено, как и раньше (шаг 1: node-8-0). Противоположная
+ * сторона — это НЕ второе звено того же разворота, а начало следующего
+ * прохода вверх (шаг 9: node-8-1 в разметке), поэтому берётся не усечённая
+ * пара граней самого нижнего узла, а полный проход её дальнего узла той же
+ * `weavingSide` — ровно то же самое, что дал бы обычный клик по этому
+ * дальнему узлу. Если дальше по сетке нечему продолжаться, оба варианта
+ * совпадают (см. тест «шаг 1»).
+ *
+ * Узел ровно НАД зубцом (его нижняя грань ведёт в bottomRow) — не отдельный
+ * проход сам по себе, а «начало следующего прохода вверх» ЧУЖОГО разворота
+ * (см. выше): клик по нему или по любой его грани обязан подсветить тот же
+ * объединённый сегмент, что и клик по самому зубцу, иначе один и тот же
+ * физический стежок подсвечивается по-разному в зависимости от того, по
+ * какой бисерине попали. Поэтому раньше, чем строить свой обычный проход,
+ * проверяем: не ведёт ли этот узел прямиком в bottomRow — и если да,
+ * отдаём управление развороту.
  */
 export const silyankaNodeClickSegment = (
   r: number,
@@ -182,15 +199,31 @@ export const silyankaNodeClickSegment = (
   { mirrored = false, bottomRow }: WeavePassOptions = {},
 ): string[] => {
   if (bottomRow !== undefined && r === bottomRow && r > 0) {
-    return Array.from(new Set([
-      ...silyankaNodeSegment(r, c, 'left', index),
-      ...silyankaNodeSegment(r, c, 'right', index),
-    ]));
+    const side = weavingSide(mirrored);
+    const other = flipSide(side);
+    const closing = silyankaNodeSegment(r, c, side, index);
+    const upper = upperEdgeOf(r, c, other);
+    const rising = silyankaNodeSegment(upper.r, upper.c, side, index);
+    return Array.from(new Set([...closing, ...rising]));
   }
+
+  // Узел стоит ровно над зубцом с этой стороны — сам не разворот, но его
+  // дальний узел (через уже существующую грань `passSide`) им является.
+  const redirectToBottom = (passSide: WeaveSide): string[] | null => {
+    if (bottomRow === undefined || !index.has(`vertEdge:${r}:${c}:${passSide}`)) return null;
+    const far = vertEdgeEndNodes(r, c, passSide).bottom;
+    if (far.r !== bottomRow) return null;
+    return silyankaNodeClickSegment(bottomRow, far.c, index, { mirrored, bottomRow });
+  };
+
   const side = weavingSide(mirrored);
+  const redirected = redirectToBottom(side);
+  if (redirected) return redirected;
+
   const primary = silyankaNodeSegment(r, c, side, index);
   if (primary.length > 1) return primary;
-  return silyankaNodeSegment(r, c, flipSide(side), index);
+
+  return redirectToBottom(flipSide(side)) ?? silyankaNodeSegment(r, c, flipSide(side), index);
 };
 
 /**

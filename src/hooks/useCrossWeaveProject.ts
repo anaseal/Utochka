@@ -6,7 +6,7 @@ import { usePersistedState } from './usePersistedState';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../config/crossWeaveTheme';
 import { APP_CONSTRAINTS, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import { CrossWeaveGridConfig } from '../types/crossWeaveBead';
-import { PendantPlacement, PendantChain } from '../types/pendant';
+import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
 import { generateCrossWeaveGrid } from '../utils/crossWeaveGenerator';
 import { mirrorCrossWeaveBeadId, shiftCrossWeaveDesignMapColumns } from '../utils/crossWeaveMirror';
@@ -23,6 +23,8 @@ const EMPTY_PENDANT_PLACEMENTS: PendantPlacement[] = [];
 const noopSetPendantPlacements = () => {};
 const EMPTY_PENDANT_CHAINS: PendantChain[] = [];
 const noopSetPendantChains = () => {};
+const EMPTY_DECOR_TAIL_PLACEMENTS: DecorTailPlacement[] = [];
+const noopSetDecorTailPlacements = () => {};
 
 const isThreads = (v: unknown): v is Thread[] =>
   Array.isArray(v) && v.every(t =>
@@ -131,7 +133,8 @@ export const useCrossWeaveProject = (palette: readonly string[]) => {
 
   const drawingControls = useDrawing(
     palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements,
-    EMPTY_PENDANT_CHAINS, noopSetPendantChains, threads, setThreads, 'crossWeave',
+    EMPTY_PENDANT_CHAINS, noopSetPendantChains,
+    EMPTY_DECOR_TAIL_PLACEMENTS, noopSetDecorTailPlacements, threads, setThreads, 'crossWeave',
   );
   const threadControls = useThreads(threads, drawingControls.applyPatch);
 

@@ -206,6 +206,32 @@ describe('silyankaNodeClickSegment', () => {
     ]);
   });
 
+  it('узел нижнего ряда — противоположная сторона не обрубается, а берёт весь проход дальнего узла (зубец)', () => {
+    // node-8-1 сходится из двух узлов ряда 7: node-7-0 (грань weavingSide,
+    // просто закрывающий стежок) и node-7-1 (грань другой стороны — начало
+    // следующего прохода вверх, у него есть свой узел ещё выше, node-6-1).
+    const idx = buildSegmentIndex([
+      bead('node-6-1'), bead('node-7-0'), bead('node-7-1'), bead('node-8-1'),
+      bead('span-edge-6-1-right-bead-1'), bead('span-edge-6-1-right-bead-2'),
+      bead('span-edge-7-0-right-bead-1'),
+      bead('span-edge-7-1-left-bead-1'),
+    ]);
+    const merged = [
+      'node-6-1', 'node-7-0', 'node-7-1', 'node-8-1',
+      'span-edge-6-1-right-bead-1', 'span-edge-6-1-right-bead-2',
+      'span-edge-7-0-right-bead-1',
+      'span-edge-7-1-left-bead-1',
+    ];
+    expect(silyankaNodeClickSegment(8, 1, idx, { bottomRow: 8 }).sort()).toEqual(merged);
+
+    // Клик по node-7-1 (или по любой его грани, см. silyankaPassCenter) сам
+    // по себе не разворот — но его нижняя грань ведёт прямиком в bottomRow,
+    // так что это «начало следующего прохода вверх» ЧУЖОГО разворота. Должен
+    // подсветиться тот же объединённый сегмент, а не свой изолированный
+    // обрубок (node-6-1 → node-7-1 → node-8-1 без node-7-0).
+    expect(silyankaNodeClickSegment(7, 1, idx, { bottomRow: 8 }).sort()).toEqual(merged);
+  });
+
   it('на отражённом полотне (Flip) экранное «слева» — правая пара граней сетки', () => {
     const idx = buildSegmentIndex([
       bead('node-1-0'), bead('node-1-1'),

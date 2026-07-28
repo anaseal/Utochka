@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { RotateCcw } from 'lucide-react';
 import { Bead } from '../../types/bead';
-import { PendantPlacement, PendantTemplate, PendantChain } from '../../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../../types/pendant';
 import { BEAD_THEME } from '../../config/theme';
 import { SectionHelp } from '../common/SectionHelp';
 import './Sidebar.css';
@@ -24,6 +24,16 @@ interface PendantsSidebarProps {
   onDecorCount: (nodeRow: number, delta: number) => void;
   onClearDecor: () => void;
   onHoveredRowChange: (row: number | null) => void;
+  // Индивидуальный декор-хвост — точечно на одну ноду нижнего ряда (в отличие
+  // от Decor Bands выше, полосы на весь ряд). Подвески в свою очередь можно
+  // навесить на кончик хвоста той же колонки (см. pendantAnchors в
+  // useSilyankaProject.ts, spec.md «Декор-хвост»).
+  decorTailPlacements: DecorTailPlacement[];
+  onAddDecorTail: (col: number) => void;
+  onUpdateDecorTailLength: (placementId: string, delta: number) => void;
+  onRemoveDecorTail: (placementId: string) => void;
+  onClearDecorTails: () => void;
+  onHoveredDecorTailColChange: (col: number | null) => void;
   // Bottom Chain теперь включается/выключается в панели «Сетка» (GridSidebar) —
   // здесь только читаем флаг, чтобы блокировать карточки подвесок (взаимоисключение,
   // см. spec.md, «Взаимоисключение с Bottom Chain»).
@@ -117,6 +127,26 @@ const BandPreview = () => (
   </svg>
 );
 
+// В отличие от Band (полоса без якоря — свободно висит между рядами), хвост
+// всегда крепится к одной ноде — якорный кружок сверху, как у PendantPreview,
+// показывает это отличие на глаз.
+const TAIL_YS = [14, 24, 34, 44] as const;
+
+const TailPreview = () => (
+  <svg
+    viewBox="-26 -26 52 76"
+    className="pendant-preview"
+    preserveAspectRatio="xMidYMid meet"
+  >
+    <circle className="pendant-preview__anchor" cx={0} cy={0} r={ANCHOR_R} />
+    {TAIL_YS.map((y) => (
+      <g key={y} className="bead bead--type-span bead--empty">
+        <circle className="bead__body" cx={0} cy={y} r={6} />
+      </g>
+    ))}
+  </svg>
+);
+
 export const PendantsSidebar = ({
   open,
   templates,
@@ -133,6 +163,12 @@ export const PendantsSidebar = ({
   onDecorCount,
   onClearDecor,
   onHoveredRowChange,
+  decorTailPlacements,
+  onAddDecorTail,
+  onUpdateDecorTailLength,
+  onRemoveDecorTail,
+  onClearDecorTails,
+  onHoveredDecorTailColChange,
   bottomEdgeEnabled,
   pendantChains,
   chainToolActive,
@@ -143,11 +179,13 @@ export const PendantsSidebar = ({
 }: PendantsSidebarProps) => {
   const [drag, setDrag] = useState<{ templateId: string; x: number; y: number } | null>(null);
   const [decorDrag, setDecorDrag] = useState<{ x: number; y: number } | null>(null);
+  const [tailDrag, setTailDrag] = useState<{ x: number; y: number } | null>(null);
 
   // Тач ещё не признан драгом (см. PENDANT_DRAG_THRESHOLD_TOUCH) — в ref, а
   // не в state: пока порог не пройден, никакого ре-рендера быть не должно.
   const pendingDragRef = useRef<{ templateId: string; x: number; y: number } | null>(null);
   const pendingDecorDragRef = useRef<{ x: number; y: number } | null>(null);
+  const pendingTailDragRef = useRef<{ x: number; y: number } | null>(null);
 
   const startPendantDrag = useCallback((e: React.PointerEvent, templateId: string) => {
     if (e.pointerType === 'touch') {
@@ -198,6 +236,30 @@ export const PendantsSidebar = ({
 
   const cancelDecorDrag = useCallback(() => {
     pendingDecorDragRef.current = null;
+  }, []);
+
+  const startTailDrag = useCallback((e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      pendingTailDragRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    e.preventDefault();
+    setTailDrag({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const moveTailDrag = useCallback((e: React.PointerEvent) => {
+    const pending = pendingTailDragRef.current;
+    if (!pending) return;
+    const dx = e.clientX - pending.x;
+    const dy = e.clientY - pending.y;
+    if (Math.hypot(dx, dy) < PENDANT_DRAG_THRESHOLD_TOUCH) return;
+    pendingTailDragRef.current = null;
+    e.preventDefault();
+    setTailDrag({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const cancelTailDrag = useCallback(() => {
+    pendingTailDragRef.current = null;
   }, []);
 
   const computeCol = useCallback((clientX: number, clientY: number): number | null => {
@@ -310,6 +372,39 @@ export const PendantsSidebar = ({
     };
   }, [decorDrag, computeRow, onHoveredRowChange, onDecorDrop]);
 
+  useEffect(() => {
+    if (!tailDrag) return;
+    let rafId: number | null = null;
+    let pending: { x: number; y: number } | null = null;
+    const flush = () => {
+      rafId = null;
+      const point = pending;
+      if (!point) return;
+      setTailDrag((d) => (d ? { ...d, x: point.x, y: point.y } : d));
+      onHoveredDecorTailColChange(computeCol(point.x, point.y));
+    };
+    const onMove = (e: PointerEvent) => {
+      pending = { x: e.clientX, y: e.clientY };
+      if (rafId === null) rafId = requestAnimationFrame(flush);
+    };
+    const onUp = (e: PointerEvent) => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      const col = computeCol(e.clientX, e.clientY);
+      if (col !== null) onAddDecorTail(col);
+      onHoveredDecorTailColChange(null);
+      setTailDrag(null);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [tailDrag, computeCol, onHoveredDecorTailColChange, onAddDecorTail]);
+
   const dragTemplate = drag
     ? templates.find((t) => t.id === drag.templateId) ?? null
     : null;
@@ -322,12 +417,19 @@ export const PendantsSidebar = ({
   );
 
   const hasPendants = placements.length > 0;
+  const hasDecorTails = decorTailPlacements.length > 0;
 
   const handleClearAll = useCallback(() => {
     onClearAll();
     onClearDecor();
     onClearChains();
-  }, [onClearAll, onClearDecor, onClearChains]);
+    onClearDecorTails();
+  }, [onClearAll, onClearDecor, onClearChains, onClearDecorTails]);
+
+  const handleClearDecorSection = useCallback(() => {
+    onClearDecor();
+    onClearDecorTails();
+  }, [onClearDecor, onClearDecorTails]);
 
   return (
     <>
@@ -448,13 +550,13 @@ export const PendantsSidebar = ({
               <div className="sidebar__section-heading-row">
                 <span className="sidebar__section-heading-label">
                   <h3 className="sidebar__section-title">Decor</h3>
-                  <SectionHelp text="Drag a band into a gap between rows." />
+                  <SectionHelp text="Drag a band into a gap between rows, or a tail onto a bottom-row node." />
                 </span>
                 <button
                   type="button"
                   className="sidebar__section-clear"
-                  onClick={onClearDecor}
-                  disabled={activeBands.length === 0}
+                  onClick={handleClearDecorSection}
+                  disabled={activeBands.length === 0 && !hasDecorTails}
                   aria-label="Clear Decor"
                   title="Clear Decor"
                 >
@@ -476,11 +578,32 @@ export const PendantsSidebar = ({
                 </div>
                 <span className="pendant-card__name">Band</span>
               </button>
+
+              <button
+                type="button"
+                className={`pendant-card${bottomEdgeEnabled ? ' pendant-card--disabled' : ''}`}
+                aria-disabled={bottomEdgeEnabled}
+                onPointerDown={(e) => {
+                  if (bottomEdgeEnabled) return;
+                  startTailDrag(e);
+                }}
+                onPointerMove={moveTailDrag}
+                onPointerUp={cancelTailDrag}
+                onPointerCancel={cancelTailDrag}
+              >
+                <div className="pendant-card__preview">
+                  <TailPreview />
+                </div>
+                <span className="pendant-card__name">Tail</span>
+                {decorTailPlacements.length > 0 && (
+                  <span className="pendant-card__badge">{decorTailPlacements.length}</span>
+                )}
+              </button>
             </div>
 
             {activeBands.length > 0 && (
               <div className="decor-bands-list">
-                <div className="decor-bands-list__title">Placed</div>
+                <div className="decor-bands-list__title">Bands placed</div>
                 {activeBands.map(({ row, count, gapIndex }) => (
                   <div key={row} className="decor-band-item">
                     <span className="decor-band-item__label">Gap {gapIndex}</span>
@@ -505,6 +628,42 @@ export const PendantsSidebar = ({
                 ))}
               </div>
             )}
+
+            {hasDecorTails && (
+              <div className="decor-bands-list">
+                <div className="decor-bands-list__title">Tails placed</div>
+                {decorTailPlacements.map((tail) => (
+                  <div key={tail.placementId} className="decor-band-item">
+                    <span className="decor-band-item__label">Col {tail.col}</span>
+                    <div className="decor-band-item__controls">
+                      <button
+                        type="button"
+                        className="decor-band-item__btn"
+                        onClick={() => onUpdateDecorTailLength(tail.placementId, -1)}
+                      >
+                        −
+                      </button>
+                      <span className="decor-band-item__count">{tail.rows}</span>
+                      <button
+                        type="button"
+                        className="decor-band-item__btn"
+                        onClick={() => onUpdateDecorTailLength(tail.placementId, 1)}
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        className="decor-band-item__btn"
+                        onClick={() => onRemoveDecorTail(tail.placementId)}
+                        aria-label={`Remove tail at col ${tail.col}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
 
@@ -513,14 +672,14 @@ export const PendantsSidebar = ({
             type="button"
             className="sidebar__clear"
             onClick={handleClearAll}
-            disabled={!hasPendants && activeBands.length === 0 && pendantChains.length === 0}
+            disabled={!hasPendants && activeBands.length === 0 && pendantChains.length === 0 && !hasDecorTails}
           >
             Reset all
           </button>
           <p className="sidebar__hint">
             {bottomEdgeEnabled
-              ? 'Drag a band onto a row gap (pendants unavailable while Bottom Chain is on)'
-              : 'Drag a pendant onto a bottom-row node, or a band onto a row gap'}
+              ? 'Drag a band onto a row gap (pendants and tails unavailable while Bottom Chain is on)'
+              : 'Drag a pendant or a tail onto a bottom-row node, or a band onto a row gap'}
           </p>
         </div>
       </aside>
@@ -541,6 +700,16 @@ export const PendantsSidebar = ({
           style={{ left: decorDrag.x, top: decorDrag.y }}
         >
           <BandPreview />
+        </div>,
+        document.body,
+      )}
+
+      {tailDrag && createPortal(
+        <div
+          className="pendant-drag-ghost decor-drag-ghost"
+          style={{ left: tailDrag.x, top: tailDrag.y }}
+        >
+          <TailPreview />
         </div>,
         document.body,
       )}

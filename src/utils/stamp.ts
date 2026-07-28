@@ -68,7 +68,7 @@ export const translateBeadId = (
     ctx.beadIds.has(candidate) ? candidate : null;
 
   const ref = decode(id);
-  if (!ref) return null; // pendant:* — отдельная система colorMap, не поддерживается в v1.
+  if (!ref) return null; // pendant:*/chain:*/decorTail:* — отдельные системы colorMap, не поддерживаются в v1.
 
   switch (ref.kind) {
     case 'node': {
