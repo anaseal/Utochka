@@ -1,17 +1,33 @@
-import { APP_CONSTRAINTS } from '../config/theme';
+import { APP_CONSTRAINTS, BEAD_THEME } from '../config/theme';
 import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper, TaperSide } from '../types/bead';
 import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
 import { resolveSpanCount } from '../utils/spans';
 
+// Целое в границах [min, max] — тот же приём, что isCount ниже (NaN не
+// проходит typeof + isInteger), но с диапазоном: без него ширина/высота/
+// spacing/spans, пришедшие из localStorage, файла проекта или Share-ссылки,
+// обходили ограничение степперов и вешали браузер на том же значении, на
+// котором степперы уже не пускают дальше. Используется и в
+// useCrossWeaveProject.ts для тех же полей CrossWeaveGridConfig.
+export const isIntInRange = (v: unknown, min: number, max: number): v is number =>
+  typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
+
+// Сырые пределы под панельные APP_CONSTRAINTS.maxGridWidth/maxGridHeight —
+// с тем же сдвигом, что и во View (App.tsx: gridWidth = gridSize.width - 1,
+// gridHeight = gridSize.height + 1, см. комментарий там же).
+export const MAX_RAW_WIDTH = APP_CONSTRAINTS.maxGridWidth + 1;
+export const MAX_RAW_HEIGHT = APP_CONSTRAINTS.maxGridHeight - 1;
+
 export const isGridConfig = (v: unknown): v is GridConfig => {
   if (typeof v !== 'object' || v === null) return false;
   const obj = v as Record<string, unknown>;
-  if (typeof obj.width !== 'number') return false;
-  if (typeof obj.height !== 'number') return false;
-  if (typeof obj.spacing !== 'number') return false;
-  if (typeof obj.topSpan !== 'number') return false;
-  if (typeof obj.bottomSpan !== 'number') return false;
+  const { minSpan, maxSpan, minSpacing, maxSpacing } = BEAD_THEME.constraints;
+  if (!isIntInRange(obj.width, 1, MAX_RAW_WIDTH)) return false;
+  if (!isIntInRange(obj.height, 1, MAX_RAW_HEIGHT)) return false;
+  if (!isIntInRange(obj.spacing, minSpacing, maxSpacing)) return false;
+  if (!isIntInRange(obj.topSpan, minSpan, maxSpan)) return false;
+  if (!isIntInRange(obj.bottomSpan, minSpan, maxSpan)) return false;
   return true;
 };
 
@@ -53,12 +69,6 @@ export const clampTaperSide = (side: TaperSide, height: number): TaperSide => ({
 
 export const clampTaperDepth = (depth: number, width: number): number =>
   Math.max(0, Math.min(depth, taperDepthMax(width)));
-
-// Сырые пределы под панельные APP_CONSTRAINTS.maxGridWidth/maxGridHeight —
-// с тем же сдвигом, что и во View (App.tsx: gridWidth = gridSize.width - 1,
-// gridHeight = gridSize.height + 1, см. комментарий там же).
-export const MAX_RAW_WIDTH = APP_CONSTRAINTS.maxGridWidth + 1;
-export const MAX_RAW_HEIGHT = APP_CONSTRAINTS.maxGridHeight - 1;
 
 export const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
   if (typeof v !== 'object' || v === null) return false;

@@ -23,6 +23,7 @@ import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
 import { useStatsReserve } from '../../../hooks/useStatsReserve';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
+import { useFastPaint } from '../../../hooks/useFastPaint';
 import { useBeadCoords } from '../../../hooks/useBeadCoords';
 import { useThreadTrace } from '../../../hooks/useThreadTrace';
 import { useColorHighlight } from '../../../hooks/useColorHighlight';
@@ -41,6 +42,7 @@ interface CrossWeaveCanvasViewProps {
   activeColor: string;
   isDrawing: boolean;
   paintBead: (id: string) => void;
+  paintBeadFast: (id: string) => string | undefined;
   startDrawing: () => void;
   stopDrawing: () => void;
   zoom: number;
@@ -94,6 +96,7 @@ export const CrossWeaveCanvasView = ({
   activeColor,
   isDrawing,
   paintBead,
+  paintBeadFast,
   startDrawing,
   stopDrawing,
   zoom,
@@ -276,6 +279,12 @@ export const CrossWeaveCanvasView = ({
     [rawWidth],
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
+  // Крестик не различает типы бисерин (см. CrossWeaveBeadView.tsx — класс
+  // всегда bead--type-span), поэтому дефолтный цвет один вне зависимости от
+  // элемента, в отличие от силянки (CanvasView.tsx).
+  const applyPaintFast = useFastPaint({
+    canvasSvgRef, paintBeadFast, mirrorMode, mirrorFn, defaultColorOf: defaultColorForCrossWeave,
+  });
 
   // 'thread' сюда не заходит — точки добавляются только явным кликом
   // (handlePointerDown), протяжка их не добавляет.
@@ -284,8 +293,8 @@ export const CrossWeaveCanvasView = ({
       weaveCanvas.touchWhileDrawing(id);
       return;
     }
-    if (activeTool !== 'flood-fill' && activeTool !== 'thread' && isDrawing) applyPaint(id);
-  }, [weaveMode, weaveCanvas, activeTool, isDrawing, applyPaint]);
+    if (activeTool !== 'flood-fill' && activeTool !== 'thread' && isDrawing) applyPaintFast(id);
+  }, [weaveMode, weaveCanvas, activeTool, isDrawing, applyPaintFast]);
 
   const handlePointerDown = useCallback((id: string) => {
     if (weaveMode) {

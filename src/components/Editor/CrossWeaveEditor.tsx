@@ -98,6 +98,7 @@ export const CrossWeaveEditor = ({
       activeColor={crossWeave.drawingControls.activeColor}
       isDrawing={crossWeave.drawingControls.isDrawing}
       paintBead={crossWeave.drawingControls.paintBead}
+      paintBeadFast={crossWeave.drawingControls.paintBeadFast}
       startDrawing={crossWeave.drawingControls.startDrawing}
       stopDrawing={crossWeave.drawingControls.stopDrawing}
       mirrorMode={crossWeave.mirrorMode}

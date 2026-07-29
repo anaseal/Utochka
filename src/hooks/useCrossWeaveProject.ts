@@ -14,6 +14,7 @@ import { computeCrossWeaveFloodFill } from '../utils/crossWeaveFloodFill';
 import { fillMissingMirror } from '../utils/symmetrize';
 import { clamp } from '../utils/clamp';
 import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
+import { isIntInRange } from './useSilyankaProject.validators';
 
 // CrossWeave не поддерживает подвески и цепочки-подвески (MVP) — стабильные
 // пустая ссылка и no-op сеттер, чтобы useDrawing не считал их «изменившимися»
@@ -54,8 +55,11 @@ const isOpacityByStrand = (v: unknown): v is Record<1 | 2, number> => {
 const isCrossWeaveGridConfig = (v: unknown): v is CrossWeaveGridConfig => {
   if (typeof v !== 'object' || v === null) return false;
   const obj = v as Record<string, unknown>;
-  return typeof obj.width === 'number' && typeof obj.height === 'number' &&
-    typeof obj.pitchX === 'number' && typeof obj.pitchY === 'number';
+  const { minSpacing, maxSpacing } = CROSS_WEAVE_THEME.constraints;
+  return isIntInRange(obj.width, 1, APP_CONSTRAINTS.maxGridWidth) &&
+    isIntInRange(obj.height, 1, APP_CONSTRAINTS.maxGridHeight) &&
+    isIntInRange(obj.pitchX, minSpacing, maxSpacing) &&
+    isIntInRange(obj.pitchY, minSpacing, maxSpacing);
 };
 
 // gridSize.width/height — «логические» размеры: ровно то, что подписывает

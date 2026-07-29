@@ -43,3 +43,17 @@
 .error-boundary__button:hover {
   filter: brightness(1.15);
 }
+
+.error-boundary__button--reset {
+  margin-top: 0;
+  padding: 4px 8px;
+  background-color: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.error-boundary__button--reset:hover {
+  filter: none;
+  color: #cbd5e1;
+  text-decoration: underline;
+}

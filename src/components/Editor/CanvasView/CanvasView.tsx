@@ -346,7 +346,13 @@ export const CanvasView = ({
     [width, internalTop, internalBottom, extendLeftEdge, extendRightEdge],
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
-  const applyPaintFast = useFastPaint({ canvasSvgRef, paintBeadFast, mirrorMode, mirrorFn });
+  const fastPaintDefaultColor = useCallback(
+    (el: HTMLElement) => defaultColorFor(el.classList.contains('bead--type-node') ? 'NODE' : 'SPAN'),
+    [],
+  );
+  const applyPaintFast = useFastPaint({
+    canvasSvgRef, paintBeadFast, mirrorMode, mirrorFn, defaultColorOf: fastPaintDefaultColor,
+  });
 
   // --- Режим плетения -------------------------------------------------------
   // Холст здесь ничего не рисует: клик и протяжка только отмечают, что уже

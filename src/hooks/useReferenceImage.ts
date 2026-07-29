@@ -58,6 +58,7 @@ export const useReferenceImage = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasPersistError, setHasPersistError] = useState(false);
+  const [hasDecodeError, setHasDecodeError] = useState(false);
   const imageUrlRef = useRef<string | null>(null);
 
   const [position, setPosition] = usePersistedState<Position>(
@@ -99,15 +100,17 @@ export const useReferenceImage = () => {
 
   const uploadImage = useCallback(async (file: File) => {
     setIsLoading(true);
+    setHasDecodeError(false);
+    setHasPersistError(false);
     try {
       const blob = await downscaleToJpeg(file);
       applyImageUrl(URL.createObjectURL(blob));
-      try {
-        await putImage(blob);
-        setHasPersistError(false);
-      } catch {
-        setHasPersistError(true);
-      }
+      await putImage(blob).catch(() => setHasPersistError(true));
+    } catch {
+      // Браузер не смог декодировать файл — например HEIC с iPhone,
+      // который проходит accept="image/*", но не читается createImageBitmap
+      // ни в Chrome, ни в Firefox.
+      setHasDecodeError(true);
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +134,7 @@ export const useReferenceImage = () => {
   }, [setZoom]);
 
   return {
-    imageUrl, isLoading, hasPersistError, uploadImage, removeImage,
+    imageUrl, isLoading, hasPersistError, hasDecodeError, uploadImage, removeImage,
     position, setPosition,
     size, setSize,
     zoom, setZoom: setZoomClamped,

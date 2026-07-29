@@ -16,7 +16,7 @@ interface ReferenceWindowProps {
 
 export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
   const {
-    imageUrl, isLoading, hasPersistError, uploadImage, removeImage,
+    imageUrl, isLoading, hasPersistError, hasDecodeError, uploadImage, removeImage,
     position, setPosition, size, setSize, zoom, setZoom,
     collapsed, setCollapsed,
   } = useReferenceImage();
@@ -241,6 +241,12 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
 
       {!collapsed && (
         <>
+          {hasDecodeError && (
+            <div className="reference-window__warning">
+              Couldn't read this file — try a different image (HEIC from iPhone isn't supported)
+            </div>
+          )}
+
           {hasPersistError && (
             <div className="reference-window__warning">
               Image not saved — it will be lost on page reload

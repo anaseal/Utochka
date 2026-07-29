@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import https from 'https';
 import { randomBytes } from 'node:crypto';
 import { Redis } from '@upstash/redis';
+import { isAllowedOrigin, withinRateLimit } from './api/_lib/security';
 
 const app = express();
 const PORT = 3001;
@@ -11,9 +12,17 @@ const redis = Redis.fromEnv();
 const SHARE_ID_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const SHARE_ID_LENGTH = 7;
 const SHARE_MAX_PAYLOAD_LENGTH = 200_000;
+const SHARE_TTL_SECONDS = 90 * 24 * 60 * 60;
+const PALETTE_RATE_LIMIT = 20;
+const SHARE_WRITE_RATE_LIMIT = 10;
+const SHARE_READ_RATE_LIMIT = 60;
+const RATE_WINDOW_SECONDS = 60;
 
 const randomShareId = (): string =>
   Array.from(randomBytes(SHARE_ID_LENGTH), (b) => SHARE_ID_CHARS[b % SHARE_ID_CHARS.length]).join('');
+
+const clientIp = (req: Request): string =>
+  (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.socket.remoteAddress ?? 'unknown';
 
 app.use(express.json());
 
@@ -36,7 +45,16 @@ app.use((req: Request, res: Response, next) => {
 });
 
 // Прокси для Colormind API
-app.post('/api/generate-palette', (req: Request, res: Response) => {
+app.post('/api/generate-palette', async (req: Request, res: Response) => {
+  if (!isAllowedOrigin(req.get('origin') ?? null, DEV_ORIGIN)) {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  if (!(await withinRateLimit(redis, `rl:generate-palette:${clientIp(req)}`, PALETTE_RATE_LIMIT, RATE_WINDOW_SECONDS))) {
+    res.status(429).json({ error: 'Too many requests' });
+    return;
+  }
+
   const data = JSON.stringify(req.body);
 
   const options = {
@@ -78,6 +96,15 @@ app.post('/api/generate-palette', (req: Request, res: Response) => {
 // Прокси для Share-ссылки (см. api/share.ts — на Vercel это Edge Function,
 // здесь тот же контракт для локальной разработки через `npm run dev:server`).
 app.post('/api/share', express.text({ type: '*/*' }), async (req: Request, res: Response) => {
+  if (!isAllowedOrigin(req.get('origin') ?? null, DEV_ORIGIN)) {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+  if (!(await withinRateLimit(redis, `rl:share:write:${clientIp(req)}`, SHARE_WRITE_RATE_LIMIT, RATE_WINDOW_SECONDS))) {
+    res.status(429).json({ error: 'Too many requests' });
+    return;
+  }
+
   const payload = req.body;
   if (typeof payload !== 'string' || !payload || payload.length > SHARE_MAX_PAYLOAD_LENGTH) {
     res.status(400).json({ error: 'Invalid payload' });
@@ -85,11 +112,16 @@ app.post('/api/share', express.text({ type: '*/*' }), async (req: Request, res: 
   }
   let id = randomShareId();
   while (await redis.exists(id)) id = randomShareId();
-  await redis.set(id, payload);
+  await redis.set(id, payload, { ex: SHARE_TTL_SECONDS });
   res.json({ id });
 });
 
 app.get('/api/share', async (req: Request, res: Response) => {
+  if (!(await withinRateLimit(redis, `rl:share:read:${clientIp(req)}`, SHARE_READ_RATE_LIMIT, RATE_WINDOW_SECONDS))) {
+    res.status(429).json({ error: 'Too many requests' });
+    return;
+  }
+
   const id = req.query.id;
   if (typeof id !== 'string') {
     res.status(400).json({ error: 'Missing id' });

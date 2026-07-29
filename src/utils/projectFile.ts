@@ -67,17 +67,21 @@ export const isProjectFile = (v: unknown): v is ProjectFile => {
   return Object.values(obj.localStorage).every(entry => typeof entry === 'string');
 };
 
-// Полностью заменяет собственные ключи localStorage данными из файла/ссылки
-// (сначала чистит все app:/silyanka:/crossWeave:, потом пишет новые), не
-// трогая ничего постороннего.
-export const applyProjectData = (data: ProjectFile): void => {
+// Удаляет все собственные ключи localStorage (app:/silyanka:/crossWeave:), не
+// трогая ничего постороннего. Используется и как первый шаг applyProjectData,
+// и напрямую в ErrorBoundary для сброса испорченных данных.
+export const clearOwnStorage = (): void => {
   const ownKeys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && isOwnKey(key)) ownKeys.push(key);
   }
   ownKeys.forEach(key => localStorage.removeItem(key));
+};
 
+// Полностью заменяет собственные ключи localStorage данными из файла/ссылки.
+export const applyProjectData = (data: ProjectFile): void => {
+  clearOwnStorage();
   for (const [key, value] of Object.entries(data.localStorage)) {
     localStorage.setItem(key, value);
   }

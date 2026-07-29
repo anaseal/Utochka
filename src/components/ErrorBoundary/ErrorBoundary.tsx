@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { clearOwnStorage } from '../../utils/projectFile';
 import './ErrorBoundary.css';
 
 interface ErrorBoundaryProps {
@@ -20,8 +21,24 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('ErrorBoundary поймал ошибку рендера:', error, info.componentStack);
+    console.error('ErrorBoundary caught a render error:', error, info.componentStack);
   }
+
+  private handleReload = () => {
+    window.location.reload();
+  };
+
+  // Вторая кнопка — на случай, если падение вызвано не случайностью, а
+  // испорченными данными в localStorage (например, некорректным размером
+  // сетки): обычная перезагрузка в этом случае приводит к той же ошибке по
+  // кругу, и единственный выход — стереть свои данные и начать заново.
+  private handleReset = () => {
+    if (!window.confirm('This will permanently delete your saved design and progress. Continue?')) {
+      return;
+    }
+    clearOwnStorage();
+    window.location.reload();
+  };
 
   override render() {
     if (!this.state.hasError) {
@@ -31,16 +48,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return (
       <div className="error-boundary" role="alert">
         <AlertTriangle size={40} className="error-boundary__icon" />
-        <h1 className="error-boundary__title">Что-то пошло не так</h1>
+        <h1 className="error-boundary__title">Something went wrong</h1>
         <p className="error-boundary__text">
-          Ваши данные сохранены в браузере и никуда не пропали. Попробуйте перезагрузить страницу.
+          Your work is saved in the browser and hasn't been lost. Try reloading the page.
         </p>
+        <button type="button" className="error-boundary__button" onClick={this.handleReload}>
+          Reload page
+        </button>
         <button
           type="button"
-          className="error-boundary__button"
-          onClick={() => window.location.reload()}
+          className="error-boundary__button error-boundary__button--reset"
+          onClick={this.handleReset}
         >
-          Перезагрузить страницу
+          Reset data and start over
         </button>
       </div>
     );
