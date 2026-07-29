@@ -1,10 +1,9 @@
 /* FILE: src\components\Editor\CanvasView\CanvasView.tsx */
-import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
 import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../../../types/pendant';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
-import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BeadGrid } from './BeadGrid';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
 import { WeaveTool, WeaveOrientation } from '../Header/WeaveControls';
@@ -19,14 +18,11 @@ import { CanvasSurface } from './CanvasSurface';
 import { ThreadTraceControls } from './ThreadTraceControls';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { mirrorBeadId } from '../../../utils/mirror';
-import { chainBeadCountBetween, computeChainBeadPositions, expandChainRun } from '../../../utils/pendantChain';
+import { expandChainRun } from '../../../utils/pendantChain';
 import { buildBeadPositionIndex } from '../../../utils/beadPositions';
 import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
-import {
-  buildSegmentIndex, silyankaSegment, silyankaNodeClickSegment, silyankaPassCenter,
-} from '../../../utils/weaveSegment';
 import { WeaveProgressControls } from '../../../hooks/useWeaveProgress';
 import { useWeaveCanvas } from '../../../hooks/useWeaveCanvas';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
@@ -34,24 +30,19 @@ import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
 import { useStatsReserve } from '../../../hooks/useStatsReserve';
 import { useMirrorPaint } from '../../../hooks/useMirrorPaint';
 import { useBeadCoords } from '../../../hooks/useBeadCoords';
-import { useFrameThrottle } from '../../../hooks/useFrameThrottle';
 import { useThreadTrace } from '../../../hooks/useThreadTrace';
 import { useColorHighlight } from '../../../hooks/useColorHighlight';
+import { usePendantStats } from '../../../hooks/usePendantStats';
+import { useSilyankaWeaveSegments } from '../../../hooks/useSilyankaWeaveSegments';
+import { useStampTool } from '../../../hooks/useStampTool';
+import { useFastPaint } from '../../../hooks/useFastPaint';
+import { useScrolledFromLeft } from '../../../hooks/useScrolledFromLeft';
 import { computeCanvasDim } from '../../../utils/canvasDim';
+import { computeSilyankaExtraMaxY } from '../../../utils/pendantCanvasDim';
 import {
   swapColorInMap, swapColorInPendants, swapColorInChains, swapColorInDecorTails,
 } from '../../../utils/colorSwap';
 import './CanvasView.css';
-
-// Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
-// (выделение рамкой) — независим от zoom, т.к. сравнивается в client-координатах.
-// Используется только когда узор ещё не загружен (рисование новой рамки
-// выделения) — пока узор загружен, тач вообще не завязан на этот порог: там
-// касание сразу входит в режим «таскать превью» (см. handleStampContainerPointerDown,
-// mode: 'movePreview'). Отдельное touch-значение выше десктопного — палец
-// толще и дрожит сильнее курсора, случайный микро-сдвиг не должен рвать рамку.
-const STAMP_DRAG_THRESHOLD = 4;
-const STAMP_DRAG_THRESHOLD_TOUCH = 10;
 
 interface CanvasViewProps {
   beads: Bead[];
@@ -207,18 +198,6 @@ export const CanvasView = ({
   const { nodeRadius } = BEAD_THEME.sizes;
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const stampGroupRef = useRef<SVGGElement>(null);
-  const stampDragRef = useRef<{
-    startClient: { x: number; y: number };
-    startBead: { x: number; y: number };
-    dragging: boolean;
-    // 'select' — обычная логика клик/драг (десктоп: клик ставит копию,
-    // драг рисует новую рамку). 'movePreview' — тач-режим с уже загруженным
-    // узором: палец сразу таскает живое превью (см. handleStampContainerPointerMove),
-    // отпускание коммитит; чтобы нарисовать новую рамку в этом состоянии,
-    // узор сначала сбрасывают крестиком (см. spec.md, «Штамп»).
-    mode: 'select' | 'movePreview';
-  } | null>(null);
-  const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   // Сворачиваемый редактор количества бисерин (per-row span controls,
   // CanvasRulers) — свёрнут по умолчанию на всех ширинах экрана (столбик
   // ±/счётчиков — визуальный шум, нужен редко), раскрывается той же ручкой
@@ -232,49 +211,14 @@ export const CanvasView = ({
     ? offsetX
     : BEAD_THEME.gridDefaults.offsetXCollapsed;
 
-  const dim = useMemo(() => {
-    // Подвески свисают ниже сетки — учитываем их глубину в высоте SVG.
-    // Якорь — pendantAnchors, а не bottomNodes: на колонке с декор-хвостом
-    // подвеска висит от его кончика и уходит ниже, чем от голой ноды.
-    let pendantMaxY = 0;
-    for (const p of pendantPlacements) {
-      const t = pendantTemplates[p.templateId];
-      const anchor = pendantAnchors.find(n => n.logicalIndex.col === p.col);
-      if (!t || !anchor) continue;
-      let depth = -Infinity;
-      for (const b of t.beads) {
-        const reach = b.dy + (b.shape === 'circle' ? (b.r ?? 0) : (b.h ?? 0) / 2);
-        if (reach > depth) depth = reach;
-      }
-      // +26: место под кнопку удаления ниже последней бусины
-      pendantMaxY = Math.max(pendantMaxY, anchor.y + depth * PENDANT_SCALE + 26);
-    }
-
-    // Цепочки-подвески тоже провисают ниже сетки — учитываем глубину дуги.
-    // Цепочки крепятся к настоящей ноде независимо от декор-хвоста на той
-    // же колонке (см. spec.md, «Декор-хвост»), поэтому якорь — bottomNodes.
-    let chainMaxY = 0;
-    for (const c of pendantChains) {
-      const start = bottomNodes.find(n => n.logicalIndex.col === c.startCol);
-      const end = bottomNodes.find(n => n.logicalIndex.col === c.endCol);
-      if (!start || !end) continue;
-      const positions = computeChainBeadPositions(start, end);
-      const maxY = Math.max(start.y, end.y, ...positions.map(p => p.y));
-      chainMaxY = Math.max(chainMaxY, maxY + 26);
-    }
-
-    // Декор-хвосты — прямая колонка вниз от настоящей ноды.
-    let decorTailMaxY = 0;
-    for (const t of decorTailPlacements) {
-      const anchor = bottomNodes.find(n => n.logicalIndex.col === t.col);
-      if (!anchor) continue;
-      decorTailMaxY = Math.max(decorTailMaxY, anchor.y + t.rows * decorRowStep + 26);
-    }
-
-    return computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, {
-      extraMaxY: Math.max(pendantMaxY, chainMaxY, decorTailMaxY),
-    });
-  }, [
+  // Подвески, цепочки-подвески и декор-хвосты свисают ниже сетки — учитываем
+  // это в высоте SVG (см. computeSilyankaExtraMaxY).
+  const dim = useMemo(() => computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, {
+    extraMaxY: computeSilyankaExtraMaxY(
+      pendantPlacements, pendantTemplates, pendantAnchors, pendantChains, bottomNodes,
+      decorTailPlacements, decorRowStep,
+    ),
+  }), [
     beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates,
     pendantAnchors, bottomNodes, pendantChains, decorTailPlacements, decorRowStep,
   ]);
@@ -338,8 +282,7 @@ export const CanvasView = ({
 
   cancelActiveStrokeRef.current = () => {
     stopDrawing();
-    stampDragRef.current = null;
-    setSelectionRect(null);
+    stamp.cancel();
     thread.cancelHandleDrag();
     thread.cancel();
     // Второй палец обрывает и уже идущий мазок отметок (режим плетения) —
@@ -351,77 +294,11 @@ export const CanvasView = ({
     weaveCanvas.endStroke();
   };
 
-  // Шеврон (.span-controls-toggle) «пришвартован» к левому краю карточки
-  // холста и осмыслен только там (за ним прячется панель, живущая у левого
-  // края сетки) — как только пользователь скроллит вправо, эта панель уезжает
-  // за пределы видимой области, и шеврон поверх чужих колонок вводит в
-  // заблуждение. Поэтому он скрыт всё время, пока scrollLeft > 0, и
-  // появляется обратно не по таймеру, а только когда пользователь докрутит
-  // холст обратно до левого края.
-  const [isScrolledFromLeft, setIsScrolledFromLeft] = useState(false);
-  useEffect(() => {
-    const el = canvasContainerRef.current;
-    if (!el) return;
-    const handleScroll = () => setIsScrolledFromLeft(el.scrollLeft > 0);
-    handleScroll();
-    el.addEventListener('scroll', handleScroll);
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, []);
+  const isScrolledFromLeft = useScrolledFromLeft(canvasContainerRef);
 
-  // Подвеска учитывается в статистике, только если у неё есть и валидный
-  // шаблон, и живая нода-якорь на нижнем ряду (та же проверка, что и в
-  // PendantLayer для occupiedCols).
-  const validPendantPlacements = useMemo(() => {
-    const bottomCols = new Set(bottomNodes.map(n => n.logicalIndex.col));
-    return pendantPlacements.filter(
-      (p) => pendantTemplates[p.templateId] && bottomCols.has(p.col),
-    );
-  }, [pendantPlacements, pendantTemplates, bottomNodes]);
-
-  // Цепочка учитывается в статистике, только если у неё живы оба узла-якоря
-  // на нижнем ряду (та же проверка, что и у validPendantPlacements).
-  const validPendantChains = useMemo(() => {
-    const nodeByCol = new Map(bottomNodes.map(n => [n.logicalIndex.col, n]));
-    return pendantChains
-      .map((c) => {
-        const start = nodeByCol.get(c.startCol);
-        const end = nodeByCol.get(c.endCol);
-        if (!start || !end) return null;
-        return { chain: c, count: chainBeadCountBetween(start, end) };
-      })
-      .filter((v): v is { chain: PendantChain; count: number } => v !== null);
-  }, [pendantChains, bottomNodes]);
-
-  // Хвост учитывается в статистике, только если у него жива нода-якорь на
-  // нижнем ряду (та же проверка, что и у validPendantPlacements).
-  const validDecorTailPlacements = useMemo(() => {
-    const bottomCols = new Set(bottomNodes.map(n => n.logicalIndex.col));
-    return decorTailPlacements.filter((t) => bottomCols.has(t.col));
-  }, [decorTailPlacements, bottomNodes]);
-
-  // Подвески, цепочки-подвески и декор-хвосты — тоже бисерины проекта,
-  // поэтому досеиваются в общую сводку по цветам поверх прохода по сетке.
-  const extendStats = useCallback((stats: Map<string, number>) => {
-    validPendantPlacements.forEach((p) => {
-      const template = pendantTemplates[p.templateId];
-      template.beads.forEach((bead, index) => {
-        const color = p.colorMap[index] ?? defaultColorFor(bead.type);
-        stats.set(color, (stats.get(color) || 0) + 1);
-      });
-    });
-    validPendantChains.forEach(({ chain, count }) => {
-      for (let i = 0; i < count; i++) {
-        const color = chain.colorMap[i] ?? defaultColorFor('SPAN');
-        stats.set(color, (stats.get(color) || 0) + 1);
-      }
-    });
-    validDecorTailPlacements.forEach((t) => {
-      for (let i = 0; i < t.rows; i++) {
-        const color = t.colorMap[i] ?? defaultColorFor('SPAN');
-        stats.set(color, (stats.get(color) || 0) + 1);
-      }
-    });
-  }, [validPendantPlacements, pendantTemplates, validPendantChains, validDecorTailPlacements]);
+  const { extendStats, totalCount } = usePendantStats({
+    beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains, decorTailPlacements,
+  });
 
   const defaultColorOf = useCallback((bead: Bead) => defaultColorFor(bead.type), []);
 
@@ -446,16 +323,6 @@ export const CanvasView = ({
     extendStats,
   });
 
-  const totalCount = useMemo(() => {
-    const pendantBeadCount = validPendantPlacements.reduce(
-      (sum, p) => sum + pendantTemplates[p.templateId].beads.length,
-      0,
-    );
-    const chainBeadCount = validPendantChains.reduce((sum, { count }) => sum + count, 0);
-    const decorTailBeadCount = validDecorTailPlacements.reduce((sum, t) => sum + t.rows, 0);
-    return beads.length + pendantBeadCount + chainBeadCount + decorTailBeadCount;
-  }, [beads.length, validPendantPlacements, pendantTemplates, validPendantChains, validDecorTailPlacements]);
-
   const highlightedNodeIds = useMemo(() => {
     if (hoveredRow === null) return null;
     const ids = new Set<string>();
@@ -479,65 +346,12 @@ export const CanvasView = ({
     [width, internalTop, internalBottom, extendLeftEdge, extendRightEdge],
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
-
-  // Красит одну бисерину напрямую в DOM, в обход React — используется только
-  // во время протяжки (см. paintBeadFast/strokeChangesRef в useDrawing.ts).
-  // Держит в синхроне ровно то, что рендерит BeadView по тем же данным:
-  // fill/--bead-color и класс bead--empty (см. BeadView.tsx/BeadView.css).
-  const applyBeadColorDom = useCallback((id: string, color: string | undefined) => {
-    const svg = canvasSvgRef.current;
-    const g = svg?.ownerDocument.getElementById(id);
-    if (!g) return;
-    g.classList.toggle('bead--empty', !color);
-    const body = g.querySelector('.bead__body') as SVGCircleElement | null;
-    if (!body) return;
-    const finalColor = color ?? defaultColorFor(g.classList.contains('bead--type-node') ? 'NODE' : 'SPAN');
-    body.setAttribute('fill', finalColor);
-    body.style.setProperty('--bead-color', finalColor);
-  }, [canvasSvgRef]);
-
-  const paintBeadFastAndDom = useCallback((id: string) => {
-    applyBeadColorDom(id, paintBeadFast(id));
-  }, [paintBeadFast, applyBeadColorDom]);
-  const applyPaintFast = useMirrorPaint(paintBeadFastAndDom, mirrorMode, mirrorFn);
+  const applyPaintFast = useFastPaint({ canvasSvgRef, paintBeadFast, mirrorMode, mirrorFn });
 
   // --- Режим плетения -------------------------------------------------------
   // Холст здесь ничего не рисует: клик и протяжка только отмечают, что уже
   // сплетено. Порядок плетения режим не знает и не навязывает (см. spec.md).
-  const segmentIndex = useMemo(() => buildSegmentIndex(beads), [beads]);
-  const beadById = useMemo(() => new Map(beads.map((b) => [b.id, b])), [beads]);
-  // Нижний ряд узлов: у его узлов сегмент — разворот из обеих верхних граней
-  // (см. silyankaNodeClickSegment).
-  const bottomNodeRow = useMemo(() => {
-    let max = -Infinity;
-    for (const b of beads) {
-      if (b.type === 'NODE' && b.logicalIndex.row > max) max = b.logicalIndex.row;
-    }
-    return max === -Infinity ? undefined : max;
-  }, [beads]);
-
-  const weaveBeadsFor = useCallback((id: string): string[] => {
-    if (weaveTool !== 'segment') return [id];
-    // Сегмент — один проход нити от узла до узла: «узел → грань → узел →
-    // грань → узел». Сторона не зависит от жеста и места клика: плетение идёт
-    // слева направо по экрану, а на отражённом полотне это другая сторона
-    // сетки (см. silyankaNodeClickSegment и разметку шагов в spec.md).
-    const pass = { mirrored: weaveFlipped, bottomRow: bottomNodeRow };
-    const bead = beadById.get(id);
-    if (bead?.type === 'NODE') {
-      return silyankaNodeClickSegment(bead.logicalIndex.row, bead.logicalIndex.col, segmentIndex, pass);
-    }
-    // Клик по спану отмечает тот же сегмент: раз сторона фиксирована, пролёт
-    // входит ровно в один проход, и центр однозначен.
-    const center = silyankaPassCenter(id, weaveFlipped);
-    if (center && segmentIndex.has(`node:${center.r}:${center.c}`)) {
-      const ids = silyankaNodeClickSegment(center.r, center.c, segmentIndex, pass);
-      // Страховка от края и среза Taper: если проход почему-то не содержит
-      // саму кликнутую бисерину, отмечаем её группу, а не чужой сегмент.
-      if (ids.includes(id)) return ids;
-    }
-    return silyankaSegment(id, segmentIndex);
-  }, [weaveTool, beadById, segmentIndex, bottomNodeRow, weaveFlipped]);
+  const weaveBeadsFor = useSilyankaWeaveSegments({ beads, weaveTool, weaveFlipped });
 
   const radiusOf = useCallback(
     (bead: Bead) => (bead.type === 'NODE' ? BEAD_THEME.sizes.nodeRadius : BEAD_THEME.sizes.spanRadius),
@@ -609,131 +423,33 @@ export const CanvasView = ({
     weaveCanvas.unmark(weaveBeadsFor(nearest.id));
   }, [weaveMode, toBeadCoords, beads, weaveCanvas, weaveBeadsFor]);
 
-  const findNearestNode = useCallback((point: { x: number; y: number }): Bead | null => {
-    let nearest: Bead | null = null;
-    let bestDist = Infinity;
-    for (const bead of beads) {
-      if (bead.type !== 'NODE') continue;
-      const dx = bead.x - point.x;
-      const dy = bead.y - point.y;
-      const dist = dx * dx + dy * dy;
-      if (dist < bestDist) {
-        bestDist = dist;
-        nearest = bead;
-      }
-    }
-    return nearest;
-  }, [beads]);
+  const stamp = useStampTool({
+    active: !weaveMode && activeTool === 'stamp',
+    beads,
+    toBeadCoords,
+    stampPattern,
+    onStampHover,
+    onStampSelect,
+    onStampPlace,
+    isMultiTouch: touchGesture.isMultiTouch,
+  });
 
-  const handleStampContainerPointerDown = useCallback((e: React.PointerEvent) => {
-    if (weaveMode || activeTool !== 'stamp') return;
-    const beadPoint = toBeadCoords(e.clientX, e.clientY);
-    if (!beadPoint) return;
-    // На тач с уже загруженным узором нет наведения без контакта — поэтому
-    // касание сразу входит в режим «таскать превью», а не ждёт превышения
-    // порога драга (см. STAMP_DRAG_THRESHOLD_TOUCH — там он больше не нужен
-    // для этого случая, только для рисования новой рамки без узора).
-    const movePreview = e.pointerType === 'touch' && stampPattern !== null;
-    stampDragRef.current = {
-      startClient: { x: e.clientX, y: e.clientY },
-      startBead: beadPoint,
-      dragging: false,
-      mode: movePreview ? 'movePreview' : 'select',
-    };
-    if (movePreview) {
-      const nearest = findNearestNode(beadPoint);
-      onStampHover(nearest?.id ?? null);
-    }
-  }, [weaveMode, activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover]);
-
-  // Линейный перебор всех бисерин в findNearestNode не нужен чаще одного раза
-  // за кадр (см. useFrameThrottle). Не применяется к rect-драгу выделения
-  // ниже — там нет поиска ближайшей бусины, только арифметика.
-  const shouldThrottleHoverSearch = useFrameThrottle();
-
+  // pointerMove на контейнере холста маршрутизирует между двумя точечными
+  // инструментами: 'thread' ведёт курсор трассировки, 'stamp' — драг/превью
+  // (сам useStampTool уже гейтит себя по activeTool==='stamp' через active).
   const handleStampContainerPointerMove = useCallback((e: React.PointerEvent) => {
     if (weaveMode) return;
     if (activeTool === 'thread') {
       thread.handlePointerMove(e);
       return;
     }
-    if (activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;
-    const drag = stampDragRef.current;
-    if (drag) {
-      if (drag.mode === 'movePreview') {
-        if (shouldThrottleHoverSearch()) return;
-        const beadPoint = toBeadCoords(e.clientX, e.clientY);
-        const nearest = beadPoint ? findNearestNode(beadPoint) : null;
-        onStampHover(nearest?.id ?? null);
-        return;
-      }
-      const dx = e.clientX - drag.startClient.x;
-      const dy = e.clientY - drag.startClient.y;
-      const threshold = e.pointerType === 'touch' ? STAMP_DRAG_THRESHOLD_TOUCH : STAMP_DRAG_THRESHOLD;
-      if (drag.dragging || Math.hypot(dx, dy) > threshold) {
-        // Момент перехода клика в драг — прячем протухший preview старого
-        // штампа, чтобы он не мешал видеть новую рамку выделения.
-        if (!drag.dragging) onStampHover(null);
-        drag.dragging = true;
-        const beadPoint = toBeadCoords(e.clientX, e.clientY);
-        if (beadPoint) {
-          setSelectionRect({
-            x: Math.min(drag.startBead.x, beadPoint.x),
-            y: Math.min(drag.startBead.y, beadPoint.y),
-            w: Math.abs(beadPoint.x - drag.startBead.x),
-            h: Math.abs(beadPoint.y - drag.startBead.y),
-          });
-        }
-      }
-      return;
-    }
-    if (stampPattern) {
-      if (shouldThrottleHoverSearch()) return;
-      const beadPoint = toBeadCoords(e.clientX, e.clientY);
-      const nearest = beadPoint ? findNearestNode(beadPoint) : null;
-      onStampHover(nearest?.id ?? null);
-    }
-  }, [weaveMode, activeTool, toBeadCoords, stampPattern, findNearestNode, onStampHover, touchGesture.isMultiTouch, thread, shouldThrottleHoverSearch]);
-
-  const handleStampContainerPointerUp = useCallback((e: React.PointerEvent) => {
-    if (weaveMode || activeTool !== 'stamp' || touchGesture.isMultiTouch()) return;
-    const drag = stampDragRef.current;
-    stampDragRef.current = null;
-    if (!drag) return;
-
-    if (drag.mode === 'movePreview') {
-      const beadPoint = toBeadCoords(e.clientX, e.clientY) ?? drag.startBead;
-      const nearest = findNearestNode(beadPoint);
-      if (nearest) onStampPlace(nearest.id);
-      return;
-    }
-
-    if (drag.dragging) {
-      const beadPoint = toBeadCoords(e.clientX, e.clientY) ?? drag.startBead;
-      const minX = Math.min(drag.startBead.x, beadPoint.x);
-      const maxX = Math.max(drag.startBead.x, beadPoint.x);
-      const minY = Math.min(drag.startBead.y, beadPoint.y);
-      const maxY = Math.max(drag.startBead.y, beadPoint.y);
-      const ids = beads
-        .filter(b => b.x >= minX && b.x <= maxX && b.y >= minY && b.y <= maxY)
-        .map(b => b.id);
-      setSelectionRect(null);
-      onStampSelect(ids);
-      return;
-    }
-
-    if (stampPattern) {
-      const nearest = findNearestNode(drag.startBead);
-      if (nearest) onStampPlace(nearest.id);
-    }
-  }, [weaveMode, activeTool, toBeadCoords, beads, onStampSelect, stampPattern, findNearestNode, onStampPlace, touchGesture.isMultiTouch]);
+    stamp.handlePointerMove(e);
+  }, [weaveMode, activeTool, thread, stamp]);
 
   const handleStampContainerPointerLeave = useCallback(() => {
-    stampDragRef.current = null;
-    setSelectionRect(null);
+    stamp.handlePointerLeave();
     thread.clearCursor();
-    onStampHover(null);
-  }, [onStampHover, thread]);
+  }, [stamp, thread]);
 
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
@@ -767,9 +483,9 @@ export const CanvasView = ({
             className="canvas__svg"
             data-canvas-theme={canvasTheme}
             ref={canvasContainerRef}
-            onPointerDown={handleStampContainerPointerDown}
+            onPointerDown={stamp.handlePointerDown}
             onPointerMove={handleStampContainerPointerMove}
-            onPointerUp={handleStampContainerPointerUp}
+            onPointerUp={stamp.handlePointerUp}
             onPointerLeave={handleStampContainerPointerLeave}
             onContextMenu={handleWeaveContextMenu}
           >
@@ -812,13 +528,13 @@ export const CanvasView = ({
                   labelTransform={weaveCanvas.labelTransform}
                 />
 
-                {selectionRect && (
+                {stamp.selectionRect && (
                   <rect
                     className="canvas__stamp-rect"
-                    x={selectionRect.x}
-                    y={selectionRect.y}
-                    width={selectionRect.w}
-                    height={selectionRect.h}
+                    x={stamp.selectionRect.x}
+                    y={stamp.selectionRect.y}
+                    width={stamp.selectionRect.w}
+                    height={stamp.selectionRect.h}
                   />
                 )}
 
