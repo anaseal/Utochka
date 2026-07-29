@@ -7,16 +7,13 @@ import { useDecorTails } from './useDecorTails';
 import { useThreads } from './useThreads';
 import { useWeaveProgress } from './useWeaveProgress';
 import { usePersistedState } from './usePersistedState';
-import { APP_CONSTRAINTS, BEAD_THEME, THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
-import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper, TaperSide } from '../types/bead';
+import { useGridConfig } from './useGridConfig';
+import { THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
 import { PENDANT_TEMPLATES_BY_ID } from '../data/pendantTemplates';
-import { clampSpan, resolveSpanCount } from '../utils/spans';
-import { clamp } from '../utils/clamp';
-import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
-import { shiftDesignMapColumns } from '../utils/regrid';
 import { mirrorBeadId } from '../utils/mirror';
+import { resolveSpanCount } from '../utils/spans';
 import { fillMissingMirror } from '../utils/symmetrize';
 import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
 import { chainBeadId } from '../utils/pendantChain';
@@ -25,186 +22,15 @@ import { getDecorRowStep } from '../utils/decorGeometry';
 import {
   StampPattern, StampContext, StampAnchorEdge, captureStampPattern, applyStampPattern,
 } from '../utils/stamp';
-
-const isGridConfig = (v: unknown): v is GridConfig => {
-  if (typeof v !== 'object' || v === null) return false;
-  const obj = v as Record<string, unknown>;
-  if (typeof obj.width !== 'number') return false;
-  if (typeof obj.height !== 'number') return false;
-  if (typeof obj.spacing !== 'number') return false;
-  if (typeof obj.topSpan !== 'number') return false;
-  if (typeof obj.bottomSpan !== 'number') return false;
-  return true;
-};
-
-const isBottomEdgeDecor = (v: unknown): v is BottomEdgeDecor =>
-  typeof v === 'object' && v !== null &&
-  typeof (v as BottomEdgeDecor).enabled === 'boolean';
-
-const isEdgeExtension = (v: unknown): v is EdgeExtension =>
-  typeof v === 'object' && v !== null &&
-  typeof (v as EdgeExtension).left === 'boolean' &&
-  typeof (v as EdgeExtension).right === 'boolean';
-
-// Целое неотрицательное. Строго, а не просто `typeof === 'number'`: NaN из
-// повреждённого файла проекта или Share-ссылки протекал в срез и обнулял
-// сравнения в generator.ts — на холсте не оставалось НИ ОДНОЙ бисерины.
-const isCount = (v: unknown): v is number =>
-  typeof v === 'number' && Number.isInteger(v) && v >= 0;
-
-const isTaperSide = (v: unknown): v is TaperSide =>
-  typeof v === 'object' && v !== null && isCount((v as TaperSide).rows);
-
-const isTaper = (v: unknown): v is Taper =>
-  typeof v === 'object' && v !== null &&
-  isTaperSide((v as Taper).top) && isTaperSide((v as Taper).bottom) &&
-  isCount((v as Taper).depth);
-
-// rows — сколько узловых рядов половины может занимать скос (+1, чтобы можно
-// было свести конец в точку). depth — общий для top/bottom пол ширины в
-// половинках колонки (см. types/bead.ts), поэтому его потолок — width-1: на
-// нём полотно уже сведено к одной колонке по всей длине, и дальше степпер
-// менял бы только число на экране (см. spec.md).
-const taperRowsMax = (height: number): number => height + 1;
-
-const taperDepthMax = (width: number): number => Math.max(0, width - 1);
-
-const clampTaperSide = (side: TaperSide, height: number): TaperSide => ({
-  rows: Math.max(0, Math.min(side.rows, taperRowsMax(height))),
-});
-
-const clampTaperDepth = (depth: number, width: number): number =>
-  Math.max(0, Math.min(depth, taperDepthMax(width)));
-
-// Сырые пределы под панельные APP_CONSTRAINTS.maxGridWidth/maxGridHeight —
-// с тем же сдвигом, что и во View (App.tsx: gridWidth = gridSize.width - 1,
-// gridHeight = gridSize.height + 1, см. комментарий там же).
-const MAX_RAW_WIDTH = APP_CONSTRAINTS.maxGridWidth + 1;
-const MAX_RAW_HEIGHT = APP_CONSTRAINTS.maxGridHeight - 1;
-
-const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
-  if (typeof v !== 'object' || v === null) return false;
-  return Object.values(v).every(n => typeof n === 'number');
-};
-
-// decorBands имеет ту же форму, что и rowSpanOverrides: Record<row, count>.
-const isDecorBands = isRowSpanOverrides;
-
-// Убирает per-row override'ы, совпавшие с глобальным дефолтом.
-// Иначе такой override «протухает»: resolveSpanCount отдаёт ему приоритет
-// через `??`, и общий контрол TOP/BOTTOM EDGE перестаёт двигать этот ряд.
-const pruneRedundantOverrides = (
-  overrides: Record<number, number>,
-  topSpan: number,
-  bottomSpan: number,
-): Record<number, number> => {
-  const next: Record<number, number> = {};
-  let changed = false;
-  for (const [k, v] of Object.entries(overrides)) {
-    const r = Number(k);
-    if (v === resolveSpanCount(r, topSpan, bottomSpan, {})) {
-      changed = true;
-      continue;
-    }
-    next[r] = v;
-  }
-  return changed ? next : overrides;
-};
-
-// Убирает записи с рядами >= limit — используется при сужении высоты, чтобы
-// снять decor-полосы/overrides с исчезнувших рядов.
-const pruneRowsBelow = (
-  map: Record<number, number>,
-  limit: number,
-): Record<number, number> => {
-  const next: Record<number, number> = {};
-  for (const [k, v] of Object.entries(map)) {
-    if (Number(k) < limit) next[Number(k)] = v;
-  }
-  return next;
-};
-
-const isPendantPlacements = (v: unknown): v is PendantPlacement[] =>
-  Array.isArray(v) && v.every(p =>
-    typeof p === 'object' && p !== null &&
-    typeof p.placementId === 'string' &&
-    typeof p.templateId === 'string' &&
-    typeof p.col === 'number' &&
-    typeof p.colorMap === 'object' && p.colorMap !== null);
-
-const isPendantChains = (v: unknown): v is PendantChain[] =>
-  Array.isArray(v) && v.every(c =>
-    typeof c === 'object' && c !== null &&
-    typeof c.placementId === 'string' &&
-    typeof c.startCol === 'number' &&
-    typeof c.endCol === 'number' &&
-    typeof c.colorMap === 'object' && c.colorMap !== null);
-
-const isDecorTailPlacements = (v: unknown): v is DecorTailPlacement[] =>
-  Array.isArray(v) && v.every(t =>
-    typeof t === 'object' && t !== null &&
-    typeof t.placementId === 'string' &&
-    typeof t.col === 'number' &&
-    typeof t.rows === 'number' &&
-    typeof t.colorMap === 'object' && t.colorMap !== null);
-
-const isThreads = (v: unknown): v is Thread[] =>
-  Array.isArray(v) && v.every(t =>
-    typeof t === 'object' && t !== null &&
-    typeof (t as Thread).id === 'string' &&
-    Array.isArray((t as Thread).beadIds) &&
-    (t as Thread).beadIds.every(id => typeof id === 'string'));
-
-const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
-
-const isOpacity = (v: unknown): v is number => typeof v === 'number' && v >= 0 && v <= 1;
+import {
+  isPendantPlacements, isPendantChains, isDecorTailPlacements, isThreads, isHexColor, isOpacity,
+} from './useSilyankaProject.validators';
 
 // Всё силяночное состояние и обработчики, вынесенные из App.tsx, чтобы
 // хостить вторую независимую технику (крестик) без дублирования ~400 строк.
+// Геометрия сетки (размеры/спаны/скос/края) вынесена в useGridConfig —
+// см. комментарий там же.
 export const useSilyankaProject = (palette: readonly string[]) => {
-  const [gridSize, setGridSize] = usePersistedState<GridConfig>('silyanka:gridSize', {
-    width: BEAD_THEME.gridDefaults.initialWidth,
-    height: BEAD_THEME.gridDefaults.initialHeight,
-    spacing: BEAD_THEME.gridDefaults.spacing,
-    topSpan: BEAD_THEME.gridDefaults.beadsInSpan,
-    bottomSpan: BEAD_THEME.gridDefaults.beadsInSpan,
-  }, isGridConfig);
-
-  const [rowSpanOverrides, setRowSpanOverrides] = usePersistedState<Record<number, number>>(
-    'silyanka:rowSpanOverrides', {}, isRowSpanOverrides,
-  );
-  const [mirrorMode, setMirrorMode] = usePersistedState<boolean>(
-    'silyanka:mirrorMode', false, (v): v is boolean => typeof v === 'boolean',
-  );
-  const [decorBands, setDecorBands] = usePersistedState<Record<number, number>>(
-    'silyanka:decorBands', {}, isDecorBands,
-  );
-  const [bottomEdgeDecor, setBottomEdgeDecor] = usePersistedState<BottomEdgeDecor>(
-    'silyanka:bottomEdgeDecor',
-    { enabled: false },
-    isBottomEdgeDecor,
-  );
-  const [edgeExtension, setEdgeExtension] = usePersistedState<EdgeExtension>(
-    'silyanka:edgeExtension',
-    { left: true, right: true },
-    isEdgeExtension,
-  );
-  // По умолчанию включена — в отличие от Bottom Chain, верхняя цепочка была
-  // частью геометрии всегда, тумблер лишь позволяет её убрать.
-  const [topEdgeEnabled, setTopEdgeEnabled] = usePersistedState<boolean>(
-    'silyanka:topEdgeEnabled', true, (v): v is boolean => typeof v === 'boolean',
-  );
-  const [taper, setTaper] = usePersistedState<Taper>(
-    'silyanka:taper',
-    { top: { rows: 0 }, bottom: { rows: 0 }, depth: 0 },
-    isTaper,
-  );
-  // Синхронизация Rows между top/bottom — по умолчанию выключена, каждая
-  // сторона независима (см. spec.md, «Сужение концов»).
-  const [taperRowsLinked, setTaperRowsLinked] = usePersistedState<boolean>(
-    'silyanka:taperRowsLinked', false, (v): v is boolean => typeof v === 'boolean',
-  );
-
   const [pendantPlacements, setPendantPlacements] = usePersistedState<PendantPlacement[]>(
     'silyanka:pendantPlacements', [], isPendantPlacements,
   );
@@ -221,12 +47,22 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     'silyanka:threads', [], isThreads,
   );
 
-  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension, topEdgeEnabled, taper);
   const drawingControls = useDrawing(
     palette[0], palette, pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, decorTailPlacements, setDecorTailPlacements,
     threads, setThreads, 'silyanka',
   );
+
+  const gridConfig = useGridConfig(
+    pendantPlacements, setPendantPlacements, setPendantChains,
+    decorTailPlacements, setDecorTailPlacements, drawingControls.remapDesignMap,
+  );
+  const {
+    gridSize, rowSpanOverrides, mirrorMode, decorBands, bottomEdgeDecor,
+    edgeExtension, topEdgeEnabled, taper,
+  } = gridConfig;
+
+  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension, topEdgeEnabled, taper);
   const threadControls = useThreads(threads, drawingControls.applyPatch);
 
   // Прогресс плетения — отдельно от рисунка и от его истории Undo/Redo
@@ -380,249 +216,6 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       return next;
     });
   }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom, stampAnchorEdge, edgeExtension]);
-
-  // Общий обработчик результата resizeWidthRelative/resizeWidthAbsolute:
-  // сдвиг designMap в Mirror Mode, снятие подвесок с исчезнувших/сдвинутых
-  // колонок (только у силянки — у CrossWeave подвесок нет) и запись gridSize.
-  const applyWidth = (result: WidthResizeResult | null, wasMirror: boolean) => {
-    if (!result) return;
-    const { newWidth, mirrorDelta } = result;
-    if (wasMirror) {
-      drawingControls.remapDesignMap(map =>
-        shiftDesignMapColumns(map, mirrorDelta, newWidth, edgeExtension.left, edgeExtension.right),
-      );
-      // Подвески сдвигаем вместе с рисунком, иначе их col отвяжется от нод.
-      setPendantPlacements(prev => prev
-        .map(p => ({ ...p, col: p.col + mirrorDelta }))
-        .filter(p => p.col >= 0 && p.col < newWidth));
-      // Цепочки сдвигаем целиком по обоим концам; если один конец вышел за
-      // границу — цепочка теряет якорь и удаляется целиком.
-      setPendantChains(prev => prev
-        .map(c => ({ ...c, startCol: c.startCol + mirrorDelta, endCol: c.endCol + mirrorDelta }))
-        .filter(c => c.startCol >= 0 && c.endCol < newWidth));
-      // Декор-хвосты сдвигаем вместе с рисунком той же логикой, что и подвески.
-      setDecorTailPlacements(prev => prev
-        .map(t => ({ ...t, col: t.col + mirrorDelta }))
-        .filter(t => t.col >= 0 && t.col < newWidth));
-    } else if (newWidth < gridSize.width) {
-      // При сужении сетки убираем подвески/цепочки/хвосты с исчезнувших колонок.
-      setPendantPlacements(prev => prev.filter(p => p.col < newWidth));
-      setPendantChains(prev => prev.filter(c => c.startCol < newWidth && c.endCol < newWidth));
-      setDecorTailPlacements(prev => prev.filter(t => t.col < newWidth));
-    }
-    // Потолок Taper.depth зависит от ширины — подрезаем так же, как rows
-    // подрезаются под высоту (см. applyHeight), иначе на узкой сетке остаётся
-    // depth, который давно упёрся в клэмп и не отражает картинку.
-    setTaper(prev => ({ ...prev, depth: clampTaperDepth(prev.depth, newWidth) }));
-    setGridSize(prev => ({ ...prev, width: newWidth }));
-  };
-
-  // При уменьшении высоты убираем декор-полосы с исчезнувших рядов и
-  // подрезаем Taper.rows под новый максимум (см. clampTaperSide).
-  const applyHeight = (newH: number) => {
-    if (newH === gridSize.height) return;
-    if (newH < gridSize.height) {
-      setDecorBands(prev => pruneRowsBelow(prev, 2 * newH));
-    }
-    setTaper(prev => ({
-      ...prev,
-      top: clampTaperSide(prev.top, newH),
-      bottom: clampTaperSide(prev.bottom, newH),
-    }));
-    setGridSize(prev => ({ ...prev, height: newH }));
-  };
-
-  // Общий обработчик top/bottom span: пишет gridSize и чистит устаревшие
-  // per-row overrides, совпавшие с новым глобальным дефолтом.
-  const applySpanEdge = (edge: 'topSpan' | 'bottomSpan', newVal: number) => {
-    if (newVal === gridSize[edge]) return;
-    setGridSize(prev => ({ ...prev, [edge]: newVal }));
-    setRowSpanOverrides(prev => pruneRedundantOverrides(
-      prev,
-      edge === 'topSpan' ? newVal : gridSize.topSpan,
-      edge === 'bottomSpan' ? newVal : gridSize.bottomSpan,
-    ));
-  };
-
-  const updateDimension = (field: 'width' | 'height', delta: number) => {
-    if (field === 'width') {
-      applyWidth(resizeWidthRelative(gridSize.width, delta, mirrorMode, MAX_RAW_WIDTH), mirrorMode);
-      return;
-    }
-    applyHeight(clamp(gridSize.height + delta, 1, MAX_RAW_HEIGHT));
-  };
-
-  const updateTopSpan = (delta: number) => {
-    applySpanEdge('topSpan', clampSpan(gridSize.topSpan + delta));
-  };
-
-  const updateBottomSpan = (delta: number) => {
-    applySpanEdge('bottomSpan', clampSpan(gridSize.bottomSpan + delta));
-  };
-
-  const updateTaperRows = (edge: 'top' | 'bottom', delta: number) => {
-    setTaper(prev => {
-      const nextSide = clampTaperSide({ rows: prev[edge].rows + delta }, gridSize.height);
-      return taperRowsLinked
-        ? { ...prev, top: nextSide, bottom: nextSide }
-        : { ...prev, [edge]: nextSide };
-    });
-  };
-
-  const toggleTaperRowsLinked = () => {
-    // Побочный эффект (setTaper) — здесь, в обработчике, а не внутри апдейтера
-    // setTaperRowsLinked: React (StrictMode) может вызвать апдейтер дважды,
-    // и setState изнутри чужого апдейтера — источник трудноуловимых багов.
-    const turningOn = !taperRowsLinked;
-    setTaperRowsLinked(turningOn);
-    // Включение синка сразу выравнивает стороны, иначе «синхронно» вводит в
-    // заблуждение, пока обе стороны не станут равны следующим изменением.
-    // Равняем по БОЛЬШЕЙ из двух: копирование top в bottom молча стирало
-    // настроенную нижнюю сторону (в истории Undo параметров сетки нет,
-    // вернуть было нечем), а так ни одна сторона не пропадает — видно сразу,
-    // и откатывается тем же степпером.
-    if (turningOn) {
-      setTaper(prev => {
-        const rows = Math.max(prev.top.rows, prev.bottom.rows);
-        return { ...prev, top: { rows }, bottom: { rows } };
-      });
-    }
-  };
-
-  const updateTaperDepth = (delta: number) => {
-    setTaper(prev => ({ ...prev, depth: clampTaperDepth(prev.depth + delta, gridSize.width) }));
-  };
-
-  const updateSpacing = (delta: number) => {
-    const { minSpacing, maxSpacing } = BEAD_THEME.constraints;
-    setGridSize(prev => ({
-      ...prev,
-      spacing: clamp(prev.spacing + delta, minSpacing, maxSpacing),
-    }));
-  };
-
-  const setWidthAbsolute = (v: number) => {
-    applyWidth(resizeWidthAbsolute(gridSize.width, v, mirrorMode, MAX_RAW_WIDTH), mirrorMode);
-  };
-
-  const setHeightAbsolute = (v: number) => {
-    applyHeight(clamp(Math.round(v), 1, MAX_RAW_HEIGHT));
-  };
-
-  const setTopSpanAbsolute = (v: number) => {
-    applySpanEdge('topSpan', clampSpan(Math.round(v)));
-  };
-
-  const setBottomSpanAbsolute = (v: number) => {
-    applySpanEdge('bottomSpan', clampSpan(Math.round(v)));
-  };
-
-  const setTaperRowsAbsolute = (edge: 'top' | 'bottom', v: number) => {
-    setTaper(prev => {
-      const nextSide = clampTaperSide({ rows: Math.round(v) }, gridSize.height);
-      return taperRowsLinked
-        ? { ...prev, top: nextSide, bottom: nextSide }
-        : { ...prev, [edge]: nextSide };
-    });
-  };
-
-  const setTaperDepthAbsolute = (v: number) => {
-    setTaper(prev => ({ ...prev, depth: clampTaperDepth(Math.round(v), gridSize.width) }));
-  };
-
-  const resetTaperSide = (edge: 'top' | 'bottom') => {
-    setTaper(prev => taperRowsLinked
-      ? { ...prev, top: { rows: 0 }, bottom: { rows: 0 } }
-      : { ...prev, [edge]: { rows: 0 } });
-  };
-
-  const resetTaperDepth = () => {
-    setTaper(prev => ({ ...prev, depth: 0 }));
-  };
-
-  const setSpacingAbsolute = (v: number) => {
-    const { minSpacing, maxSpacing } = BEAD_THEME.constraints;
-    setGridSize(prev => ({
-      ...prev,
-      spacing: clamp(Math.round(v), minSpacing, maxSpacing),
-    }));
-  };
-
-  const toggleBottomEdgeEnabled = () => {
-    setBottomEdgeDecor(prev => {
-      // Bottom Chain, подвески и декор-хвосты не могут быть включены
-      // одновременно — все три стартуют от той же ноды нижнего ряда, которую
-      // трогает дуга Bottom Chain (см. spec.md, «Взаимоисключение с подвесками»).
-      if (!prev.enabled && (pendantPlacements.length > 0 || decorTailPlacements.length > 0)) return prev;
-      return { ...prev, enabled: !prev.enabled };
-    });
-  };
-
-  const toggleTopEdgeEnabled = () => {
-    setTopEdgeEnabled(prev => !prev);
-  };
-
-  const toggleExtendLeftEdge = () => {
-    setEdgeExtension(prev => ({ ...prev, left: !prev.left }));
-  };
-
-  const toggleExtendRightEdge = () => {
-    setEdgeExtension(prev => ({ ...prev, right: !prev.right }));
-  };
-
-  // useCallback: без него функция получала бы новую ссылку на каждый
-  // рендер useSilyankaProject (т.е. от любого клика где угодно в
-  // приложении) — а это проп BeadGrid (onRowSpanChange), и нестабильная
-  // ссылка пробивала бы его memo, пересобирая весь список из тысяч бисерин
-  // на совершенно не связанные действия. Обслуживает и обычные ряды, и
-  // горизонтальные цепочки (r=-1 Top Chain, r=-2 Bottom Chain) — они лежат
-  // в тех же rowSpanOverrides (см. resolveSpanCount).
-  const updateRowSpan = useCallback((spanRowIndex: number, delta: number) => {
-    setRowSpanOverrides(prev => {
-      const current = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, prev);
-      const newVal = clampSpan(current + delta);
-      if (newVal === current) return prev;
-      const globalDefault = resolveSpanCount(spanRowIndex, gridSize.topSpan, gridSize.bottomSpan, {});
-      if (newVal === globalDefault) {
-        const next = { ...prev };
-        delete next[spanRowIndex];
-        return next;
-      }
-      return { ...prev, [spanRowIndex]: newVal };
-    });
-  }, [setRowSpanOverrides, gridSize.topSpan, gridSize.bottomSpan]);
-
-  // Промежуточный декор: ± меняет число рядов полосы между узловым рядом r и r+1.
-  // 0 (ниже minRows) — полоса удаляется.
-  const updateDecorBand = (r: number, delta: number) => {
-    setDecorBands(prev => {
-      const current = prev[r] ?? 0;
-      const next = current + delta;
-      const copy = { ...prev };
-      if (next < BEAD_THEME.decorDefaults.minRows) {
-        delete copy[r];
-      } else {
-        copy[r] = Math.min(next, BEAD_THEME.decorDefaults.maxRows);
-      }
-      return copy;
-    });
-  };
-
-  const handleDecorDrop = (nodeRow: number) => {
-    setDecorBands(prev => {
-      const copy = { ...prev };
-      if ((copy[nodeRow] ?? 0) > 0) {
-        delete copy[nodeRow];
-      } else {
-        copy[nodeRow] = BEAD_THEME.decorDefaults.minRows;
-      }
-      return copy;
-    });
-  };
-
-  const handleClearDecor = () => {
-    setDecorBands({});
-  };
 
   // Заливка — единый граф сетки, подвесок, цепочек и декор-хвостов: подвеска
   // соединена со своей якорной нодой (или кончиком хвоста той же колонки,
@@ -786,64 +379,8 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     setChainPendingStart(null);
   }, [chainPendingStart, chainControls]);
 
-  // «Reset all» панели Grid — возвращает геометрию (не рисунок/декор/подвески,
-  // у тех свой Reset all в Pendants & Decor) к дефолтам первого запуска.
-  const gridIsDefault = (
-    gridSize.width === BEAD_THEME.gridDefaults.initialWidth &&
-    gridSize.height === BEAD_THEME.gridDefaults.initialHeight &&
-    gridSize.spacing === BEAD_THEME.gridDefaults.spacing &&
-    gridSize.topSpan === BEAD_THEME.gridDefaults.beadsInSpan &&
-    gridSize.bottomSpan === BEAD_THEME.gridDefaults.beadsInSpan &&
-    Object.keys(rowSpanOverrides).length === 0 &&
-    taper.top.rows === 0 && taper.bottom.rows === 0 && taper.depth === 0 &&
-    !taperRowsLinked &&
-    topEdgeEnabled &&
-    !bottomEdgeDecor.enabled &&
-    edgeExtension.left && edgeExtension.right
-  );
-
-  const resetGridAll = () => {
-    setGridSize({
-      width: BEAD_THEME.gridDefaults.initialWidth,
-      height: BEAD_THEME.gridDefaults.initialHeight,
-      spacing: BEAD_THEME.gridDefaults.spacing,
-      topSpan: BEAD_THEME.gridDefaults.beadsInSpan,
-      bottomSpan: BEAD_THEME.gridDefaults.beadsInSpan,
-    });
-    setRowSpanOverrides({});
-    setTaper({ top: { rows: 0 }, bottom: { rows: 0 }, depth: 0 });
-    setTaperRowsLinked(false);
-    setTopEdgeEnabled(true);
-    setBottomEdgeDecor({ enabled: false });
-    setEdgeExtension({ left: true, right: true });
-  };
-
-  const resetEdge = (edge: 'top' | 'bottom') => {
-    const isTop = edge === 'top';
-    setGridSize(prev => ({
-      ...prev,
-      [isTop ? 'topSpan' : 'bottomSpan']: BEAD_THEME.gridDefaults.beadsInSpan,
-    }));
-    setRowSpanOverrides(prev => {
-      const next: Record<number, number> = {};
-      for (const [k, v] of Object.entries(prev)) {
-        const isEvenRow = Number(k) % 2 === 0;
-        const belongsToEdge = isTop ? !isEvenRow : isEvenRow;
-        if (!belongsToEdge) next[Number(k)] = v;
-      }
-      return next;
-    });
-  };
-
   return {
-    gridSize, rowSpanOverrides, mirrorMode, setMirrorMode, decorBands, bottomEdgeDecor,
-    edgeExtension, toggleExtendLeftEdge, toggleExtendRightEdge,
-    topEdgeEnabled, toggleTopEdgeEnabled,
-    taper, updateTaperRows, setTaperRowsAbsolute, resetTaperSide,
-    updateTaperDepth, setTaperDepthAbsolute, resetTaperDepth,
-    taperRowsMax: taperRowsMax(gridSize.height),
-    taperDepthMax: taperDepthMax(gridSize.width),
-    taperRowsLinked, toggleTaperRowsLinked,
+    ...gridConfig,
     pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, chainControls, chainPendingStart, setChainPendingStart,
     decorTailPlacements, setDecorTailPlacements, decorTailControls,
@@ -856,13 +393,9 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     stampAnchorEdge, toggleStampAnchorEdge,
     canvasSvgRef, rowGaps, bottomNodes, pendantAnchors, decorRowStep, internalTop, internalBottom,
     handleStampSelect, handleStampPlace,
-    updateDimension, updateTopSpan, updateBottomSpan, updateSpacing,
-    setWidthAbsolute, setHeightAbsolute, setTopSpanAbsolute, setBottomSpanAbsolute, setSpacingAbsolute,
-    toggleBottomEdgeEnabled, updateRowSpan,
-    updateDecorBand, handleDecorDrop, handleClearDecor,
     handleFloodFill, handlePendantPaint, handleChainPaint, handleDecorTailPaint,
-    handleChainNodeClick, resetEdge,
-    makeSymmetric, resetGridAll, gridIsDefault,
+    handleChainNodeClick,
+    makeSymmetric,
   };
 };
 
