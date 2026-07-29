@@ -1,9 +1,11 @@
 import express, { Request, Response } from 'express';
 import https from 'https';
+import { randomBytes } from 'node:crypto';
 import { Redis } from '@upstash/redis';
 
 const app = express();
 const PORT = 3001;
+const DEV_ORIGIN = 'http://localhost:5173';
 const redis = Redis.fromEnv();
 
 const SHARE_ID_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -11,13 +13,19 @@ const SHARE_ID_LENGTH = 7;
 const SHARE_MAX_PAYLOAD_LENGTH = 200_000;
 
 const randomShareId = (): string =>
-  Array.from({ length: SHARE_ID_LENGTH }, () => SHARE_ID_CHARS[Math.floor(Math.random() * SHARE_ID_CHARS.length)]).join('');
+  Array.from(randomBytes(SHARE_ID_LENGTH), (b) => SHARE_ID_CHARS[b % SHARE_ID_CHARS.length]).join('');
 
 app.use(express.json());
 
-// CORS middleware
+// Обычный dev-сценарий (Vite, localhost:5173) до этого сервера достаёт через
+// server-side прокси в vite.config.js ('/api' → localhost:3001) — это
+// same-origin для браузера, CORS там не нужен. Заголовок ниже — только на
+// случай прямого обращения к :3001 (например, открытая вкладка с фронтом без
+// прокси) и жёстко ограничен известным dev-origin, а не '*': на этом порту
+// живут боевые креды Redis (Redis.fromEnv()), пускать туда произвольные сайты
+// нельзя.
 app.use((req: Request, res: Response, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', DEV_ORIGIN);
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
@@ -96,6 +104,6 @@ app.get('/api/share', async (req: Request, res: Response) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🎨 Palette proxy server running on http://localhost:${PORT}`);
-  console.log(`   Endpoint: POST http://localhost:${PORT}/api/generate-palette`);
+  console.log(`🎨 Dev API server (palette proxy + share links) running on http://localhost:${PORT}`);
+  console.log(`   Endpoints: POST /api/generate-palette, POST /api/share, GET /api/share`);
 });
