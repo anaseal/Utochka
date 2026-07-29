@@ -279,8 +279,6 @@ export const CanvasView = ({
     pendantAnchors, bottomNodes, pendantChains, decorTailPlacements, decorRowStep,
   ]);
 
-  useWheelZoom(canvasContainerRef, onZoomChange);
-
   // Второй палец на холсте отменяет любой начатый одним пальцем жест
   // (мазок карандаша/ластика, драг штампа, трассировка нитки) — переключение
   // на панораму/zoom. Поздняя привязка через ref: сброс трассировки живёт в
@@ -306,13 +304,14 @@ export const CanvasView = ({
   // повёрнуто на 90° (см. useWeaveCanvas: rotated меняет местами viewW/viewH
   // относительно dim.w/dim.h) — реальный <svg> ниже получает width/height
   // именно от weaveCanvas.viewW/viewH, а не от dim. Без этой же поправки
-  // здесь тач-жест писал бы в DOM во время пинча/панорамы пару размеров по
-  // ДРУГОЙ оси, чем стоит в неизменном во время жеста viewBox — холст на
-  // время жеста схлопывался в исковерканный размер и визуально «пропадал»,
-  // пока жест не заканчивался и React не перерисовывал верные width/height.
+  // здесь тач-жест и wheel-zoom писали бы в DOM во время пинча/панорамы/зума
+  // пару размеров по ДРУГОЙ оси, чем стоит в неизменном во время жеста
+  // viewBox — холст на время жеста схлопывался в исковерканный размер и
+  // визуально «пропадал», пока React не перерисовывал верные width/height.
   const touchDim = weaveMode && weaveOrientation === 'horizontal'
     ? { w: dim.h, h: dim.w }
     : dim;
+  useWheelZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onZoomChange);
   const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 

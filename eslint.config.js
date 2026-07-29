@@ -48,7 +48,7 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
       // warn, а не error: запись `ref.current = value` прямо в рендере — это
       // намеренный приём в useDrawing/usePersistedState/useTouchPanZoom/
-      // useWeaveProgress, в кэше статистики useColorHighlight и в поздней
+      // useWeaveProgress/useWheelZoom, в кэше статистики useColorHighlight и в поздней
       // привязке cancelActiveStroke у обоих холстов (см. комментарии по
       // месту). Он держит ссылки на колбэки стабильными, без чего memo у
       // BeadGrid не работает и сетка из тысяч бисерин пересобирается на

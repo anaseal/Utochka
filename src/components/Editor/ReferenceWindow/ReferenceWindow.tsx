@@ -3,7 +3,6 @@ import { X, Plus, Minus, Upload, Trash2, ChevronDown, ChevronUp } from 'lucide-r
 import './ReferenceWindow.css';
 import { REFERENCE_WINDOW } from '../../../config/theme';
 import { clamp } from '../../../utils/clamp';
-import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useReferenceImage } from '../../../hooks/useReferenceImage';
 
 // Совпадает с max-width/max-height окна в ReferenceWindow.css (90vw/90vh) —
@@ -34,7 +33,21 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
   const resizeDragRef = useRef<{ startW: number; startH: number; startX: number; startY: number; last: { w: number; h: number } } | null>(null);
   const resizeTimeoutRef = useRef<number | undefined>(undefined);
 
-  useWheelZoom(viewportRef, (delta) => setZoom((z) => z + delta));
+  // Ctrl+wheel zoom: своя, более простая реализация, чем у холста
+  // (useWheelZoom) — картинка масштабируется CSS-трансформом (--ref-zoom), а
+  // не svg width/height + viewBox, так что zoom-to-point там устроен иначе;
+  // здесь просто копится множитель, без подстройки скролла под курсор.
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom((z) => z - e.deltaY * 0.005);
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [setZoom]);
 
   // Позиция — абсолютные px, персистятся в localStorage и не пересчитываются
   // сами при ресайзе (в отличие от size, которую держит в рамках vw/vh CSS

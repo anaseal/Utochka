@@ -13,6 +13,18 @@ const isDesignMap = (v: unknown): v is Record<string, string> => {
   return Object.values(v).every(c => typeof c === 'string');
 };
 
+const isHistorySnapshotArray = (v: unknown): v is HistorySnapshot[] => {
+  if (!Array.isArray(v)) return false;
+  return v.every((s): s is HistorySnapshot => (
+    typeof s === 'object' && s !== null &&
+    isDesignMap((s as HistorySnapshot).designMap) &&
+    Array.isArray((s as HistorySnapshot).pendants) &&
+    Array.isArray((s as HistorySnapshot).chains) &&
+    Array.isArray((s as HistorySnapshot).decorTails) &&
+    Array.isArray((s as HistorySnapshot).threads)
+  ));
+};
+
 export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp' | 'pendant-chain' | 'thread';
 
 // Единица истории: снимок сетки, подвесок, цепочек-подвесок, декор-хвостов И
@@ -42,6 +54,8 @@ export const useDrawing = (
 ) => {
   const recentStorageKey = `${storageNamespace}:recentColors`;
   const designStorageKey = `${storageNamespace}:designMap`;
+  const historyPastStorageKey = `${storageNamespace}:historyPast`;
+  const historyFutureStorageKey = `${storageNamespace}:historyFuture`;
 
   const [activeColor, setActiveColorState] = useState(initialColor);
   const [activeTool, setActiveTool] = useState<DrawingTool>('pencil');
@@ -88,8 +102,14 @@ export const useDrawing = (
     designStorageKey, {}, isDesignMap,
   );
   const [isDrawing, setIsDrawing] = useState(false);
-  const [past, setPast] = useState<HistorySnapshot[]>([]);
-  const [future, setFuture] = useState<HistorySnapshot[]>([]);
+  // Персистятся тем же usePersistedState, что и designMap выше — иначе стек
+  // Undo/Redo обнуляется при перезагрузке страницы, хотя сам рисунок цел.
+  const [past, setPast] = usePersistedState<HistorySnapshot[]>(
+    historyPastStorageKey, [], isHistorySnapshotArray,
+  );
+  const [future, setFuture] = usePersistedState<HistorySnapshot[]>(
+    historyFutureStorageKey, [], isHistorySnapshotArray,
+  );
 
   const preStrokeRef = useRef<HistorySnapshot>({ designMap: {}, pendants: [], chains: [], decorTails: [], threads: [] });
 

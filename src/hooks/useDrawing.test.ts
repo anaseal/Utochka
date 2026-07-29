@@ -396,14 +396,32 @@ describe('сохранение схемы', () => {
     expect(localStorage.getItem('crossWeave:designMap')).toBeNull();
   });
 
-  it('история отмен между сессиями не переносится', () => {
+  it('история отмен переживает перезагрузку', () => {
     const first = setup();
     paintStroke(first.result, ['node-0-0']);
+    paintStroke(first.result, ['node-0-1']);
+    act(() => { first.result.current.drawing.undo(); });
     act(() => { vi.advanceTimersByTime(PERSIST_MS); });
     first.unmount();
 
     const { result } = setup();
 
+    expect(result.current.drawing.designMap).toEqual({ 'node-0-0': BLACK });
+    expect(result.current.drawing.canUndo).toBe(true);
+    expect(result.current.drawing.canRedo).toBe(true);
+
+    act(() => { result.current.drawing.redo(); });
+    expect(result.current.drawing.designMap).toEqual({ 'node-0-0': BLACK, 'node-0-1': BLACK });
+
+    act(() => { result.current.drawing.undo(); });
+    act(() => { result.current.drawing.undo(); });
+    expect(result.current.drawing.designMap).toEqual({});
+    expect(result.current.drawing.canUndo).toBe(false);
+  });
+
+  it('мусор в стеке истории отфильтровывается при загрузке', () => {
+    localStorage.setItem('silyanka:historyPast', JSON.stringify(['не снимок', 42]));
+    const { result } = setup();
     expect(result.current.drawing.canUndo).toBe(false);
   });
 });

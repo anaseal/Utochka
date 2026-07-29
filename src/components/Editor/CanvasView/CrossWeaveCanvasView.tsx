@@ -127,8 +127,6 @@ export const CrossWeaveCanvasView = ({
     [beads, beadMajorRadius],
   );
 
-  useWheelZoom(canvasContainerRef, onZoomChange);
-
   // Второй палец отменяет начатый одним пальцем жест (мазок, трассировка
   // нитки) — переключение на панораму/zoom. Поздняя привязка через ref:
   // сброс трассировки живёт в useThreadTrace, а тому, в свою очередь, нужен
@@ -138,11 +136,13 @@ export const CrossWeaveCanvasView = ({
   // См. тот же комментарий в CanvasView.tsx: в режиме плетения с
   // горизонтальной ориентацией <svg> получает width/height от
   // weaveCanvas.viewW/viewH (rotated меняет местами w/h), а не от dim
-  // напрямую — без этой поправки тач-жест писал бы в DOM не ту пару осей,
-  // и холст на время пинча/панорамы схлопывался бы и визуально «пропадал».
+  // напрямую — без этой поправки тач-жест и wheel-zoom писали бы в DOM не ту
+  // пару осей, и холст на время пинча/панорамы/зума схлопывался бы и
+  // визуально «пропадал».
   const touchDim = weaveMode && weaveOrientation === 'horizontal'
     ? { w: dim.h, h: dim.w }
     : dim;
+  useWheelZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onZoomChange);
   const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
 
