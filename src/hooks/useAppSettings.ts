@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { usePersistedState } from './usePersistedState';
-import { Technique } from '../components/Editor/Header/Header';
+import { Technique } from '../components/Editor/Header/Header.types';
 import { APP_CONSTRAINTS } from '../config/theme';
 import { clamp } from '../utils/clamp';
 

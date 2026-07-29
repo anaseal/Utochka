@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { DrawingTool } from './useDrawing';
 import { SilyankaProject } from './useSilyankaProject';
 import { CrossWeaveProject } from './useCrossWeaveProject';
-import { Technique } from '../components/Editor/Header/Header';
+import { Technique } from '../components/Editor/Header/Header.types';
 
 interface Params {
   technique: Technique;

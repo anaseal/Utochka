@@ -3,7 +3,7 @@ import { usePersistedState } from './usePersistedState';
 import { useFullscreen } from './useFullscreen';
 import { SilyankaProject } from './useSilyankaProject';
 import { CrossWeaveProject } from './useCrossWeaveProject';
-import { Technique } from '../components/Editor/Header/Header';
+import { Technique } from '../components/Editor/Header/Header.types';
 import { WeaveTool, WeaveOrientation } from '../components/Editor/Header/WeaveControls';
 
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
