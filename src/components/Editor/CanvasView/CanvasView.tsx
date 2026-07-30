@@ -2,7 +2,9 @@
 import { useMemo, useCallback, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
-import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../../../types/pendant';
+import {
+  PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint,
+} from '../../../types/pendant';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { BeadGrid } from './BeadGrid';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
@@ -11,6 +13,7 @@ import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { PendantChainLayer } from '../PendantChainLayer/PendantChainLayer';
 import { DecorTailLayer } from '../DecorTailLayer/DecorTailLayer';
+import { ToothLayer } from '../ToothLayer/ToothLayer';
 import { ThreadLayer } from '../ThreadLayer/ThreadLayer';
 import { CanvasChrome } from './CanvasChrome';
 import { CanvasScrollbars } from './CanvasScrollbars';
@@ -39,24 +42,14 @@ import { useFastPaint } from '../../../hooks/useFastPaint';
 import { useScrolledFromLeft } from '../../../hooks/useScrolledFromLeft';
 import { computeCanvasDim } from '../../../utils/canvasDim';
 import { computeSilyankaExtraMaxY } from '../../../utils/pendantCanvasDim';
+import { ToothMesh, toothBeadId } from '../../../utils/tooth';
 import {
-  swapColorInMap, swapColorInPendants, swapColorInChains, swapColorInDecorTails,
+  swapColorInMap, swapColorInPendants, swapColorInChains, swapColorInDecorTails, swapColorInTeeth,
 } from '../../../utils/colorSwap';
 import './CanvasView.css';
 
-// Стабильная пустая ссылка — иначе activeTool !== 'hole' давал бы новый []
-// на каждый рендер и пробивал бы memo у BeadGrid без всякой причины.
-const EMPTY_GHOST_BEADS: Bead[] = [];
-
 interface CanvasViewProps {
   beads: Bead[];
-  // Удалённые инструментом Hole бисерины (исходные позиции) — рисуются
-  // пунктирным «призраком» и остаются кликабельны для возврата, но только
-  // пока сам инструмент активен (см. GridSidebar, «Holes»). Восстановление
-  // призрака — единственное, что осталось мгновенным (без подтверждения):
-  // само удаление теперь идёт через пометку + confirm (см. pendingDeleteIds).
-  deletedBeadGhosts: Bead[];
-  onToggleDeletedBead: (id: string) => void;
   // Пометка «на удаление» (Bead и Segment пишут в один и тот же список,
   // см. useSilyankaProject.pendingDeleteIds) — бисерина остаётся в beads
   // (не удаляется), только рисуется пунктиром, пока не нажата кнопка
@@ -113,6 +106,12 @@ interface CanvasViewProps {
   hoveredDecorTailCol: number | null;
   onPaintDecorTailBead: (placementId: string, beadIndex: number) => void;
   onRemoveDecorTail: (placementId: string) => void;
+  teeth: ToothPlacement[];
+  toothMeshes: Map<string, ToothMesh>;
+  toothPendingStart: number | null;
+  onToothNodeClick: (col: number) => void;
+  onPaintToothBead: (placementId: string, beadIndex: number) => void;
+  onRemoveTooth: (placementId: string) => void;
   threads: Thread[];
   onAddThread: (beadIds: string[], options?: ThreadCommitOptions) => void;
   onRerouteThreadEnd: (threadId: string, end: 'start' | 'end', traceBeadIds: string[]) => void;
@@ -121,8 +120,8 @@ interface CanvasViewProps {
   // Header.tsx → ThreadStyleButton, useSilyankaProject.ts).
   activeThreadColor: string;
   activeThreadOpacity: number;
-  chainPendingStart: number | null;
-  onChainNodeClick: (col: number) => void;
+  chainPendingStart: ChainEndpoint | null;
+  onChainNodeClick: (endpoint: ChainEndpoint) => void;
   canvasSvgRef: React.RefObject<SVGSVGElement | null>;
   topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
@@ -137,6 +136,7 @@ interface CanvasViewProps {
     chainsFn?: ((c: PendantChain[]) => PendantChain[]) | null,
     threadsFn?: ((t: Thread[]) => Thread[]) | null,
     decorTailsFn?: ((d: DecorTailPlacement[]) => DecorTailPlacement[]) | null,
+    teethFn?: ((t: ToothPlacement[]) => ToothPlacement[]) | null,
   ) => void;
   // Режим плетения: холст перестаёт рисовать и только отмечает прогресс.
   // Контролы режима живут в хедере (WeaveControls) — сюда приходят лишь
@@ -153,8 +153,6 @@ interface CanvasViewProps {
 
 export const CanvasView = ({
   beads,
-  deletedBeadGhosts,
-  onToggleDeletedBead,
   pendingDeleteIds,
   onToggleBeadPending,
   beadById,
@@ -201,6 +199,12 @@ export const CanvasView = ({
   hoveredDecorTailCol,
   onPaintDecorTailBead,
   onRemoveDecorTail,
+  teeth,
+  toothMeshes,
+  toothPendingStart,
+  onToothNodeClick,
+  onPaintToothBead,
+  onRemoveTooth,
   threads,
   onAddThread,
   onRerouteThreadEnd,
@@ -243,16 +247,17 @@ export const CanvasView = ({
     ? offsetX
     : BEAD_THEME.gridDefaults.offsetXCollapsed;
 
-  // Подвески, цепочки-подвески и декор-хвосты свисают ниже сетки — учитываем
-  // это в высоте SVG (см. computeSilyankaExtraMaxY).
+  // Подвески, цепочки-подвески, декор-хвосты и зубцы свисают ниже сетки —
+  // учитываем это в высоте SVG (см. computeSilyankaExtraMaxY).
   const dim = useMemo(() => computeCanvasDim(beads, effectiveOffsetX, offsetY, nodeRadius, {
     extraMaxY: computeSilyankaExtraMaxY(
       pendantPlacements, pendantTemplates, pendantAnchors, pendantChains, bottomNodes,
-      decorTailPlacements, decorRowStep,
+      decorTailPlacements, decorRowStep, teeth, toothMeshes,
     ),
   }), [
     beads, effectiveOffsetX, offsetY, nodeRadius, pendantPlacements, pendantTemplates,
     pendantAnchors, bottomNodes, pendantChains, decorTailPlacements, decorRowStep,
+    teeth, toothMeshes,
   ]);
 
   // Второй палец на холсте отменяет любой начатый одним пальцем жест
@@ -263,17 +268,19 @@ export const CanvasView = ({
   const cancelActiveStrokeRef = useRef<() => void>(() => {});
   const cancelActiveStroke = useCallback(() => cancelActiveStrokeRef.current(), []);
 
-  // Единая карта id → координаты по сетке, подвескам, цепочкам-подвесок и
-  // декор-хвостам — нитка магнитится к любой бусине любого слоя (см.
-  // spec.md, «Нитка»).
+  // Единая карта id → координаты по сетке, подвескам, цепочкам-подвесок,
+  // декор-хвостам и зубцам — нитка магнитится к любой бусине любого слоя
+  // (см. spec.md, «Нитка»).
   const beadPositionIndex = useMemo(
     () => buildBeadPositionIndex(
       beads, pendantPlacements, pendantTemplates, pendantAnchors,
       pendantChains, bottomNodes, decorTailPlacements, decorRowStep,
+      teeth, toothMeshes,
     ),
     [
       beads, pendantPlacements, pendantTemplates, pendantAnchors,
       pendantChains, bottomNodes, decorTailPlacements, decorRowStep,
+      teeth, toothMeshes,
     ],
   );
   // В режиме плетения с горизонтальной ориентацией полотно физически
@@ -330,6 +337,7 @@ export const CanvasView = ({
 
   const { extendStats, totalCount } = usePendantStats({
     beads, pendantPlacements, pendantTemplates, bottomNodes, pendantChains, decorTailPlacements,
+    teeth, toothMeshes,
   });
 
   const defaultColorOf = useCallback((bead: Bead) => defaultColorFor(bead.type), []);
@@ -341,6 +349,7 @@ export const CanvasView = ({
       (c) => swapColorInChains(c, oldColor, activeColor),
       null,
       (t) => swapColorInDecorTails(t, oldColor, activeColor),
+      (t) => swapColorInTeeth(t, oldColor, activeColor),
     );
   }, [applyPatch, activeColor]);
 
@@ -367,11 +376,25 @@ export const CanvasView = ({
   }, [hoveredRow, beads]);
 
   // Незавершённый выбор начала цепочки (инструмент 'pendant-chain') —
-  // подсвечиваем уже отмеченный узел нижнего ряда, пока не выбран второй.
+  // подсвечиваем уже отмеченный узел, пока не выбран второй. Узел сетки
+  // резолвится через bottomNodes как раньше; узел зубца — напрямую через
+  // toothBeadId (его id и так совпадает с канонической схемой ToothLayer).
+  // Один и тот же id передаётся и в BeadGrid, и в ToothLayer — каждый слой
+  // просто не найдёт совпадения для чужого id.
   const chainPendingId = useMemo(() => {
     if (chainPendingStart === null) return null;
-    return bottomNodes.find(n => n.logicalIndex.col === chainPendingStart)?.id ?? null;
+    if (chainPendingStart.kind === 'grid') {
+      return bottomNodes.find(n => n.logicalIndex.col === chainPendingStart.col)?.id ?? null;
+    }
+    return toothBeadId(chainPendingStart.placementId, chainPendingStart.beadIndex);
   }, [chainPendingStart, bottomNodes]);
+
+  // То же самое для зубца (инструмент 'tooth') — независимый незавершённый
+  // выбор, см. toothPendingStart в useSilyankaProject.ts.
+  const toothPendingId = useMemo(() => {
+    if (toothPendingStart === null) return null;
+    return bottomNodes.find(n => n.logicalIndex.col === toothPendingStart)?.id ?? null;
+  }, [toothPendingStart, bottomNodes]);
 
   const mirrorFn = useCallback(
     (id: string) => mirrorBeadId(id, width, internalTop, internalBottom, extendLeftEdge, extendRightEdge),
@@ -430,7 +453,10 @@ export const CanvasView = ({
       }
       return;
     }
-    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread' && activeTool !== 'hole' && isDrawing) {
+    if (
+      activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' &&
+      activeTool !== 'tooth' && activeTool !== 'thread' && activeTool !== 'hole' && isDrawing
+    ) {
       applyPaintFast(id);
     }
   }, [weaveMode, weaveCanvas, activeTool, isDrawing, applyPaintFast, beadById, holeSegmentPreviewIds, onHoleSegmentHover]);
@@ -455,7 +481,12 @@ export const CanvasView = ({
     if (activeTool === 'stamp') return;
     if (activeTool === 'pendant-chain') {
       const node = bottomNodes.find(n => n.id === id);
-      if (node) onChainNodeClick(node.logicalIndex.col);
+      if (node) onChainNodeClick({ kind: 'grid', col: node.logicalIndex.col });
+      return;
+    }
+    if (activeTool === 'tooth') {
+      const node = bottomNodes.find(n => n.id === id);
+      if (node) onToothNodeClick(node.logicalIndex.col);
       return;
     }
     if (activeTool === 'flood-fill') {
@@ -463,7 +494,10 @@ export const CanvasView = ({
     } else {
       applyPaint(id);
     }
-  }, [weaveMode, weaveCanvas, activeTool, applyPaint, onFloodFill, bottomNodes, onChainNodeClick, thread, onToggleBeadPending, onToggleHoleSegmentPending]);
+  }, [
+    weaveMode, weaveCanvas, activeTool, applyPaint, onFloodFill, bottomNodes, onChainNodeClick,
+    onToothNodeClick, thread, onToggleBeadPending, onToggleHoleSegmentPending,
+  ]);
 
   // Правый клик снимает один проход — обратное действие к обычной отметке.
   const handleWeaveContextMenu = useCallback((e: React.MouseEvent) => {
@@ -569,14 +603,13 @@ export const CanvasView = ({
               <g ref={stampGroupRef} transform={`translate(${effectiveOffsetX + dim.shiftX}, ${offsetY})`}>
                 <BeadGrid
                   beads={beads}
-                  ghostBeads={activeTool === 'hole' ? deletedBeadGhosts : EMPTY_GHOST_BEADS}
-                  onGhostPointerDown={onToggleDeletedBead}
                   pendingDeleteIds={(activeTool === 'hole' || activeTool === 'hole-segment') ? pendingDeleteIds : null}
                   deletePreviewIds={activeTool === 'hole-segment' ? holeSegmentPreviewIds : null}
                   designMap={designMap}
                   highlightedNodeIds={highlightedNodeIds}
                   colorHighlightedBeadIds={highlightedBeadIds}
                   chainPendingId={chainPendingId}
+                  toothPendingId={toothPendingId}
                   stampPreviewPatch={stampPreviewPatch}
                   onPointerEnter={handlePointerEnter}
                   onPointerDown={handlePointerDown}
@@ -620,6 +653,7 @@ export const CanvasView = ({
                 <PendantChainLayer
                   chains={pendantChains}
                   bottomNodes={bottomNodes}
+                  toothMeshes={toothMeshes}
                   isDrawing={isDrawing}
                   onPaintBead={onPaintChainBead}
                   onRemove={onRemoveChain}
@@ -641,6 +675,21 @@ export const CanvasView = ({
                   highlightedColor={highlightedColor}
                   threadToolActive={activeTool === 'thread'}
                   onThreadPoint={thread.addPoint}
+                />
+
+                <ToothLayer
+                  teeth={teeth}
+                  toothMeshes={toothMeshes}
+                  isDrawing={isDrawing}
+                  onPaintBead={onPaintToothBead}
+                  onRemove={onRemoveTooth}
+                  highlightedColor={highlightedColor}
+                  threadToolActive={activeTool === 'thread'}
+                  onThreadPoint={thread.addPoint}
+                  chainToolActive={activeTool === 'pendant-chain'}
+                  onChainNodeClick={(placementId, beadIndex) =>
+                    onChainNodeClick({ kind: 'tooth', placementId, beadIndex })}
+                  chainPendingBeadId={chainPendingId}
                 />
 
                 <ThreadLayer

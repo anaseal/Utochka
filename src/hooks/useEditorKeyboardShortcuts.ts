@@ -39,6 +39,10 @@ export const useEditorKeyboardShortcuts = ({
         silyanka.setChainPendingStart(null);
         return;
       }
+      if (technique === 'silyanka' && e.key === 'Escape' && silyanka.toothPendingStart !== null) {
+        silyanka.setToothPendingStart(null);
+        return;
+      }
       // Hole/Hole segment — единственные инструменты рисования без своей
       // однобуквенной клавиши (см. переключатель ниже, у них его нет) — без
       // Escape выйти из них можно было только кликом по другому инструменту

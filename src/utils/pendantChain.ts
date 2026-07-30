@@ -1,4 +1,6 @@
 import { BEAD_THEME } from '../config/theme';
+import { ChainEndpoint } from '../types/pendant';
+import { ToothMesh, toothBeadId } from './tooth';
 
 // Отдельное пространство ID для бисерин цепочки-подвески, не пересекается ни
 // с id основной сетки (beadId.ts), ни с pendant:* (см. floodFill.ts) — цепочка
@@ -41,6 +43,16 @@ export const expandChainRun = (fromId: string, toId: string): string[] | null =>
 // цепочка визуально «не касается» узла или соседней бисерины.
 const CHAIN_PITCH = BEAD_THEME.sizes.spanRadius * 2 + 2;
 
+// Минимум бисерин в цепочке независимо от расстояния между узлами-креплениями.
+// Без пола короткая цепочка (например, между двумя соседними узлами меша
+// зубца) даёт 1-2 бисерины — это выглядит как случайный сдвиг одной бисерины
+// в сторону, а не как цепочка. Пол работает через тот же механизм, что и
+// провис: computeChainBeadPositions пересчитывает фактическую длину нити из
+// ИТОГОВОГО count (см. ниже), поэтому при срабатывании пола нить автоматически
+// становится длиннее хорды заметно сильнее обычного — дуга получается не
+// плоской, а по-настоящему петлеобразной («объём»), без отдельных настроек.
+const MIN_CHAIN_BEADS = 4;
+
 // Доля «лишней» длины нити сверх хорды (расстояния между узлами) — источник
 // провиса, см. pendantChainDefaults в theme.ts.
 const slackRatioFor = (distance: number): number => {
@@ -57,7 +69,7 @@ const slackRatioFor = (distance: number): number => {
 // поэтому число бисерин и их фактический шаг всегда согласованы.
 export const getChainBeadCount = (distance: number): number => {
   const strandLength = distance * (1 + slackRatioFor(distance));
-  return Math.max(1, Math.round(strandLength / CHAIN_PITCH) - 1);
+  return Math.max(MIN_CHAIN_BEADS, Math.round(strandLength / CHAIN_PITCH) - 1);
 };
 
 export interface ChainBeadPosition {
@@ -132,4 +144,54 @@ export const computeChainBeadPositions = (
     positions.push({ x: start.x + ux * u + vx * v, y: start.y + uy * u + vy * v });
   }
   return positions;
+};
+
+export interface ChainAnchor extends ChainBeadPosition {
+  id: string;
+}
+
+// Единая точка резолва конца цепочки в координаты+id — и для сетки (col →
+// bottomNodeByCol), и для зубца (placementId+beadIndex → бисерина меша).
+// Используется рендером, floodFill, статистикой, высотой холста и индексом
+// позиций нитки — вместо того, чтобы каждый потребитель резолвил bottomNodes
+// по-своему (см. spec.md, «Цепочки-подвески»).
+export const resolveChainAnchor = (
+  endpoint: ChainEndpoint,
+  bottomNodeByCol: Map<number, { id: string; x: number; y: number }>,
+  toothMeshes: Map<string, ToothMesh>,
+): ChainAnchor | null => {
+  if (endpoint.kind === 'grid') {
+    const node = bottomNodeByCol.get(endpoint.col);
+    return node ? { id: node.id, x: node.x, y: node.y } : null;
+  }
+  const bead = toothMeshes.get(endpoint.placementId)?.beads[endpoint.beadIndex];
+  if (!bead) return null;
+  return { id: toothBeadId(endpoint.placementId, endpoint.beadIndex), x: bead.x, y: bead.y };
+};
+
+export const chainEndpointsEqual = (a: ChainEndpoint, b: ChainEndpoint): boolean => {
+  if (a.kind === 'grid' && b.kind === 'grid') return a.col === b.col;
+  if (a.kind === 'tooth' && b.kind === 'tooth') {
+    return a.placementId === b.placementId && a.beadIndex === b.beadIndex;
+  }
+  return false;
+};
+
+// Правило «одна сторона» из spec.md, «Цепочки-подвески»: ограничение имеет
+// смысл, только когда оба конца — один и тот же зубец (иначе цепочка не
+// пересекает тело зубца никак) — тогда стороны их узлов-границ должны
+// пересекаться (бисерина-кончик несёт обе стороны сразу, поэтому кончик
+// совместим с любой стороной того же зубца). Сетка↔зубец и разные зубцы
+// между собой не ограничены вовсе.
+export const chainEndpointsAllowed = (
+  a: ChainEndpoint,
+  b: ChainEndpoint,
+  toothMeshes: Map<string, ToothMesh>,
+): boolean => {
+  if (a.kind !== 'tooth' || b.kind !== 'tooth' || a.placementId !== b.placementId) return true;
+  const mesh = toothMeshes.get(a.placementId);
+  const sidesA = mesh?.beads[a.beadIndex]?.side;
+  const sidesB = mesh?.beads[b.beadIndex]?.side;
+  if (!sidesA || !sidesB) return false;
+  return sidesA.some((s) => sidesB.includes(s));
 };

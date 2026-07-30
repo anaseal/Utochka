@@ -2,30 +2,34 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useGrid } from './useGrid';
 import { useDrawing } from './useDrawing';
 import { usePendants } from './usePendants';
-import { usePendantChains } from './usePendantChains';
+import { usePendantChains, findMirrorChain } from './usePendantChains';
 import { useDecorTails } from './useDecorTails';
+import { useTeeth } from './useTeeth';
 import { useThreads } from './useThreads';
 import { useWeaveProgress } from './useWeaveProgress';
 import { usePersistedState } from './usePersistedState';
 import { useGridConfig } from './useGridConfig';
 import { THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
-import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
+import {
+  PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint,
+} from '../types/pendant';
 import { Thread } from '../types/thread';
 import { PENDANT_TEMPLATES_BY_ID } from '../data/pendantTemplates';
 import { mirrorBeadId } from '../utils/mirror';
 import { resolveSpanCount } from '../utils/spans';
 import { fillMissingMirror } from '../utils/symmetrize';
 import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
-import { chainBeadId } from '../utils/pendantChain';
+import { chainBeadId, chainEndpointsEqual } from '../utils/pendantChain';
 import { decorTailBeadId } from '../utils/decorTail';
+import { toothBeadId, computeToothMeshes } from '../utils/tooth';
 import { getDecorRowStep } from '../utils/decorGeometry';
 import { buildSegmentIndex, silyankaNodeSpans } from '../utils/weaveSegment';
 import {
   StampPattern, StampContext, StampAnchorEdge, captureStampPattern, applyStampPattern,
 } from '../utils/stamp';
 import {
-  isPendantPlacements, isPendantChains, isDecorTailPlacements, isThreads, isHexColor, isOpacity,
-  isDeletedBeads,
+  isPendantPlacements, isPendantChains, isDecorTailPlacements, isTeeth, isThreads, isHexColor,
+  isOpacity, isDeletedBeads,
 } from './useSilyankaProject.validators';
 
 // Всё силяночное состояние и обработчики, вынесенные из App.tsx, чтобы
@@ -45,6 +49,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     'silyanka:decorTailPlacements', [], isDecorTailPlacements,
   );
 
+  const [teeth, setTeeth] = usePersistedState<ToothPlacement[]>(
+    'silyanka:teeth', [], isTeeth,
+  );
+
   const [threads, setThreads] = usePersistedState<Thread[]>(
     'silyanka:threads', [], isThreads,
   );
@@ -52,12 +60,12 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   const drawingControls = useDrawing(
     palette[0], palette, pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, decorTailPlacements, setDecorTailPlacements,
-    threads, setThreads, 'silyanka',
+    teeth, setTeeth, threads, setThreads, 'silyanka',
   );
 
   const gridConfig = useGridConfig(
     pendantPlacements, setPendantPlacements, setPendantChains,
-    decorTailPlacements, setDecorTailPlacements, drawingControls.remapDesignMap,
+    decorTailPlacements, setDecorTailPlacements, teeth, setTeeth, drawingControls.remapDesignMap,
   );
   const {
     gridSize, rowSpanOverrides, mirrorMode, decorBands, bottomEdgeDecor,
@@ -79,21 +87,13 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     [rawBeads, deletedBeads],
   );
 
-  // Для рендера «призраков» удалённых бисерин (видны только пока активен
-  // инструмент Hole — см. CanvasView) нужны их исходные позиции, которых уже
-  // нет в отфильтрованном beads.
-  const deletedBeadGhosts = useMemo(
-    () => rawBeads.filter(b => deletedBeads[b.id]),
-    [rawBeads, deletedBeads],
+  // Для дизейбла кнопки «Restore all» в HolesSection — сами удалённые
+  // бисерины больше не рендерятся (см. confirmPendingDelete ниже), поэтому
+  // достаточно факта, что список непуст.
+  const hasDeletedBeads = useMemo(
+    () => Object.keys(deletedBeads).length > 0,
+    [deletedBeads],
   );
-
-  const toggleDeletedBead = useCallback((id: string) => {
-    setDeletedBeads(prev => {
-      const next = { ...prev };
-      if (next[id]) delete next[id]; else next[id] = true;
-      return next;
-    });
-  }, [setDeletedBeads]);
 
   const clearDeletedBeads = useCallback(() => {
     setDeletedBeads({});
@@ -136,15 +136,19 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   }, [setDeletedBeads]);
 
   // Пометка «на удаление» — общая для Bead и Segment, требует явного
-  // подтверждения (см. ниже), в отличие от восстановления призрака
-  // (toggleDeletedBead выше) и от самого подтверждения: удаление такое же
-  // деструктивное, а Undo/Redo рисования на deletedBeads не действует (см.
-  // spec.md), поэтому именно у него, в отличие от восстановления, есть шаг
-  // предпросмотра. Не персистится (usePersistedState не нужен) — это
+  // подтверждения (см. ниже): удаление деструктивно, а Undo/Redo рисования
+  // на deletedBeads не действует (см. spec.md), поэтому у него есть шаг
+  // предпросмотра, в отличие от восстановления (clearDeletedBeads/«Restore
+  // all» выше — то применяется мгновенно). Не персистится (usePersistedState
+  // не нужен) — это
   // черновая пометка на время сессии работы с инструментом, а не часть
   // сохранённого проекта; сбрасывается при уходе с обоих под-инструментов
   // Hole (см. useSilyankaToolSwitch.ts).
-  const [pendingDeleteIds, setPendingDeleteIds] = useState<Record<string, true>>({});
+  const [pendingDeleteMap, setPendingDeleteMap] = useState<Record<string, true>>({});
+
+  // Отдаётся потребителям (BeadGrid/BeadView) как Set — тот же формат, что и
+  // у holeSegmentPreviewIds/deletePreviewIds рядом, вместо сырого Record.
+  const pendingDeleteIds = useMemo(() => new Set(Object.keys(pendingDeleteMap)), [pendingDeleteMap]);
 
   // ids[0] — «якорь»: у Bead это сама бисерина, у Segment — нода сегмента.
   // Если якорь уже помечен, снимаем пометку со всего списка (повторный клик
@@ -152,7 +156,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   // сразу.
   const togglePendingDelete = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
-    setPendingDeleteIds(prev => {
+    setPendingDeleteMap(prev => {
       const next = { ...prev };
       if (next[ids[0]]) {
         for (const id of ids) delete next[id];
@@ -171,15 +175,15 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     togglePendingDelete(getHoleSegmentIds(nodeId));
   }, [togglePendingDelete, getHoleSegmentIds]);
 
-  const pendingDeleteCount = Object.keys(pendingDeleteIds).length;
+  const pendingDeleteCount = pendingDeleteIds.size;
 
   const confirmPendingDelete = useCallback(() => {
-    deleteBeadIds(Object.keys(pendingDeleteIds));
-    setPendingDeleteIds({});
-  }, [deleteBeadIds, pendingDeleteIds]);
+    deleteBeadIds(Object.keys(pendingDeleteMap));
+    setPendingDeleteMap({});
+  }, [deleteBeadIds, pendingDeleteMap]);
 
   const clearPendingDelete = useCallback(() => {
-    setPendingDeleteIds({});
+    setPendingDeleteMap({});
   }, []);
 
   const threadControls = useThreads(threads, drawingControls.applyPatch);
@@ -206,8 +210,13 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   // цель драга полосы Decor Bands на зазор между рядами).
   const [hoveredDecorTailCol, setHoveredDecorTailCol] = useState<number | null>(null);
   // Незавершённый выбор узла-начала цепочки (инструмент 'pendant-chain') —
-  // null, пока не кликнули по первому узлу нижнего ряда.
-  const [chainPendingStart, setChainPendingStart] = useState<number | null>(null);
+  // null, пока не кликнули по первому узлу (сетки или зубца, см. ChainEndpoint
+  // в types/pendant.ts).
+  const [chainPendingStart, setChainPendingStart] = useState<ChainEndpoint | null>(null);
+  // То же самое для зубца (инструмент 'tooth') — независимое состояние, т.к.
+  // оба инструмента могут иметь незавершённый выбор параллельно (переключение
+  // между ними не обязано сбрасывать выбор в другом).
+  const [toothPendingStart, setToothPendingStart] = useState<number | null>(null);
   const [stampPattern, setStampPattern] = useState<StampPattern | null>(null);
   const [stampHoverNodeId, setStampHoverNodeId] = useState<string | null>(null);
   // Базовая точка привязки штампа: 'top' (по умолчанию) — targetAnchor
@@ -231,6 +240,21 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     }));
   }, [beads]);
 
+  const bottomNodes = useMemo(() => beads.filter(
+    b => b.type === 'NODE' && b.logicalIndex.row === 2 * gridSize.height,
+  ), [beads, gridSize.height]);
+
+  // Геометрия меша каждого зубца — единая точка входа для заливки,
+  // статистики, высоты холста и индекса позиций нитки (см. computeToothMeshes
+  // в tooth.ts): считает stepX/rowYStep/internalCount из главного полотна
+  // один раз, а не в каждом потребителе по-своему. Считается здесь (а не
+  // рядом с useTeeth ниже), т.к. нужна chainControls — цепочки-подвески могут
+  // крепиться к узлам зубца (см. spec.md, «Цепочки-подвески»).
+  const toothMeshes = useMemo(
+    () => computeToothMeshes(teeth, bottomNodes, gridSize.spacing, gridSize.bottomSpan),
+    [teeth, bottomNodes, gridSize.spacing, gridSize.bottomSpan],
+  );
+
   const pendantControls = usePendants(
     pendantPlacements, setPendantPlacements,
     drawingControls.activeColor, drawingControls.activeTool,
@@ -240,7 +264,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   const chainControls = usePendantChains(
     pendantChains, setPendantChains,
     drawingControls.activeColor, drawingControls.activeTool,
-    mirrorMode, gridSize.width,
+    mirrorMode, gridSize.width, teeth, toothMeshes,
   );
 
   const decorTailControls = useDecorTails(
@@ -249,9 +273,11 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     mirrorMode, gridSize.width,
   );
 
-  const bottomNodes = useMemo(() => beads.filter(
-    b => b.type === 'NODE' && b.logicalIndex.row === 2 * gridSize.height,
-  ), [beads, gridSize.height]);
+  const toothControls = useTeeth(
+    teeth, setTeeth,
+    drawingControls.activeColor, drawingControls.activeTool,
+    mirrorMode, gridSize.width,
+  );
 
   // Якорь ПОДВЕСКИ на колонку: настоящая нода нижнего ряда — либо, если на
   // этой колонке есть декор-хвост, его последняя бисерина. Единая точка
@@ -336,29 +362,31 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     });
   }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom, stampAnchorEdge, edgeExtension]);
 
-  // Заливка — единый граф сетки, подвесок, цепочек и декор-хвостов: подвеска
-  // соединена со своей якорной нодой (или кончиком хвоста той же колонки,
-  // если он есть — см. pendantAnchors), цепочка — с обоими концами, хвост —
-  // со своей якорной нодой, поэтому цвет может «перетекать» между сеткой и
-  // любым декором.
+  // Заливка — единый граф сетки, подвесок, цепочек, декор-хвостов и зубцов:
+  // подвеска соединена со своей якорной нодой (или кончиком хвоста той же
+  // колонки, если он есть — см. pendantAnchors), цепочка — с обоими концами,
+  // хвост — со своей якорной нодой, зубец — со всеми узлами своей полосы
+  // [startCol, endCol] (см. toothMeshes), поэтому цвет может «перетекать»
+  // между сеткой и любым декором.
   const applyUnifiedFloodFill = useCallback((startId: string, mirrorStartId: string | null) => {
     const args = [
       beads, drawingControls.designMap, drawingControls.activeColor,
       pendantPlacements, PENDANT_TEMPLATES_BY_ID, pendantAnchors, bottomNodes,
-      pendantChains, decorTailPlacements,
+      pendantChains, decorTailPlacements, teeth, toothMeshes,
     ] as const;
     const r1 = computeUnifiedFloodFill(startId, ...args);
     const r2 = mirrorStartId
       ? computeUnifiedFloodFill(mirrorStartId, ...args)
-      : { gridIds: [], pendantHits: [], chainHits: [], decorTailHits: [] };
+      : { gridIds: [], pendantHits: [], chainHits: [], decorTailHits: [], toothHits: [] };
 
     const gridIds = [...new Set([...r1.gridIds, ...r2.gridIds])];
     const pendantHits = [...r1.pendantHits, ...r2.pendantHits];
     const chainHits = [...r1.chainHits, ...r2.chainHits];
     const decorTailHits = [...r1.decorTailHits, ...r2.decorTailHits];
+    const toothHits = [...r1.toothHits, ...r2.toothHits];
     if (
       gridIds.length === 0 && pendantHits.length === 0 &&
-      chainHits.length === 0 && decorTailHits.length === 0
+      chainHits.length === 0 && decorTailHits.length === 0 && toothHits.length === 0
     ) return;
 
     const activeColor = drawingControls.activeColor;
@@ -398,8 +426,20 @@ export const useSilyankaProject = (palette: readonly string[]) => {
           return { ...t, colorMap };
         })
         : null,
+      toothHits.length > 0
+        ? (prev) => prev.map((t) => {
+          const hits = toothHits.filter(h => h.placementId === t.placementId);
+          if (hits.length === 0) return t;
+          const colorMap = { ...t.colorMap };
+          for (const h of hits) colorMap[h.index] = activeColor;
+          return { ...t, colorMap };
+        })
+        : null,
     );
-  }, [beads, drawingControls, pendantPlacements, pendantAnchors, bottomNodes, pendantChains, decorTailPlacements]);
+  }, [
+    beads, drawingControls, pendantPlacements, pendantAnchors, bottomNodes, pendantChains,
+    decorTailPlacements, teeth, toothMeshes,
+  ]);
 
   const handleFloodFill = useCallback((startId: string) => {
     const mirrorId = mirrorMode
@@ -447,17 +487,14 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     const startId = chainBeadId(placementId, beadIndex);
     let mirrorStartId: string | null = null;
     if (mirrorMode && gridSize.width > 1) {
-      const chain = pendantChains.find(c => c.placementId === placementId);
-      if (chain) {
-        const mirrorStart = gridSize.width - 1 - chain.endCol;
-        const mirrorEnd = gridSize.width - 1 - chain.startCol;
-        const mirrorChain = pendantChains.find(c =>
-          c.placementId !== placementId && c.startCol === mirrorStart && c.endCol === mirrorEnd);
-        if (mirrorChain) mirrorStartId = chainBeadId(mirrorChain.placementId, beadIndex);
-      }
+      const mirrorChain = findMirrorChain(pendantChains, placementId, teeth, gridSize.width);
+      if (mirrorChain) mirrorStartId = chainBeadId(mirrorChain.placementId, beadIndex);
     }
     applyUnifiedFloodFill(startId, mirrorStartId);
-  }, [drawingControls.activeTool, chainControls, mirrorMode, gridSize.width, pendantChains, applyUnifiedFloodFill]);
+  }, [
+    drawingControls.activeTool, chainControls, mirrorMode, gridSize.width, pendantChains, teeth,
+    applyUnifiedFloodFill,
+  ]);
 
   const handleDecorTailPaint = useCallback((placementId: string, beadIndex: number) => {
     if (drawingControls.activeTool !== 'flood-fill') {
@@ -482,30 +519,73 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     decorTailPlacements, applyUnifiedFloodFill,
   ]);
 
-  // Инструмент 'pendant-chain': клик по узлу нижнего ряда отмечает начало,
-  // следующий клик по другому узлу — конец и создаёт цепочку. Повторный клик
-  // по той же ноде отменяет незавершённый выбор.
-  const handleChainNodeClick = useCallback((col: number) => {
-    if (chainPendingStart === null) {
-      setChainPendingStart(col);
+  const handleToothPaint = useCallback((placementId: string, beadIndex: number) => {
+    if (drawingControls.activeTool !== 'flood-fill') {
+      toothControls.paintToothBead(placementId, beadIndex);
       return;
     }
-    if (col === chainPendingStart) {
+    const startId = toothBeadId(placementId, beadIndex);
+    let mirrorStartId: string | null = null;
+    if (mirrorMode && gridSize.width > 1) {
+      const tooth = teeth.find(t => t.placementId === placementId);
+      if (tooth) {
+        const mirrorStart = gridSize.width - 1 - tooth.endCol;
+        const mirrorEnd = gridSize.width - 1 - tooth.startCol;
+        const mirrorTooth = teeth.find(t =>
+          t.placementId !== placementId && t.startCol === mirrorStart && t.endCol === mirrorEnd);
+        if (mirrorTooth) mirrorStartId = toothBeadId(mirrorTooth.placementId, beadIndex);
+      }
+    }
+    applyUnifiedFloodFill(startId, mirrorStartId);
+  }, [drawingControls.activeTool, toothControls, mirrorMode, gridSize.width, teeth, applyUnifiedFloodFill]);
+
+  // Инструмент 'pendant-chain': клик по узлу (сетки или зубца, см.
+  // ChainEndpoint) отмечает начало, следующий клик по другому узлу — конец и
+  // создаёт цепочку. Повторный клик по тому же узлу отменяет незавершённый
+  // выбор. chainControls.addChain сам молча отбрасывает недопустимую пару
+  // (одна сторона одного зубца, см. chainEndpointsAllowed) — pending всё
+  // равно сбрасывается, как при успешной простановке (тот же приём, что у
+  // зубцов ниже).
+  const handleChainNodeClick = useCallback((endpoint: ChainEndpoint) => {
+    if (chainPendingStart === null) {
+      setChainPendingStart(endpoint);
+      return;
+    }
+    if (chainEndpointsEqual(chainPendingStart, endpoint)) {
       setChainPendingStart(null);
       return;
     }
-    chainControls.addChain(chainPendingStart, col);
+    chainControls.addChain(chainPendingStart, endpoint);
     setChainPendingStart(null);
   }, [chainPendingStart, chainControls]);
+
+  // Инструмент 'tooth': тот же двухкликовый выбор, что у цепочки-подвески —
+  // клик по узлу нижнего ряда отмечает начало полосы, следующий клик по
+  // другому узлу — конец и создаёт зубец. Пересечение с существующим зубцом
+  // (включая касание общей колонкой) toothControls.addTooth молча
+  // игнорирует — pending всё равно сбрасывается, как при успешной простановке.
+  const handleToothNodeClick = useCallback((col: number) => {
+    if (toothPendingStart === null) {
+      setToothPendingStart(col);
+      return;
+    }
+    if (col === toothPendingStart) {
+      setToothPendingStart(null);
+      return;
+    }
+    toothControls.addTooth(toothPendingStart, col);
+    setToothPendingStart(null);
+  }, [toothPendingStart, toothControls]);
 
   return {
     ...gridConfig,
     pendantPlacements, setPendantPlacements,
     pendantChains, setPendantChains, chainControls, chainPendingStart, setChainPendingStart,
     decorTailPlacements, setDecorTailPlacements, decorTailControls,
+    teeth, setTeeth, toothControls, toothMeshes, toothPendingStart, setToothPendingStart,
     threads, threadControls, weave,
     activeThreadColor, setActiveThreadColor, activeThreadOpacity, setActiveThreadOpacity,
-    beads, deletedBeadGhosts, toggleDeletedBead, clearDeletedBeads, drawingControls, pendantControls,
+    beads, hasDeletedBeads, clearDeletedBeads, drawingControls, pendantControls,
     beadById, holeSegmentPreviewIds, setHoleSegmentHoverNodeId,
     toggleBeadPending, toggleHoleSegmentPending, pendingDeleteIds, pendingDeleteCount,
     confirmPendingDelete, clearPendingDelete,
@@ -515,8 +595,8 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     stampAnchorEdge, toggleStampAnchorEdge,
     canvasSvgRef, rowGaps, bottomNodes, pendantAnchors, decorRowStep, internalTop, internalBottom,
     handleStampSelect, handleStampPlace,
-    handleFloodFill, handlePendantPaint, handleChainPaint, handleDecorTailPaint,
-    handleChainNodeClick,
+    handleFloodFill, handlePendantPaint, handleChainPaint, handleDecorTailPaint, handleToothPaint,
+    handleChainNodeClick, handleToothNodeClick,
     makeSymmetric,
   };
 };

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { swapColorInMap, swapColorInPendants, swapColorInChains, swapColorInDecorTails } from './colorSwap';
-import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
+import {
+  swapColorInMap, swapColorInPendants, swapColorInChains, swapColorInDecorTails, swapColorInTeeth,
+} from './colorSwap';
+import { PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 
 describe('swapColorInMap', () => {
   it('replaces every matching value, leaves others untouched', () => {
@@ -64,8 +66,8 @@ describe('swapColorInPendants', () => {
 describe('swapColorInChains', () => {
   const makeChain = (colorMap: Record<number, string>): PendantChain => ({
     placementId: 'c1',
-    startCol: 0,
-    endCol: 5,
+    start: { kind: 'grid', col: 0 },
+    end: { kind: 'grid', col: 5 },
     colorMap,
   });
 
@@ -128,5 +130,40 @@ describe('swapColorInDecorTails', () => {
   it('returns the same reference when oldColor === newColor', () => {
     const tails = [makeTail({ 0: '#ff0000' })];
     expect(swapColorInDecorTails(tails, '#ff0000', '#ff0000')).toBe(tails);
+  });
+});
+
+describe('swapColorInTeeth', () => {
+  const makeTooth = (colorMap: Record<number, string>): ToothPlacement => ({
+    placementId: 'z1',
+    startCol: 0,
+    endCol: 4,
+    colorMap,
+  });
+
+  it('replaces matching colors inside tooth colorMaps', () => {
+    const teeth = [makeTooth({ 0: '#ff0000', 1: '#00ff00' })];
+    const next = swapColorInTeeth(teeth, '#ff0000', '#0000ff');
+    expect(next[0].colorMap).toEqual({ 0: '#0000ff', 1: '#00ff00' });
+  });
+
+  it('only replaces teeth that changed, leaving unaffected ones by reference', () => {
+    const untouched = makeTooth({ 0: '#00ff00' });
+    const touched = makeTooth({ 0: '#ff0000' });
+    const teeth = [untouched, touched];
+    const next = swapColorInTeeth(teeth, '#ff0000', '#0000ff');
+    expect(next[0]).toBe(untouched);
+    expect(next[1]).not.toBe(touched);
+    expect(next[1].colorMap).toEqual({ 0: '#0000ff' });
+  });
+
+  it('returns the same reference when nothing matches', () => {
+    const teeth = [makeTooth({ 0: '#00ff00' })];
+    expect(swapColorInTeeth(teeth, '#ff0000', '#0000ff')).toBe(teeth);
+  });
+
+  it('returns the same reference when oldColor === newColor', () => {
+    const teeth = [makeTooth({ 0: '#ff0000' })];
+    expect(swapColorInTeeth(teeth, '#ff0000', '#ff0000')).toBe(teeth);
   });
 });

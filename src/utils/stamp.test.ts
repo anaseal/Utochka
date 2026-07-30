@@ -142,6 +142,10 @@ describe('translateBeadId — pendant is not supported', () => {
   it('decorTail:* → null', () => {
     expect(translateBeadId('decorTail:d1:0', 0, 0, ctx(), 0)).toBeNull();
   });
+
+  it('tooth:* → null', () => {
+    expect(translateBeadId('tooth:z1:0', 0, 0, ctx(), 0)).toBeNull();
+  });
 });
 
 // --- capture / apply ---

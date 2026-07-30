@@ -266,6 +266,37 @@
   color: #22d3ee;
 }
 
+/* Подтверждение удаления помеченных (пунктиром) бисерин — Bead/Segment
+   только помечают, это единственное действие, которое реально пишет в
+   deletedBeads. Тот же нейтральный CTA-стиль, что у .sidebar__tool-toggle
+   (не красный — красный читался как что-то опасное/пугающее, хотя это
+   обычная кнопка подтверждения набранного, а не необратимый снос без
+   предупреждения). Задизейблена, пока список пометок пуст. */
+.sidebar__confirm-delete {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 0 14px 8px;
+  padding: 7px 12px;
+  background: var(--color-canvas);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 8px;
+  color: #22d3ee;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
+}
+
+.sidebar__confirm-delete:hover:not(:disabled) {
+  border-color: #22d3ee;
+  background: #243349;
+}
+
+.sidebar__confirm-delete:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Разделитель ВНУТРИ секции (не между секциями — те уже разделены
    .sidebar__section + .sidebar__section выше) — отделяет блок выбора
    инструмента (.sidebar__tool-picker у Holes) от того, что может появиться

@@ -107,6 +107,8 @@ const STRIP_SELECTORS = [
   '.decor-tail-hover-area',
   '.decor-tail-drop-target',
   '.decor-tail-remove-btn',
+  '.tooth-bead__hitbox',
+  '.tooth-remove-btn',
   '.thread-group__handle',
   '.thread-group__remove-btn',
   '.thread-layer__preview',

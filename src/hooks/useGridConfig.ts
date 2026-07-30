@@ -2,7 +2,9 @@ import { Dispatch, SetStateAction, useCallback } from 'react';
 import { usePersistedState } from './usePersistedState';
 import { BEAD_THEME } from '../config/theme';
 import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper } from '../types/bead';
-import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
+import {
+  PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint,
+} from '../types/pendant';
 import { clampSpan, resolveSpanCount } from '../utils/spans';
 import { clamp } from '../utils/clamp';
 import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
@@ -25,6 +27,12 @@ export const useGridConfig = (
   setPendantChains: Dispatch<SetStateAction<PendantChain[]>>,
   decorTailPlacements: DecorTailPlacement[],
   setDecorTailPlacements: Dispatch<SetStateAction<DecorTailPlacement[]>>,
+  // Значение (не только сеттер) — цепочка-подвеска может крепиться к узлу
+  // зубца (см. ChainEndpoint в types/pendant.ts), поэтому applyWidth ниже
+  // должен знать, какие зубцы переживут ресайз, чтобы синхронно решить
+  // судьбу цепочек, привязанных к ним.
+  teeth: ToothPlacement[],
+  setTeeth: Dispatch<SetStateAction<ToothPlacement[]>>,
   remapDesignMap: (fn: (map: Record<string, string>) => Record<string, string>) => void,
 ) => {
   const [gridSize, setGridSize] = usePersistedState<GridConfig>('silyanka:gridSize', {
@@ -76,6 +84,25 @@ export const useGridConfig = (
   const applyWidth = (result: WidthResizeResult | null, wasMirror: boolean) => {
     if (!result) return;
     const { newWidth, mirrorDelta } = result;
+    // Зубцы, которые переживут этот ресайз — считаем по значению (не через
+    // prev внутри setTeeth), чтобы знать survivingToothIds ДО того, как
+    // разбираемся с цепочками-подвесками ниже: конец цепочки на зубце валиден,
+    // только если сам зубец пережил ресайз (см. ChainEndpoint, types/pendant.ts).
+    const nextTeeth = wasMirror
+      ? teeth
+        .map(t => ({ ...t, startCol: t.startCol + mirrorDelta, endCol: t.endCol + mirrorDelta }))
+        .filter(t => t.startCol >= 0 && t.endCol < newWidth)
+      : newWidth < gridSize.width
+        ? teeth.filter(t => t.startCol < newWidth && t.endCol < newWidth)
+        : teeth;
+    const survivingToothIds = new Set(nextTeeth.map(t => t.placementId));
+    // Конец-сетка сдвигается/режется по col, как и раньше; конец-зубец сам не
+    // сдвигается (зубец уже сдвинут в nextTeeth) — валиден, пока жив зубец.
+    const shiftChainEndpoint = (e: ChainEndpoint): ChainEndpoint =>
+      (e.kind === 'grid' ? { ...e, col: e.col + mirrorDelta } : e);
+    const chainEndpointSurvives = (e: ChainEndpoint): boolean =>
+      (e.kind === 'grid' ? e.col >= 0 && e.col < newWidth : survivingToothIds.has(e.placementId));
+
     if (wasMirror) {
       remapDesignMap(map =>
         shiftDesignMapColumns(map, mirrorDelta, newWidth, edgeExtension.left, edgeExtension.right),
@@ -85,19 +112,25 @@ export const useGridConfig = (
         .map(p => ({ ...p, col: p.col + mirrorDelta }))
         .filter(p => p.col >= 0 && p.col < newWidth));
       // Цепочки сдвигаем целиком по обоим концам; если один конец вышел за
-      // границу — цепочка теряет якорь и удаляется целиком.
+      // границу (сетка) или потерял свой зубец (зубец) — цепочка теряет
+      // якорь и удаляется целиком.
       setPendantChains(prev => prev
-        .map(c => ({ ...c, startCol: c.startCol + mirrorDelta, endCol: c.endCol + mirrorDelta }))
-        .filter(c => c.startCol >= 0 && c.endCol < newWidth));
+        .map(c => ({ ...c, start: shiftChainEndpoint(c.start), end: shiftChainEndpoint(c.end) }))
+        .filter(c => chainEndpointSurvives(c.start) && chainEndpointSurvives(c.end)));
       // Декор-хвосты сдвигаем вместе с рисунком той же логикой, что и подвески.
       setDecorTailPlacements(prev => prev
         .map(t => ({ ...t, col: t.col + mirrorDelta }))
         .filter(t => t.col >= 0 && t.col < newWidth));
+      // Зубцы сдвигаем целиком по обоим концам полосы — та же логика, что и
+      // у цепочек-подвесок.
+      setTeeth(nextTeeth);
     } else if (newWidth < gridSize.width) {
-      // При сужении сетки убираем подвески/цепочки/хвосты с исчезнувших колонок.
+      // При сужении сетки убираем подвески/цепочки/хвосты/зубцы с исчезнувших колонок.
       setPendantPlacements(prev => prev.filter(p => p.col < newWidth));
-      setPendantChains(prev => prev.filter(c => c.startCol < newWidth && c.endCol < newWidth));
+      setPendantChains(prev =>
+        prev.filter(c => chainEndpointSurvives(c.start) && chainEndpointSurvives(c.end)));
       setDecorTailPlacements(prev => prev.filter(t => t.col < newWidth));
+      setTeeth(nextTeeth);
     }
     // Потолок Taper.depth зависит от ширины — подрезаем так же, как rows
     // подрезаются под высоту (см. applyHeight), иначе на узкой сетке остаётся

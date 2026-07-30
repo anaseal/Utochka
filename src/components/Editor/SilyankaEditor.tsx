@@ -130,12 +130,12 @@ export const SilyankaEditor = ({
 
     <CanvasView
       beads={silyanka.beads}
-      deletedBeadGhosts={silyanka.deletedBeadGhosts}
-      onToggleDeletedBead={silyanka.toggleDeletedBead}
+      pendingDeleteIds={silyanka.pendingDeleteIds}
+      onToggleBeadPending={silyanka.toggleBeadPending}
       beadById={silyanka.beadById}
       holeSegmentPreviewIds={silyanka.holeSegmentPreviewIds}
       onHoleSegmentHover={silyanka.setHoleSegmentHoverNodeId}
-      onDeleteHoleSegment={silyanka.deleteHoleSegment}
+      onToggleHoleSegmentPending={silyanka.toggleHoleSegmentPending}
       canvasTheme={settings.canvasTheme}
       onToggleCanvasTheme={settings.toggleCanvasTheme}
       zoom={settings.zoom}
@@ -167,6 +167,12 @@ export const SilyankaEditor = ({
       hoveredDecorTailCol={silyanka.hoveredDecorTailCol}
       onPaintDecorTailBead={silyanka.handleDecorTailPaint}
       onRemoveDecorTail={silyanka.decorTailControls.removePlacement}
+      teeth={silyanka.teeth}
+      toothMeshes={silyanka.toothMeshes}
+      toothPendingStart={silyanka.toothPendingStart}
+      onToothNodeClick={silyanka.handleToothNodeClick}
+      onPaintToothBead={silyanka.handleToothPaint}
+      onRemoveTooth={silyanka.toothControls.removeTooth}
       threads={silyanka.threads}
       onAddThread={silyanka.threadControls.addThread}
       onRerouteThreadEnd={silyanka.threadControls.rerouteThreadEnd}
@@ -224,6 +230,14 @@ export const SilyankaEditor = ({
       chainPendingStart={silyanka.chainPendingStart}
       onRemoveChain={silyanka.chainControls.removeChain}
       onClearChains={silyanka.chainControls.clearAllChains}
+      teeth={silyanka.teeth}
+      toothToolActive={silyanka.drawingControls.activeTool === 'tooth'}
+      onToggleToothTool={() => setSilyankaTool(
+        silyanka.drawingControls.activeTool === 'tooth' ? 'pencil' : 'tooth',
+      )}
+      toothPendingStart={silyanka.toothPendingStart}
+      onRemoveTooth={silyanka.toothControls.removeTooth}
+      onClearTeeth={silyanka.toothControls.clearAllTeeth}
       holeToolActive={silyanka.drawingControls.activeTool === 'hole'}
       onToggleHoleTool={() => setSilyankaTool(
         silyanka.drawingControls.activeTool === 'hole' ? 'pencil' : 'hole',
@@ -232,8 +246,10 @@ export const SilyankaEditor = ({
       onToggleHoleSegmentTool={() => setSilyankaTool(
         silyanka.drawingControls.activeTool === 'hole-segment' ? 'pencil' : 'hole-segment',
       )}
-      hasDeletedBeads={silyanka.deletedBeadGhosts.length > 0}
+      hasDeletedBeads={silyanka.hasDeletedBeads}
       onClearDeletedBeads={silyanka.clearDeletedBeads}
+      pendingDeleteCount={silyanka.pendingDeleteCount}
+      onConfirmPendingDelete={silyanka.confirmPendingDelete}
     />
   </>
 );

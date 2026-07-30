@@ -1,9 +1,12 @@
 import { Bead } from '../types/bead';
 import { defaultColorFor } from '../config/theme';
-import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 import { decode, encode } from './beadId';
-import { chainBeadId, isChainBeadId, parseChainBeadId, chainBeadCountBetween } from './pendantChain';
+import {
+  chainBeadId, isChainBeadId, parseChainBeadId, chainBeadCountBetween, resolveChainAnchor,
+} from './pendantChain';
 import { decorTailBeadId, isDecorTailBeadId, parseDecorTailBeadId } from './decorTail';
+import { toothBeadId, isToothBeadId, parseToothBeadId, ToothMesh } from './tooth';
 
 type AdjMap = Map<string, string[]>;
 
@@ -151,11 +154,17 @@ interface DecorTailHit {
   index: number;
 }
 
+interface ToothHit {
+  placementId: string;
+  index: number;
+}
+
 interface UnifiedFloodFillResult {
   gridIds: string[];
   pendantHits: PendantHit[];
   chainHits: ChainHit[];
   decorTailHits: DecorTailHit[];
+  toothHits: ToothHit[];
 }
 
 // Заливка через сетку, подвески, цепочки-подвески и декор-хвосты как единый
@@ -181,6 +190,8 @@ export function computeUnifiedFloodFill(
   bottomNodes: Bead[],
   chains: PendantChain[] = [],
   decorTails: DecorTailPlacement[] = [],
+  teeth: ToothPlacement[] = [],
+  toothMeshes: Map<string, ToothMesh> = new Map(),
 ): UnifiedFloodFillResult {
   const beadMap = new Map(beads.map(b => [b.id, b]));
   const pendantAnchorByCol = new Map<number, Bead>();
@@ -190,6 +201,7 @@ export function computeUnifiedFloodFill(
   const placementById = new Map(placements.map(p => [p.placementId, p]));
   const chainById = new Map(chains.map(c => [c.placementId, c]));
   const decorTailById = new Map(decorTails.map(t => [t.placementId, t]));
+  const toothById = new Map(teeth.map(t => [t.placementId, t]));
 
   const anchorPendants = (nodeId: string): PendantPlacement[] =>
     placements.filter(p => {
@@ -197,12 +209,13 @@ export function computeUnifiedFloodFill(
       return anchor?.id === nodeId && templates[p.templateId];
     });
 
-  // Цепочки, у которых нода nodeId — один из двух концов (startCol/endCol).
+  // Цепочки, у которых нода nodeId — один из двух концов (start/end,
+  // сетка или зубец, см. ChainEndpoint в types/pendant.ts).
   const anchorChains = (nodeId: string): { chain: PendantChain; isStart: boolean }[] => {
     const result: { chain: PendantChain; isStart: boolean }[] = [];
     for (const chain of chains) {
-      const start = bottomNodeByCol.get(chain.startCol);
-      const end = bottomNodeByCol.get(chain.endCol);
+      const start = resolveChainAnchor(chain.start, bottomNodeByCol, toothMeshes);
+      const end = resolveChainAnchor(chain.end, bottomNodeByCol, toothMeshes);
       if (start?.id === nodeId) result.push({ chain, isStart: true });
       if (end?.id === nodeId) result.push({ chain, isStart: false });
     }
@@ -210,8 +223,8 @@ export function computeUnifiedFloodFill(
   };
 
   const chainCount = (chain: PendantChain): number => {
-    const start = bottomNodeByCol.get(chain.startCol);
-    const end = bottomNodeByCol.get(chain.endCol);
+    const start = resolveChainAnchor(chain.start, bottomNodeByCol, toothMeshes);
+    const end = resolveChainAnchor(chain.end, bottomNodeByCol, toothMeshes);
     if (!start || !end) return 0;
     return chainBeadCountBetween(start, end);
   };
@@ -219,6 +232,24 @@ export function computeUnifiedFloodFill(
   // Хвосты, у которых нода nodeId — якорь (col).
   const anchorDecorTails = (nodeId: string): DecorTailPlacement[] =>
     decorTails.filter(t => bottomNodeByCol.get(t.col)?.id === nodeId);
+
+  // Зубцы, у которых нода nodeId — один из узлов полосы [startCol, endCol]:
+  // внутренняя колонка касается ДВУХ бисерин ряда 1 меша (как любой
+  // внутренний узел сетки граничит с двумя диагоналями), крайняя
+  // (startCol/endCol) — одной (см. ToothMesh.anchors в tooth.ts).
+  const anchorTeeth = (nodeId: string): { placementId: string; beadIndex: number }[] => {
+    const result: { placementId: string; beadIndex: number }[] = [];
+    for (const tooth of teeth) {
+      const mesh = toothMeshes.get(tooth.placementId);
+      if (!mesh) continue;
+      for (const anchor of mesh.anchors) {
+        if (bottomNodeByCol.get(anchor.col)?.id === nodeId) {
+          result.push({ placementId: tooth.placementId, beadIndex: anchor.beadIndex });
+        }
+      }
+    }
+    return result;
+  };
 
   const parsePendantId = (id: string): [string, number] => {
     const [, placementId, idxStr] = id.split(':');
@@ -240,11 +271,19 @@ export function computeUnifiedFloodFill(
       const [placementId, index] = parseDecorTailBeadId(id);
       return decorTailById.get(placementId)?.colorMap[index] ?? defaultColorFor('SPAN');
     }
+    if (isToothBeadId(id)) {
+      const [placementId, index] = parseToothBeadId(id);
+      const mesh = toothMeshes.get(placementId);
+      const kind = mesh?.beads[index]?.kind === 'node' ? 'NODE' : 'SPAN';
+      return toothById.get(placementId)?.colorMap[index] ?? defaultColorFor(kind);
+    }
     return designMap[id] ?? defaultColorFor(beadMap.get(id)?.type ?? 'SPAN');
   };
 
   const startColor = effectiveColor(startId);
-  if (startColor === activeColor) return { gridIds: [], pendantHits: [], chainHits: [], decorTailHits: [] };
+  if (startColor === activeColor) {
+    return { gridIds: [], pendantHits: [], chainHits: [], decorTailHits: [], toothHits: [] };
+  }
 
   const adjMap = buildAdjacencyMap(beads);
 
@@ -274,13 +313,13 @@ export function computeUnifiedFloodFill(
       if (index > 0) {
         result.push(chainBeadId(placementId, index - 1));
       } else {
-        const startAnchor = bottomNodeByCol.get(chain.startCol);
+        const startAnchor = resolveChainAnchor(chain.start, bottomNodeByCol, toothMeshes);
         if (startAnchor) result.push(startAnchor.id);
       }
       if (index < count - 1) {
         result.push(chainBeadId(placementId, index + 1));
       } else {
-        const endAnchor = bottomNodeByCol.get(chain.endCol);
+        const endAnchor = resolveChainAnchor(chain.end, bottomNodeByCol, toothMeshes);
         if (endAnchor) result.push(endAnchor.id);
       }
       return result;
@@ -306,12 +345,33 @@ export function computeUnifiedFloodFill(
       }
       return result;
     }
+    if (isToothBeadId(id)) {
+      const [placementId, index] = parseToothBeadId(id);
+      const mesh = toothMeshes.get(placementId);
+      if (!mesh) return [];
+      const result = mesh.neighbors[index].map(i => toothBeadId(placementId, i));
+      // Бисерины ряда 1 дополнительно касаются настоящих узлов нижнего ряда
+      // (см. ToothMesh.anchors в tooth.ts).
+      for (const anchor of mesh.anchors) {
+        if (anchor.beadIndex === index) {
+          const node = bottomNodeByCol.get(anchor.col);
+          if (node) result.push(node.id);
+        }
+      }
+      // Симметрично корню сетки (chainRoots ниже): если эта бисерина зубца
+      // сама — конец цепочки-подвески, заливка должна перетекать и в неё.
+      const chainRoots = anchorChains(id).map(({ chain, isStart }) =>
+        chainBeadId(chain.placementId, isStart ? 0 : Math.max(0, chainCount(chain) - 1)));
+      result.push(...chainRoots);
+      return result;
+    }
     const gridNeighbors = adjMap.get(id) ?? [];
     const pendantRoots = anchorPendants(id).map(p => pendantBeadId(p.placementId, 0));
     const chainRoots = anchorChains(id).map(({ chain, isStart }) =>
       chainBeadId(chain.placementId, isStart ? 0 : Math.max(0, chainCount(chain) - 1)));
     const decorTailRoots = anchorDecorTails(id).map(t => decorTailBeadId(t.placementId, 0));
-    return [...gridNeighbors, ...pendantRoots, ...chainRoots, ...decorTailRoots];
+    const toothRoots = anchorTeeth(id).map(a => toothBeadId(a.placementId, a.beadIndex));
+    return [...gridNeighbors, ...pendantRoots, ...chainRoots, ...decorTailRoots, ...toothRoots];
   };
 
   const visited = new Set([startId]);
@@ -320,6 +380,7 @@ export function computeUnifiedFloodFill(
   const pendantHits: PendantHit[] = [];
   const chainHits: ChainHit[] = [];
   const decorTailHits: DecorTailHit[] = [];
+  const toothHits: ToothHit[] = [];
 
   while (queue.length > 0) {
     const current = queue.shift()!;
@@ -332,6 +393,9 @@ export function computeUnifiedFloodFill(
     } else if (isDecorTailBeadId(current)) {
       const [placementId, index] = parseDecorTailBeadId(current);
       decorTailHits.push({ placementId, index });
+    } else if (isToothBeadId(current)) {
+      const [placementId, index] = parseToothBeadId(current);
+      toothHits.push({ placementId, index });
     } else {
       gridIds.push(current);
     }
@@ -343,5 +407,5 @@ export function computeUnifiedFloodFill(
     }
   }
 
-  return { gridIds, pendantHits, chainHits, decorTailHits };
+  return { gridIds, pendantHits, chainHits, decorTailHits, toothHits };
 }

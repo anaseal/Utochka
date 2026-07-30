@@ -25,9 +25,10 @@ describe('beadId.decode — invalid input', () => {
     expect(decode('')).toBeNull();
   });
 
-  it('returns null for ids from a different namespace (pendant/chain/decorTail)', () => {
+  it('returns null for ids from a different namespace (pendant/chain/decorTail/tooth)', () => {
     expect(decode('pendant:p1:0')).toBeNull();
     expect(decode('chain:c1:0')).toBeNull();
     expect(decode('decorTail:d1:0')).toBeNull();
+    expect(decode('tooth:z1:0')).toBeNull();
   });
 });

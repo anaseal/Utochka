@@ -1,8 +1,9 @@
 /* FILE: src\utils\pendantCanvasDim.ts */
 import { Bead } from '../types/bead';
-import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 import { PENDANT_SCALE } from '../data/pendantTemplates';
-import { computeChainBeadPositions } from './pendantChain';
+import { computeChainBeadPositions, resolveChainAnchor } from './pendantChain';
+import { ToothMesh } from './tooth';
 
 // Подвески, цепочки-подвески и декор-хвосты свисают ниже сетки — считает,
 // насколько именно нужно расширить высоту SVG-холста (extraMaxY для
@@ -14,11 +15,14 @@ export const computeSilyankaExtraMaxY = (
   // кончик хвоста — см. pendantAnchors в useSilyankaProject.ts.
   pendantAnchors: Bead[],
   pendantChains: PendantChain[],
-  // Цепочки крепятся к настоящей ноде независимо от декор-хвоста на той же
-  // колонке (см. spec.md, «Декор-хвост»), поэтому якорь для них — bottomNodes.
+  // Якорь ЦЕПОЧКИ — настоящая нода нижнего ряда (независимо от декор-хвоста
+  // на той же колонке, см. spec.md, «Декор-хвост») либо узел зубца
+  // (resolveChainAnchor, см. ChainEndpoint в types/pendant.ts).
   bottomNodes: Bead[],
   decorTailPlacements: DecorTailPlacement[],
   decorRowStep: number,
+  teeth: ToothPlacement[],
+  toothMeshes: Map<string, ToothMesh>,
 ): number => {
   let pendantMaxY = 0;
   for (const p of pendantPlacements) {
@@ -35,9 +39,10 @@ export const computeSilyankaExtraMaxY = (
   }
 
   let chainMaxY = 0;
+  const bottomNodeByCol = new Map(bottomNodes.map(n => [n.logicalIndex.col, n]));
   for (const c of pendantChains) {
-    const start = bottomNodes.find(n => n.logicalIndex.col === c.startCol);
-    const end = bottomNodes.find(n => n.logicalIndex.col === c.endCol);
+    const start = resolveChainAnchor(c.start, bottomNodeByCol, toothMeshes);
+    const end = resolveChainAnchor(c.end, bottomNodeByCol, toothMeshes);
     if (!start || !end) continue;
     const positions = computeChainBeadPositions(start, end);
     const maxY = Math.max(start.y, end.y, ...positions.map(p => p.y));
@@ -52,5 +57,16 @@ export const computeSilyankaExtraMaxY = (
     decorTailMaxY = Math.max(decorTailMaxY, anchor.y + t.rows * decorRowStep + 26);
   }
 
-  return Math.max(pendantMaxY, chainMaxY, decorTailMaxY);
+  // Зубцы — мини-меш, сходящийся в точку; глубина зависит от ширины каждого
+  // конкретного зубца (см. getToothRows в tooth.ts), поэтому берём max по y
+  // готового меша, а не по формуле.
+  let toothMaxY = 0;
+  for (const tooth of teeth) {
+    const mesh = toothMeshes.get(tooth.placementId);
+    if (!mesh || mesh.beads.length === 0) continue;
+    const maxY = Math.max(...mesh.beads.map(b => b.y));
+    toothMaxY = Math.max(toothMaxY, maxY + 26);
+  }
+
+  return Math.max(pendantMaxY, chainMaxY, decorTailMaxY, toothMaxY);
 };

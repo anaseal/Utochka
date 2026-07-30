@@ -1,13 +1,16 @@
 import { memo, useCallback } from 'react';
 import { Bead } from '../../../types/bead';
 import { PendantChain } from '../../../types/pendant';
-import { computeChainBeadPositions, chainBeadId } from '../../../utils/pendantChain';
+import { computeChainBeadPositions, chainBeadId, resolveChainAnchor } from '../../../utils/pendantChain';
+import { ToothMesh } from '../../../utils/tooth';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import './PendantChainLayer.css';
 
 interface PendantChainLayerProps {
   chains: PendantChain[];
   bottomNodes: Bead[];
+  // Разрешает конец цепочки на узле зубца (см. ChainEndpoint, types/pendant.ts).
+  toothMeshes: Map<string, ToothMesh>;
   isDrawing: boolean;
   onPaintBead: (placementId: string, beadIndex: number) => void;
   onRemove: (placementId: string) => void;
@@ -24,6 +27,7 @@ const ID_SEP = '::';
 export const PendantChainLayer = memo(({
   chains,
   bottomNodes,
+  toothMeshes,
   isDrawing,
   onPaintBead,
   onRemove,
@@ -56,8 +60,8 @@ export const PendantChainLayer = memo(({
   return (
     <g className="pendant-chain-layer">
       {chains.map((chain) => {
-        const start = nodeByCol.get(chain.startCol);
-        const end = nodeByCol.get(chain.endCol);
+        const start = resolveChainAnchor(chain.start, nodeByCol, toothMeshes);
+        const end = resolveChainAnchor(chain.end, nodeByCol, toothMeshes);
         if (!start || !end) return null;
         const positions = computeChainBeadPositions(start, end);
 

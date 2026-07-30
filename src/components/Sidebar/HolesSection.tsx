@@ -1,4 +1,4 @@
-import { Circle, RotateCcw, Trash2, Waypoints } from 'lucide-react';
+import { Circle, RotateCcw, Waypoints } from 'lucide-react';
 import { SectionHelp } from '../common/SectionHelp';
 
 interface HolesSectionProps {
@@ -73,7 +73,6 @@ export const HolesSection = ({
       onClick={onConfirmPendingDelete}
       disabled={pendingDeleteCount === 0}
     >
-      <Trash2 size={13} />
       {pendingDeleteCount > 0
         ? `Delete ${pendingDeleteCount} bead${pendingDeleteCount === 1 ? '' : 's'}`
         : 'Delete marked beads'}

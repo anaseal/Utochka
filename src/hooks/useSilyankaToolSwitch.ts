@@ -19,6 +19,11 @@ export const useSilyankaToolSwitch = (silyanka: SilyankaProject) => {
     if (silyanka.drawingControls.activeTool === 'pendant-chain' && tool !== 'pendant-chain') {
       silyanka.setChainPendingStart(null);
     }
+    // То же самое для зубца — независимый незавершённый выбор, см.
+    // toothPendingStart в useSilyankaProject.ts.
+    if (silyanka.drawingControls.activeTool === 'tooth' && tool !== 'tooth') {
+      silyanka.setToothPendingStart(null);
+    }
     // Уход с «Hole segment» сбрасывает наведённый предпросмотр — иначе при
     // следующем заходе в инструмент сразу показывался бы предпросмотр по
     // ноде, наведённой в прошлый раз, без реального наведения курсора.

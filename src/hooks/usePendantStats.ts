@@ -1,9 +1,10 @@
 /* FILE: src\hooks\usePendantStats.ts */
 import { useCallback, useMemo } from 'react';
 import { Bead } from '../types/bead';
-import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 import { defaultColorFor } from '../config/theme';
-import { chainBeadCountBetween } from '../utils/pendantChain';
+import { chainBeadCountBetween, resolveChainAnchor } from '../utils/pendantChain';
+import { ToothMesh } from '../utils/tooth';
 
 interface UsePendantStatsOptions {
   beads: Bead[];
@@ -12,6 +13,8 @@ interface UsePendantStatsOptions {
   bottomNodes: Bead[];
   pendantChains: PendantChain[];
   decorTailPlacements: DecorTailPlacement[];
+  teeth: ToothPlacement[];
+  toothMeshes: Map<string, ToothMesh>;
 }
 
 // Подвески, цепочки-подвески и декор-хвосты — тоже бисерины проекта, но
@@ -24,6 +27,8 @@ export const usePendantStats = ({
   bottomNodes,
   pendantChains,
   decorTailPlacements,
+  teeth,
+  toothMeshes,
 }: UsePendantStatsOptions) => {
   // Подвеска учитывается в статистике, только если у неё есть и валидный
   // шаблон, и живая нода-якорь на нижнем ряду (та же проверка, что и в
@@ -35,19 +40,20 @@ export const usePendantStats = ({
     );
   }, [pendantPlacements, pendantTemplates, bottomNodes]);
 
-  // Цепочка учитывается в статистике, только если у неё живы оба узла-якоря
-  // на нижнем ряду (та же проверка, что и у validPendantPlacements).
+  // Цепочка учитывается в статистике, только если у неё живы оба конца —
+  // узел нижнего ряда либо узел зубца (см. ChainEndpoint, types/pendant.ts;
+  // та же проверка, что и у validPendantPlacements).
   const validPendantChains = useMemo(() => {
     const nodeByCol = new Map(bottomNodes.map(n => [n.logicalIndex.col, n]));
     return pendantChains
       .map((c) => {
-        const start = nodeByCol.get(c.startCol);
-        const end = nodeByCol.get(c.endCol);
+        const start = resolveChainAnchor(c.start, nodeByCol, toothMeshes);
+        const end = resolveChainAnchor(c.end, nodeByCol, toothMeshes);
         if (!start || !end) return null;
         return { chain: c, count: chainBeadCountBetween(start, end) };
       })
       .filter((v): v is { chain: PendantChain; count: number } => v !== null);
-  }, [pendantChains, bottomNodes]);
+  }, [pendantChains, bottomNodes, toothMeshes]);
 
   // Хвост учитывается в статистике, только если у него жива нода-якорь на
   // нижнем ряду (та же проверка, что и у validPendantPlacements).
@@ -55,6 +61,18 @@ export const usePendantStats = ({
     const bottomCols = new Set(bottomNodes.map(n => n.logicalIndex.col));
     return decorTailPlacements.filter((t) => bottomCols.has(t.col));
   }, [decorTailPlacements, bottomNodes]);
+
+  // Зубец учитывается в статистике, только если у него есть готовый меш
+  // (оба конца полосы резолвятся в bottomNodes — см. computeToothMeshes).
+  const validTeeth = useMemo(
+    () => teeth
+      .map((t) => {
+        const mesh = toothMeshes.get(t.placementId);
+        return mesh ? { tooth: t, mesh } : null;
+      })
+      .filter((v): v is { tooth: ToothPlacement; mesh: ToothMesh } => v !== null),
+    [teeth, toothMeshes],
+  );
 
   const extendStats = useCallback((stats: Map<string, number>) => {
     validPendantPlacements.forEach((p) => {
@@ -76,7 +94,13 @@ export const usePendantStats = ({
         stats.set(color, (stats.get(color) || 0) + 1);
       }
     });
-  }, [validPendantPlacements, pendantTemplates, validPendantChains, validDecorTailPlacements]);
+    validTeeth.forEach(({ tooth, mesh }) => {
+      mesh.beads.forEach((bead, i) => {
+        const color = tooth.colorMap[i] ?? defaultColorFor(bead.kind === 'node' ? 'NODE' : 'SPAN');
+        stats.set(color, (stats.get(color) || 0) + 1);
+      });
+    });
+  }, [validPendantPlacements, pendantTemplates, validPendantChains, validDecorTailPlacements, validTeeth]);
 
   const totalCount = useMemo(() => {
     const pendantBeadCount = validPendantPlacements.reduce(
@@ -85,10 +109,15 @@ export const usePendantStats = ({
     );
     const chainBeadCount = validPendantChains.reduce((sum, { count }) => sum + count, 0);
     const decorTailBeadCount = validDecorTailPlacements.reduce((sum, t) => sum + t.rows, 0);
-    return beads.length + pendantBeadCount + chainBeadCount + decorTailBeadCount;
-  }, [beads.length, validPendantPlacements, pendantTemplates, validPendantChains, validDecorTailPlacements]);
+    const toothBeadCount = validTeeth.reduce((sum, { mesh }) => sum + mesh.beads.length, 0);
+    return beads.length + pendantBeadCount + chainBeadCount + decorTailBeadCount + toothBeadCount;
+  }, [
+    beads.length, validPendantPlacements, pendantTemplates, validPendantChains,
+    validDecorTailPlacements, validTeeth,
+  ]);
 
   return {
-    validPendantPlacements, validPendantChains, validDecorTailPlacements, extendStats, totalCount,
+    validPendantPlacements, validPendantChains, validDecorTailPlacements, validTeeth,
+    extendStats, totalCount,
   };
 };

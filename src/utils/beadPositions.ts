@@ -1,9 +1,10 @@
 import { Bead } from '../types/bead';
-import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../types/pendant';
+import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 import { PENDANT_SCALE } from '../data/pendantTemplates';
 import { pendantBeadId } from './floodFill';
-import { chainBeadId, computeChainBeadPositions } from './pendantChain';
+import { chainBeadId, computeChainBeadPositions, resolveChainAnchor } from './pendantChain';
 import { decorTailBeadId, computeDecorTailBeadPositions } from './decorTail';
+import { toothBeadId, ToothMesh } from './tooth';
 
 export interface ThreadAnchor {
   x: number;
@@ -28,6 +29,8 @@ export const buildBeadPositionIndex = (
   bottomNodes: Bead[],
   decorTailPlacements: DecorTailPlacement[],
   decorRowStep: number,
+  teeth: ToothPlacement[],
+  toothMeshes: Map<string, ToothMesh>,
 ): Map<string, ThreadAnchor> => {
   const index = new Map<string, ThreadAnchor>();
   for (const bead of beads) index.set(bead.id, { x: bead.x, y: bead.y });
@@ -50,8 +53,8 @@ export const buildBeadPositionIndex = (
   }
 
   for (const chain of pendantChains) {
-    const start = bottomNodeByCol.get(chain.startCol);
-    const end = bottomNodeByCol.get(chain.endCol);
+    const start = resolveChainAnchor(chain.start, bottomNodeByCol, toothMeshes);
+    const end = resolveChainAnchor(chain.end, bottomNodeByCol, toothMeshes);
     if (!start || !end) continue;
     computeChainBeadPositions(start, end).forEach((pos, i) => {
       index.set(chainBeadId(chain.placementId, i), pos);
@@ -63,6 +66,14 @@ export const buildBeadPositionIndex = (
     if (!anchor) continue;
     computeDecorTailBeadPositions(anchor, tail.rows, decorRowStep).forEach((pos, i) => {
       index.set(decorTailBeadId(tail.placementId, i), pos);
+    });
+  }
+
+  for (const tooth of teeth) {
+    const mesh = toothMeshes.get(tooth.placementId);
+    if (!mesh) continue;
+    mesh.beads.forEach((bead, i) => {
+      index.set(toothBeadId(tooth.placementId, i), { x: bead.x, y: bead.y });
     });
   }
 

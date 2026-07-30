@@ -1,6 +1,6 @@
 import { APP_CONSTRAINTS, BEAD_THEME } from '../config/theme';
 import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper, TaperSide } from '../types/bead';
-import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
+import { PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
 import { resolveSpanCount } from '../utils/spans';
 
@@ -120,12 +120,23 @@ export const isPendantPlacements = (v: unknown): v is PendantPlacement[] =>
     typeof p.col === 'number' &&
     typeof p.colorMap === 'object' && p.colorMap !== null);
 
+// Конец цепочки — узел сетки ({kind:'grid', col}) либо узел зубца
+// ({kind:'tooth', placementId, beadIndex}), см. ChainEndpoint в
+// types/pendant.ts.
+const isChainEndpoint = (v: unknown): boolean => {
+  if (typeof v !== 'object' || v === null) return false;
+  const e = v as Record<string, unknown>;
+  if (e.kind === 'grid') return typeof e.col === 'number';
+  if (e.kind === 'tooth') return typeof e.placementId === 'string' && typeof e.beadIndex === 'number';
+  return false;
+};
+
 export const isPendantChains = (v: unknown): v is PendantChain[] =>
   Array.isArray(v) && v.every(c =>
     typeof c === 'object' && c !== null &&
     typeof c.placementId === 'string' &&
-    typeof c.startCol === 'number' &&
-    typeof c.endCol === 'number' &&
+    isChainEndpoint(c.start) &&
+    isChainEndpoint(c.end) &&
     typeof c.colorMap === 'object' && c.colorMap !== null);
 
 export const isDecorTailPlacements = (v: unknown): v is DecorTailPlacement[] =>
@@ -134,6 +145,14 @@ export const isDecorTailPlacements = (v: unknown): v is DecorTailPlacement[] =>
     typeof t.placementId === 'string' &&
     typeof t.col === 'number' &&
     typeof t.rows === 'number' &&
+    typeof t.colorMap === 'object' && t.colorMap !== null);
+
+export const isTeeth = (v: unknown): v is ToothPlacement[] =>
+  Array.isArray(v) && v.every(t =>
+    typeof t === 'object' && t !== null &&
+    typeof t.placementId === 'string' &&
+    typeof t.startCol === 'number' &&
+    typeof t.endCol === 'number' &&
     typeof t.colorMap === 'object' && t.colorMap !== null);
 
 export const isThreads = (v: unknown): v is Thread[] =>

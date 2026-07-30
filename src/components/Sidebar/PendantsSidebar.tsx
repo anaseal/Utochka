@@ -1,10 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { Bead } from '../../types/bead';
-import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement } from '../../types/pendant';
+import {
+  PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint,
+} from '../../types/pendant';
 import { BEAD_THEME } from '../../config/theme';
 import { PendantsCatalogSection } from './PendantsCatalogSection';
 import { ChainsSection } from './ChainsSection';
 import { DecorSection } from './DecorSection';
+import { ToothSection } from './ToothSection';
 import { HolesSection } from './HolesSection';
 import './Sidebar.css';
 import './PendantsSidebar.css';
@@ -42,9 +45,15 @@ interface PendantsSidebarProps {
   pendantChains: PendantChain[];
   chainToolActive: boolean;
   onToggleChainTool: () => void;
-  chainPendingStart: number | null;
+  chainPendingStart: ChainEndpoint | null;
   onRemoveChain: (placementId: string) => void;
   onClearChains: () => void;
+  teeth: ToothPlacement[];
+  toothToolActive: boolean;
+  onToggleToothTool: () => void;
+  toothPendingStart: number | null;
+  onRemoveTooth: (placementId: string) => void;
+  onClearTeeth: () => void;
   // Дыра (GridSidebar раньше — теперь здесь, среди остальных инструментов
   // редактирования содержимого, а не среди чистой геометрии сетки).
   holeToolActive: boolean;
@@ -53,6 +62,8 @@ interface PendantsSidebarProps {
   onToggleHoleSegmentTool: () => void;
   hasDeletedBeads: boolean;
   onClearDeletedBeads: () => void;
+  pendingDeleteCount: number;
+  onConfirmPendingDelete: () => void;
 }
 
 export const PendantsSidebar = ({
@@ -84,12 +95,20 @@ export const PendantsSidebar = ({
   chainPendingStart,
   onRemoveChain,
   onClearChains,
+  teeth,
+  toothToolActive,
+  onToggleToothTool,
+  toothPendingStart,
+  onRemoveTooth,
+  onClearTeeth,
   holeToolActive,
   onToggleHoleTool,
   holeSegmentToolActive,
   onToggleHoleSegmentTool,
   hasDeletedBeads,
   onClearDeletedBeads,
+  pendingDeleteCount,
+  onConfirmPendingDelete,
 }: PendantsSidebarProps) => {
   const computeCol = useCallback((clientX: number, clientY: number): number | null => {
     const svg = canvasSvgRef.current;
@@ -143,7 +162,9 @@ export const PendantsSidebar = ({
     onClearDecor();
     onClearChains();
     onClearDecorTails();
-  }, [onClearAll, onClearDecor, onClearChains, onClearDecorTails]);
+    onClearTeeth();
+    onClearDeletedBeads();
+  }, [onClearAll, onClearDecor, onClearChains, onClearDecorTails, onClearTeeth, onClearDeletedBeads]);
 
   return (
     <aside className={`sidebar${open ? ' sidebar--open' : ''}`}>
@@ -164,11 +185,21 @@ export const PendantsSidebar = ({
 
         <ChainsSection
           pendantChains={pendantChains}
+          teeth={teeth}
           chainToolActive={chainToolActive}
           onToggleChainTool={onToggleChainTool}
           chainPendingStart={chainPendingStart}
           onRemoveChain={onRemoveChain}
           onClearChains={onClearChains}
+        />
+
+        <ToothSection
+          teeth={teeth}
+          toothToolActive={toothToolActive}
+          onToggleToothTool={onToggleToothTool}
+          toothPendingStart={toothPendingStart}
+          onRemoveTooth={onRemoveTooth}
+          onClearTeeth={onClearTeeth}
         />
 
         <DecorSection
@@ -196,6 +227,8 @@ export const PendantsSidebar = ({
           onToggleHoleSegmentTool={onToggleHoleSegmentTool}
           hasDeletedBeads={hasDeletedBeads}
           onClearDeletedBeads={onClearDeletedBeads}
+          pendingDeleteCount={pendingDeleteCount}
+          onConfirmPendingDelete={onConfirmPendingDelete}
         />
       </div>
 
@@ -204,7 +237,10 @@ export const PendantsSidebar = ({
           type="button"
           className="sidebar__clear"
           onClick={handleClearAll}
-          disabled={!hasPendants && !hasActiveBands && pendantChains.length === 0 && !hasDecorTails}
+          disabled={
+            !hasPendants && !hasActiveBands && pendantChains.length === 0 &&
+            !hasDecorTails && teeth.length === 0 && !hasDeletedBeads
+          }
         >
           Reset all
         </button>

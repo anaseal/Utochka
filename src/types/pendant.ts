@@ -35,12 +35,22 @@ export interface PendantPlacement {
   colorMap: Record<number, string>;
 }
 
+// Конец цепочки — либо настоящий узел нижнего ряда (как раньше), либо узел на
+// границе меша зубца (см. ToothMeshBead.side в utils/tooth.ts): зубцы растут
+// из nodes нижнего ряда, поэтому у них тоже есть узлы, к которым можно
+// прицепить цепочку — не только к основной сетке.
+export type ChainEndpoint =
+  | { kind: 'grid'; col: number }
+  | { kind: 'tooth'; placementId: string; beadIndex: number };
+
 export interface PendantChain {
   placementId: string;
-  /** Индекс колонки узла нижнего ряда — начало цепочки (всегда startCol < endCol) */
-  startCol: number;
-  /** Индекс колонки узла нижнего ряда — конец цепочки */
-  endCol: number;
+  /** Начало цепочки — порядок клика, никакой канонической сортировки (в
+   * отличие от прежних числовых startCol/endCol, конец на зубце не с чем
+   * сравнивать через Math.min/max). */
+  start: ChainEndpoint;
+  /** Конец цепочки. */
+  end: ChainEndpoint;
   /** Цвета отдельных бисерин цепочки: индекс бисерины (0..N-1) → цвет */
   colorMap: Record<number, string>;
 }
@@ -57,5 +67,22 @@ export interface DecorTailPlacement {
   /** Длина хвоста в бисеринах, 1–10 (BEAD_THEME.decorDefaults.minRows/maxRows) */
   rows: number;
   /** Цвета отдельных бисерин хвоста: индекс бисерины (0..rows-1) → цвет */
+  colorMap: Record<number, string>;
+}
+
+// Зубец: локальный выступ, сужающийся в точку, растущий вниз от полосы
+// колонок нижнего ряда (см. utils/tooth.ts). В отличие от PendantChain
+// (свободная дуга между двумя узлами) — это мини-ромбовидное плетение,
+// повторяющее диагональную сетку generator.ts, но локально и снаружи
+// полотна; rows (глубина схождения в точку) в модели нет — она равна
+// endCol − startCol и выводится геометрией, а не хранится и не
+// настраивается (см. getToothRows в tooth.ts).
+export interface ToothPlacement {
+  placementId: string;
+  /** Индекс колонки узла нижнего ряда — начало полосы (всегда startCol < endCol) */
+  startCol: number;
+  /** Индекс колонки узла нижнего ряда — конец полосы */
+  endCol: number;
+  /** Цвета бисерин меша по плоскому индексу (см. computeToothMesh в tooth.ts) */
   colorMap: Record<number, string>;
 }

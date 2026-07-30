@@ -1,8 +1,11 @@
 import { useState, useCallback, useMemo, useRef, Dispatch, SetStateAction } from 'react';
 import { BEAD_THEME } from '../config/theme';
 import { usePersistedState } from './usePersistedState';
-import { PendantPlacement, PendantChain, DecorTailPlacement } from '../types/pendant';
+import { PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
+import {
+  isPendantPlacements, isPendantChains, isDecorTailPlacements, isTeeth, isThreads,
+} from './useSilyankaProject.validators';
 
 const MAX_HISTORY = 30;
 const RECENT_LIMIT = BEAD_THEME.ui.recentColorsLimit;
@@ -13,29 +16,37 @@ const isDesignMap = (v: unknown): v is Record<string, string> => {
   return Object.values(v).every(c => typeof c === 'string');
 };
 
+// Снимок истории хранит те же типы (PendantChain и др.), что и «живое»
+// состояние в useSilyankaProject.ts — переиспользуем их полноценные
+// валидаторы, а не Array.isArray: тот проверяет только внешний массив и
+// пропускает элементы устаревшей формы (например, PendantChain с прежними
+// startCol/endCol вместо start/end) — resolveChainAnchor падает на таких
+// при Undo, потому что endpoint.kind у них не существует.
 const isHistorySnapshotArray = (v: unknown): v is HistorySnapshot[] => {
   if (!Array.isArray(v)) return false;
   return v.every((s): s is HistorySnapshot => (
     typeof s === 'object' && s !== null &&
     isDesignMap((s as HistorySnapshot).designMap) &&
-    Array.isArray((s as HistorySnapshot).pendants) &&
-    Array.isArray((s as HistorySnapshot).chains) &&
-    Array.isArray((s as HistorySnapshot).decorTails) &&
-    Array.isArray((s as HistorySnapshot).threads)
+    isPendantPlacements((s as HistorySnapshot).pendants) &&
+    isPendantChains((s as HistorySnapshot).chains) &&
+    isDecorTailPlacements((s as HistorySnapshot).decorTails) &&
+    isTeeth((s as HistorySnapshot).teeth) &&
+    isThreads((s as HistorySnapshot).threads)
   ));
 };
 
-export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp' | 'pendant-chain' | 'thread' | 'hole' | 'hole-segment';
+export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp' | 'pendant-chain' | 'tooth' | 'thread' | 'hole' | 'hole-segment';
 
-// Единица истории: снимок сетки, подвесок, цепочек-подвесок, декор-хвостов И
-// ниток разом — один Undo/Redo откатывает все пять состояний синхронно (они
-// рисуются одним мазком/жестом, например заливка может задеть сетку,
-// подвеску и хвост разом).
+// Единица истории: снимок сетки, подвесок, цепочек-подвесок, декор-хвостов,
+// зубцов И ниток разом — один Undo/Redo откатывает все шесть состояний
+// синхронно (они рисуются одним мазком/жестом, например заливка может
+// задеть сетку, подвеску и хвост разом).
 interface HistorySnapshot {
   designMap: Record<string, string>;
   pendants: PendantPlacement[];
   chains: PendantChain[];
   decorTails: DecorTailPlacement[];
+  teeth: ToothPlacement[];
   threads: Thread[];
 }
 
@@ -48,6 +59,8 @@ export const useDrawing = (
   setPendantChains: Dispatch<SetStateAction<PendantChain[]>>,
   decorTailPlacements: DecorTailPlacement[],
   setDecorTailPlacements: Dispatch<SetStateAction<DecorTailPlacement[]>>,
+  toothPlacements: ToothPlacement[],
+  setToothPlacements: Dispatch<SetStateAction<ToothPlacement[]>>,
   threads: Thread[],
   setThreads: Dispatch<SetStateAction<Thread[]>>,
   storageNamespace: string,
@@ -111,7 +124,9 @@ export const useDrawing = (
     historyFutureStorageKey, [], isHistorySnapshotArray,
   );
 
-  const preStrokeRef = useRef<HistorySnapshot>({ designMap: {}, pendants: [], chains: [], decorTails: [], threads: [] });
+  const preStrokeRef = useRef<HistorySnapshot>({
+    designMap: {}, pendants: [], chains: [], decorTails: [], teeth: [], threads: [],
+  });
 
   // Буфер текущего мазка карандашом/ластиком: null = стереть бисерину.
   // paintBeadFast пишет сюда, а не в designMap напрямую — setDesignMap на
@@ -134,10 +149,10 @@ export const useDrawing = (
   const startDrawing = useCallback(() => {
     preStrokeRef.current = {
       designMap, pendants: pendantPlacements, chains: pendantChains,
-      decorTails: decorTailPlacements, threads,
+      decorTails: decorTailPlacements, teeth: toothPlacements, threads,
     };
     setIsDrawing(true);
-  }, [designMap, pendantPlacements, pendantChains, decorTailPlacements, threads]);
+  }, [designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads]);
 
   const stopDrawing = useCallback(() => {
     if (isDrawing) {
@@ -163,14 +178,15 @@ export const useDrawing = (
       }
       if (
         hasStagedChanges || pre.designMap !== designMap || pre.pendants !== pendantPlacements ||
-        pre.chains !== pendantChains || pre.decorTails !== decorTailPlacements || pre.threads !== threads
+        pre.chains !== pendantChains || pre.decorTails !== decorTailPlacements ||
+        pre.teeth !== toothPlacements || pre.threads !== threads
       ) {
         pushSnapshot(pre);
       }
     }
     setIsDrawing(false);
   }, [
-    isDrawing, designMap, pendantPlacements, pendantChains, decorTailPlacements, threads,
+    isDrawing, designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads,
     pushSnapshot, setDesignMap,
   ]);
 
@@ -204,11 +220,15 @@ export const useDrawing = (
     const hasPendantColors = pendantPlacements.some(p => Object.keys(p.colorMap).length > 0);
     const hasChainColors = pendantChains.some(c => Object.keys(c.colorMap).length > 0);
     const hasDecorTailColors = decorTailPlacements.some(t => Object.keys(t.colorMap).length > 0);
+    const hasToothColors = toothPlacements.some(t => Object.keys(t.colorMap).length > 0);
     const hasThreads = threads.length > 0;
-    if (!hasDesign && !hasPendantColors && !hasChainColors && !hasDecorTailColors && !hasThreads) return;
+    if (
+      !hasDesign && !hasPendantColors && !hasChainColors && !hasDecorTailColors &&
+      !hasToothColors && !hasThreads
+    ) return;
     pushSnapshot({
       designMap, pendants: pendantPlacements, chains: pendantChains,
-      decorTails: decorTailPlacements, threads,
+      decorTails: decorTailPlacements, teeth: toothPlacements, threads,
     });
     if (hasDesign) setDesignMap({});
     if (hasPendantColors) {
@@ -226,10 +246,15 @@ export const useDrawing = (
         Object.keys(t.colorMap).length === 0 ? t : { ...t, colorMap: {} }
       )));
     }
+    if (hasToothColors) {
+      setToothPlacements(prev => prev.map(t => (
+        Object.keys(t.colorMap).length === 0 ? t : { ...t, colorMap: {} }
+      )));
+    }
     if (hasThreads) setThreads([]);
   }, [
-    designMap, pendantPlacements, pendantChains, decorTailPlacements, threads, pushSnapshot,
-    setPendantPlacements, setPendantChains, setDecorTailPlacements, setThreads,
+    designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads, pushSnapshot,
+    setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
   ]);
 
   // Управляемая трансформация Design Map (например, пересчёт при смене ширины).
@@ -241,79 +266,85 @@ export const useDrawing = (
     if (next === designMap) return;
     pushSnapshot({
       designMap, pendants: pendantPlacements, chains: pendantChains,
-      decorTails: decorTailPlacements, threads,
+      decorTails: decorTailPlacements, teeth: toothPlacements, threads,
     });
     setDesignMap(next);
-  }, [designMap, pendantPlacements, pendantChains, decorTailPlacements, threads, pushSnapshot]);
+  }, [designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads, pushSnapshot]);
 
-  // Одновременное изменение сетки, подвесок, цепочек, декор-хвостов И ниток
-  // одним шагом истории (например, заливка, которая может задеть обычные
-  // бусины, бусины подвески и бусины хвоста за один клик; нитка коммитится
-  // тем же путём — целиком на pointerup, см. ThreadLayer/CanvasView).
+  // Одновременное изменение сетки, подвесок, цепочек, декор-хвостов, зубцов
+  // И ниток одним шагом истории (например, заливка, которая может задеть
+  // обычные бусины, бусины подвески и бусины хвоста за один клик; нитка
+  // коммитится тем же путём — целиком на pointerup, см. ThreadLayer/CanvasView).
   const applyPatch = useCallback((
     designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
     pendantsFn: ((p: PendantPlacement[]) => PendantPlacement[]) | null,
     chainsFn: ((c: PendantChain[]) => PendantChain[]) | null = null,
     threadsFn: ((t: Thread[]) => Thread[]) | null = null,
     decorTailsFn: ((d: DecorTailPlacement[]) => DecorTailPlacement[]) | null = null,
+    teethFn: ((t: ToothPlacement[]) => ToothPlacement[]) | null = null,
   ) => {
     const nextDesignMap = designMapFn ? designMapFn(designMap) : designMap;
     const nextPendants = pendantsFn ? pendantsFn(pendantPlacements) : pendantPlacements;
     const nextChains = chainsFn ? chainsFn(pendantChains) : pendantChains;
     const nextThreads = threadsFn ? threadsFn(threads) : threads;
     const nextDecorTails = decorTailsFn ? decorTailsFn(decorTailPlacements) : decorTailPlacements;
+    const nextTeeth = teethFn ? teethFn(toothPlacements) : toothPlacements;
     if (
       nextDesignMap === designMap && nextPendants === pendantPlacements &&
-      nextChains === pendantChains && nextThreads === threads && nextDecorTails === decorTailPlacements
+      nextChains === pendantChains && nextThreads === threads &&
+      nextDecorTails === decorTailPlacements && nextTeeth === toothPlacements
     ) return;
     pushSnapshot({
       designMap, pendants: pendantPlacements, chains: pendantChains,
-      decorTails: decorTailPlacements, threads,
+      decorTails: decorTailPlacements, teeth: toothPlacements, threads,
     });
     if (nextDesignMap !== designMap) setDesignMap(nextDesignMap);
     if (nextPendants !== pendantPlacements) setPendantPlacements(nextPendants);
     if (nextChains !== pendantChains) setPendantChains(nextChains);
     if (nextDecorTails !== decorTailPlacements) setDecorTailPlacements(nextDecorTails);
+    if (nextTeeth !== toothPlacements) setToothPlacements(nextTeeth);
     if (nextThreads !== threads) setThreads(nextThreads);
   }, [
-    designMap, pendantPlacements, pendantChains, decorTailPlacements, threads,
-    pushSnapshot, setPendantPlacements, setPendantChains, setDecorTailPlacements, setThreads,
+    designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads,
+    pushSnapshot, setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
   ]);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;
     setFuture(f => [{
       designMap, pendants: pendantPlacements, chains: pendantChains,
-      decorTails: decorTailPlacements, threads,
+      decorTails: decorTailPlacements, teeth: toothPlacements, threads,
     }, ...f]);
     const snapshot = past[past.length - 1];
     setDesignMap(snapshot.designMap);
     setPendantPlacements(snapshot.pendants);
     setPendantChains(snapshot.chains);
     setDecorTailPlacements(snapshot.decorTails);
+    setToothPlacements(snapshot.teeth);
     setThreads(snapshot.threads);
     setPast(p => p.slice(0, -1));
   }, [
-    past, designMap, pendantPlacements, pendantChains, decorTailPlacements, threads,
-    setPendantPlacements, setPendantChains, setDecorTailPlacements, setThreads,
+    past, designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads,
+    setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
   ]);
 
   const redo = useCallback(() => {
     if (future.length === 0) return;
     setPast(p => [...p, {
       designMap, pendants: pendantPlacements, chains: pendantChains,
-      decorTails: decorTailPlacements, threads,
+      decorTails: decorTailPlacements, teeth: toothPlacements, threads,
     }]);
     const snapshot = future[0];
     setDesignMap(snapshot.designMap);
     setPendantPlacements(snapshot.pendants);
     setPendantChains(snapshot.chains);
     setDecorTailPlacements(snapshot.decorTails);
+    setToothPlacements(snapshot.teeth);
     setThreads(snapshot.threads);
     setFuture(f => f.slice(1));
   }, [
-    future, designMap, pendantPlacements, pendantChains, decorTailPlacements, threads,
-    setPendantPlacements, setPendantChains, setDecorTailPlacements, setThreads,
+    future, designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads,
+    setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
   ]);
 
   // useMemo — та же причина, что и в usePendants.ts/usePendantChains.ts/

@@ -16,22 +16,16 @@ interface BeadViewProps {
   // поверх реального цвета полупрозрачным пунктиром, чтобы был виден готовый
   // рисунок, а не просто подсвеченный контур (см. spec.md, «Штамп»).
   previewColor?: string;
-  // Бисерина удалена инструментом Hole (GridSidebar, «Holes») — рисуется
-  // пунктирным «призраком» вместо обычного тела, клик по нему возвращает
-  // бисерину (см. useSilyankaProject.toggleDeletedBead). Виден только пока сам
-  // инструмент активен — вне его CanvasView вообще не передаёт такие бисерины.
-  deleted?: boolean;
   // Бисерина входит в сегмент, который снесёт клик по наведённой ноде
   // (инструмент «Hole segment», GridSidebar → «Holes») — отдельный от
   // highlighted визуальный язык: highlighted нейтрален/обратим (hover ряда,
-  // цвет-легенда, pending-нода цепочки), а это — «сейчас исчезнет навсегда»,
-  // тот же красный, что и .bead__ghost.
+  // цвет-легенда, pending-нода цепочки), а это — «сейчас исчезнет навсегда».
   deletePreview?: boolean;
   // Бисерина помечена на удаление (Bead или Segment), но подтверждение ещё
   // не нажато — бисерина остаётся на месте (не удалена), пунктирная рамка
   // сигналит «ждёт подтверждения», в отличие от сплошной deletePreview выше
   // (мгновенный предпросмотр при наведении, до клика). Тот же красный, что и
-  // у deletePreview/.bead__ghost — единый визуальный язык «это про удаление».
+  // у deletePreview — единый визуальный язык «это про удаление».
   pendingDelete?: boolean;
   onPointerDown: (id: string) => void;
   onPointerEnter: (id: string) => void;
@@ -46,7 +40,6 @@ export const BeadView = memo(({
   defaultColor,
   highlighted,
   previewColor,
-  deleted,
   deletePreview,
   pendingDelete,
   onPointerDown,
@@ -57,22 +50,6 @@ export const BeadView = memo(({
   const finalColor = color || defaultColor;
 
   const { nodeRadius, spanRadius, hitboxRadius } = BEAD_THEME.sizes;
-
-  if (deleted) {
-    return (
-      <g
-        id={id}
-        className="bead bead--deleted"
-        onPointerDown={(e) => {
-          if (e.target instanceof Element) e.target.releasePointerCapture(e.pointerId);
-          onPointerDown(id);
-        }}
-      >
-        <circle className="bead__hitbox" cx={x} cy={y} r={hitboxRadius} />
-        <circle className="bead__ghost" cx={x} cy={y} r={isNode ? nodeRadius : spanRadius} />
-      </g>
-    );
-  }
 
   return (
     <g
