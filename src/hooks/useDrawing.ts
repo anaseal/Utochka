@@ -25,7 +25,7 @@ const isHistorySnapshotArray = (v: unknown): v is HistorySnapshot[] => {
   ));
 };
 
-export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp' | 'pendant-chain' | 'thread';
+export type DrawingTool = 'pencil' | 'eraser' | 'flood-fill' | 'stamp' | 'pendant-chain' | 'thread' | 'hole' | 'hole-segment';
 
 // Единица истории: снимок сетки, подвесок, цепочек-подвесок, декор-хвостов И
 // ниток разом — один Undo/Redo откатывает все пять состояний синхронно (они

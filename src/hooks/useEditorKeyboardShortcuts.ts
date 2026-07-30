@@ -10,12 +10,17 @@ interface Params {
   crossWeave: CrossWeaveProject;
   setSilyankaTool: (tool: DrawingTool) => void;
   cancelStampPattern: () => void;
+  // Режим плетения подменяет собой Undo/Redo рисунка: своя история отметок
+  // (см. useWeaveProgress) и своя кнопка Undo в WeaveControls, но без
+  // клавиатурного шортката отметку можно было снять только мышью.
+  weaveMode: boolean;
+  onWeaveUndo: () => void;
 }
 
 // Глобальные горячие клавиши редактора: undo/redo, однобуквенные шорткаты
 // инструментов (Photoshop-style) и Escape/Alt/Shift для штампа/цепочки.
 export const useEditorKeyboardShortcuts = ({
-  technique, silyanka, crossWeave, setSilyankaTool, cancelStampPattern,
+  technique, silyanka, crossWeave, setSilyankaTool, cancelStampPattern, weaveMode, onWeaveUndo,
 }: Params) => {
   // Обработчик пересобирается на каждый рендер (замыкается на technique/
   // silyanka/crossWeave), но сам addEventListener — только один раз при
@@ -32,6 +37,17 @@ export const useEditorKeyboardShortcuts = ({
       }
       if (technique === 'silyanka' && e.key === 'Escape' && silyanka.chainPendingStart !== null) {
         silyanka.setChainPendingStart(null);
+        return;
+      }
+      // Hole/Hole segment — единственные инструменты рисования без своей
+      // однобуквенной клавиши (см. переключатель ниже, у них его нет) — без
+      // Escape выйти из них можно было только кликом по другому инструменту
+      // в UI.
+      if (
+        technique === 'silyanka' && e.key === 'Escape' &&
+        (silyanka.drawingControls.activeTool === 'hole' || silyanka.drawingControls.activeTool === 'hole-segment')
+      ) {
+        setSilyankaTool('pencil');
         return;
       }
       // Alt сбрасывает захваченный штамп так же, как Escape, — курсор
@@ -53,6 +69,13 @@ export const useEditorKeyboardShortcuts = ({
         return;
       }
       if (e.ctrlKey || e.metaKey) {
+        // В режиме плетения Undo/Redo рисунка скрыты и не имеют смысла (своя
+        // история — см. useWeaveProgress); Ctrl+Z снимает последнюю отметку,
+        // Redo для отметок не заведён сознательно (см. useWeaveProgress.ts).
+        if (weaveMode) {
+          if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); onWeaveUndo(); }
+          return;
+        }
         const active = technique === 'silyanka' ? silyanka.drawingControls : crossWeave.drawingControls;
         if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); active.undo(); }
         if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); active.redo(); }

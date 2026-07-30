@@ -45,6 +45,7 @@ function App() {
 
   useEditorKeyboardShortcuts({
     technique: settings.technique, silyanka, crossWeave, setSilyankaTool, cancelStampPattern,
+    weaveMode: weavePanel.weaveMode, onWeaveUndo: weavePanel.weaveControls.onUndo,
   });
 
   return (

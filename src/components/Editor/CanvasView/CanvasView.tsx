@@ -44,8 +44,32 @@ import {
 } from '../../../utils/colorSwap';
 import './CanvasView.css';
 
+// Стабильная пустая ссылка — иначе activeTool !== 'hole' давал бы новый []
+// на каждый рендер и пробивал бы memo у BeadGrid без всякой причины.
+const EMPTY_GHOST_BEADS: Bead[] = [];
+
 interface CanvasViewProps {
   beads: Bead[];
+  // Удалённые инструментом Hole бисерины (исходные позиции) — рисуются
+  // пунктирным «призраком» и остаются кликабельны для возврата, но только
+  // пока сам инструмент активен (см. GridSidebar, «Holes»). Восстановление
+  // призрака — единственное, что осталось мгновенным (без подтверждения):
+  // само удаление теперь идёт через пометку + confirm (см. pendingDeleteIds).
+  deletedBeadGhosts: Bead[];
+  onToggleDeletedBead: (id: string) => void;
+  // Пометка «на удаление» (Bead и Segment пишут в один и тот же список,
+  // см. useSilyankaProject.pendingDeleteIds) — бисерина остаётся в beads
+  // (не удаляется), только рисуется пунктиром, пока не нажата кнопка
+  // подтверждения в HolesSection.
+  pendingDeleteIds: Set<string> | null;
+  onToggleBeadPending: (id: string) => void;
+  // «Hole segment»: карта id → бисерина (для проверки типа/наведённой ноды) и
+  // предпросмотр текущего наведённого сегмента (нода + все её грани) — см.
+  // useSilyankaProject.beadById/holeSegmentPreviewIds.
+  beadById: Map<string, Bead>;
+  holeSegmentPreviewIds: Set<string> | null;
+  onHoleSegmentHover: (nodeId: string | null) => void;
+  onToggleHoleSegmentPending: (nodeId: string) => void;
   canvasTheme: 'dark' | 'light';
   onToggleCanvasTheme: () => void;
   designMap: Record<string, string>;
@@ -129,6 +153,14 @@ interface CanvasViewProps {
 
 export const CanvasView = ({
   beads,
+  deletedBeadGhosts,
+  onToggleDeletedBead,
+  pendingDeleteIds,
+  onToggleBeadPending,
+  beadById,
+  holeSegmentPreviewIds,
+  onHoleSegmentHover,
+  onToggleHoleSegmentPending,
   canvasTheme,
   onToggleCanvasTheme,
   designMap,
@@ -385,14 +417,35 @@ export const CanvasView = ({
       weaveCanvas.touchWhileDrawing(id);
       return;
     }
-    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread' && isDrawing) {
+    if (activeTool === 'hole-segment') {
+      const bead = beadById.get(id);
+      if (bead?.type === 'NODE') {
+        onHoleSegmentHover(id);
+      } else if (!holeSegmentPreviewIds?.has(id)) {
+        // Наведение ушло не на саму ноду и не на один из её же спанов (уже
+        // подсвеченных этим предпросмотром) — только тогда гасим подсказку.
+        // Так наведение с ноды на её собственную грань не гасит её раньше
+        // времени (см. spec.md, «Hole segment»).
+        onHoleSegmentHover(null);
+      }
+      return;
+    }
+    if (activeTool !== 'flood-fill' && activeTool !== 'stamp' && activeTool !== 'pendant-chain' && activeTool !== 'thread' && activeTool !== 'hole' && isDrawing) {
       applyPaintFast(id);
     }
-  }, [weaveMode, weaveCanvas, activeTool, isDrawing, applyPaintFast]);
+  }, [weaveMode, weaveCanvas, activeTool, isDrawing, applyPaintFast, beadById, holeSegmentPreviewIds, onHoleSegmentHover]);
 
   const handlePointerDown = useCallback((id: string) => {
     if (weaveMode) {
       weaveCanvas.touch(id);
+      return;
+    }
+    if (activeTool === 'hole') {
+      onToggleBeadPending(id);
+      return;
+    }
+    if (activeTool === 'hole-segment') {
+      onToggleHoleSegmentPending(id);
       return;
     }
     if (activeTool === 'thread') {
@@ -410,7 +463,7 @@ export const CanvasView = ({
     } else {
       applyPaint(id);
     }
-  }, [weaveMode, weaveCanvas, activeTool, applyPaint, onFloodFill, bottomNodes, onChainNodeClick, thread]);
+  }, [weaveMode, weaveCanvas, activeTool, applyPaint, onFloodFill, bottomNodes, onChainNodeClick, thread, onToggleBeadPending, onToggleHoleSegmentPending]);
 
   // Правый клик снимает один проход — обратное действие к обычной отметке.
   const handleWeaveContextMenu = useCallback((e: React.MouseEvent) => {
@@ -455,7 +508,8 @@ export const CanvasView = ({
   const handleStampContainerPointerLeave = useCallback(() => {
     stamp.handlePointerLeave();
     thread.clearCursor();
-  }, [stamp, thread]);
+    onHoleSegmentHover(null);
+  }, [stamp, thread, onHoleSegmentHover]);
 
   const handleExport = useCallback(() => {
     const svg = canvasSvgRef.current;
@@ -515,6 +569,10 @@ export const CanvasView = ({
               <g ref={stampGroupRef} transform={`translate(${effectiveOffsetX + dim.shiftX}, ${offsetY})`}>
                 <BeadGrid
                   beads={beads}
+                  ghostBeads={activeTool === 'hole' ? deletedBeadGhosts : EMPTY_GHOST_BEADS}
+                  onGhostPointerDown={onToggleDeletedBead}
+                  pendingDeleteIds={(activeTool === 'hole' || activeTool === 'hole-segment') ? pendingDeleteIds : null}
+                  deletePreviewIds={activeTool === 'hole-segment' ? holeSegmentPreviewIds : null}
                   designMap={designMap}
                   highlightedNodeIds={highlightedNodeIds}
                   colorHighlightedBeadIds={highlightedBeadIds}

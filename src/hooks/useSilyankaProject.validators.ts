@@ -143,6 +143,14 @@ export const isThreads = (v: unknown): v is Thread[] =>
     Array.isArray((t as Thread).beadIds) &&
     (t as Thread).beadIds.every(id => typeof id === 'string'));
 
+// Удалённые кликом бисерины (инструмент «Hole», GridSidebar) — id -> true.
+// Структурная, не «рисовальная» правка (как taper/rowSpanOverrides): не через
+// историю Undo/Redo рисования, переживает Clear All.
+export const isDeletedBeads = (v: unknown): v is Record<string, true> => {
+  if (typeof v !== 'object' || v === null) return false;
+  return Object.values(v).every(x => x === true);
+};
+
 export const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
 
 export const isOpacity = (v: unknown): v is number => typeof v === 'number' && v >= 0 && v <= 1;

@@ -47,7 +47,7 @@ export const ChainsSection = ({
     </header>
     <button
       type="button"
-      className={`chain-tool-toggle${chainToolActive ? ' chain-tool-toggle--active' : ''}`}
+      className={`sidebar__tool-toggle${chainToolActive ? ' sidebar__tool-toggle--active' : ''}`}
       onClick={onToggleChainTool}
       aria-pressed={chainToolActive}
     >

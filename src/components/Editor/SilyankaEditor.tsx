@@ -130,6 +130,12 @@ export const SilyankaEditor = ({
 
     <CanvasView
       beads={silyanka.beads}
+      deletedBeadGhosts={silyanka.deletedBeadGhosts}
+      onToggleDeletedBead={silyanka.toggleDeletedBead}
+      beadById={silyanka.beadById}
+      holeSegmentPreviewIds={silyanka.holeSegmentPreviewIds}
+      onHoleSegmentHover={silyanka.setHoleSegmentHoverNodeId}
+      onDeleteHoleSegment={silyanka.deleteHoleSegment}
       canvasTheme={settings.canvasTheme}
       onToggleCanvasTheme={settings.toggleCanvasTheme}
       zoom={settings.zoom}
@@ -218,6 +224,16 @@ export const SilyankaEditor = ({
       chainPendingStart={silyanka.chainPendingStart}
       onRemoveChain={silyanka.chainControls.removeChain}
       onClearChains={silyanka.chainControls.clearAllChains}
+      holeToolActive={silyanka.drawingControls.activeTool === 'hole'}
+      onToggleHoleTool={() => setSilyankaTool(
+        silyanka.drawingControls.activeTool === 'hole' ? 'pencil' : 'hole',
+      )}
+      holeSegmentToolActive={silyanka.drawingControls.activeTool === 'hole-segment'}
+      onToggleHoleSegmentTool={() => setSilyankaTool(
+        silyanka.drawingControls.activeTool === 'hole-segment' ? 'pencil' : 'hole-segment',
+      )}
+      hasDeletedBeads={silyanka.deletedBeadGhosts.length > 0}
+      onClearDeletedBeads={silyanka.clearDeletedBeads}
     />
   </>
 );

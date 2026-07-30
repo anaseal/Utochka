@@ -19,6 +19,23 @@ export const useSilyankaToolSwitch = (silyanka: SilyankaProject) => {
     if (silyanka.drawingControls.activeTool === 'pendant-chain' && tool !== 'pendant-chain') {
       silyanka.setChainPendingStart(null);
     }
+    // Уход с «Hole segment» сбрасывает наведённый предпросмотр — иначе при
+    // следующем заходе в инструмент сразу показывался бы предпросмотр по
+    // ноде, наведённой в прошлый раз, без реального наведения курсора.
+    if (silyanka.drawingControls.activeTool === 'hole-segment' && tool !== 'hole-segment') {
+      silyanka.setHoleSegmentHoverNodeId(null);
+    }
+    // Bead и Segment делят один список пометок «на удаление» (см.
+    // pendingDeleteIds в useSilyankaProject.ts) — переключение МЕЖДУ ними
+    // список не трогает (можно набирать общую пачку то одним, то другим
+    // инструментом), но уход в любой ДРУГОЙ инструмент (карандаш и т.д.) или
+    // Escape список сбрасывает без подтверждения — как и незавершённый выбор
+    // штампа/цепочки выше, непросмотренные пометки не должны молча пережить
+    // выход из режима.
+    const HOLE_TOOLS: DrawingTool[] = ['hole', 'hole-segment'];
+    if (HOLE_TOOLS.includes(silyanka.drawingControls.activeTool) && !HOLE_TOOLS.includes(tool)) {
+      silyanka.clearPendingDelete();
+    }
     silyanka.drawingControls.setActiveTool(tool);
   };
 

@@ -21,43 +21,35 @@
   color: #94a3b8;
 }
 
-/* display:none вместо opacity/visibility — скрытый пузырёк не должен
-   учитываться в scroll-области .sidebar__body (overflow-y:auto делает
-   overflow-x тоже auto), иначе призрачный горизонтальный скролл появлялся
-   бы от одной только геометрии тултипа, даже когда он не наведён. */
+/* Портализован в document.body (см. SectionHelp.tsx) — position:fixed и
+   top/left считаются в JS от getBoundingClientRect иконки, а не CSS-якорем
+   от родителя. Полностью вне скролл-геометрии сайдбара: не может вызвать
+   горизонтальный скролл/дёрганье сайдбара при наведении, и ширина (220px)
+   не обязана влезать в сам сайдбар (170–260px), только в окно браузера
+   (клэмп на этот случай — тоже в JS). */
 .section-help__bubble {
-  display: none;
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: max-content;
-  max-width: 140px;
+  position: fixed;
   background: #0f172a;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  padding: 7px 9px;
+  padding: 8px 10px;
   color: #cbd5e1;
-  font-size: 10.5px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.45;
   text-align: left;
-  z-index: 30;
+  z-index: 1000;
 }
 
 .section-help__bubble::before {
   content: '';
   position: absolute;
   top: -5px;
-  right: 10px;
+  left: 12px;
   width: 8px;
   height: 8px;
   background: #0f172a;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   transform: rotate(45deg);
-}
-
-.section-help:hover .section-help__bubble,
-.section-help:focus-within .section-help__bubble {
-  display: block;
 }

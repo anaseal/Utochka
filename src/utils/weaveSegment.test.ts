@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { Bead } from '../types/bead';
 import {
   silyankaSegmentKey, buildSegmentIndex, silyankaSegment, silyankaNodeSegment,
-  silyankaNodeClickSegment, silyankaPassCenter, vertEdgeEndNodes, crossWeaveCellOf,
+  silyankaNodeClickSegment, silyankaNodeSpans, silyankaPassCenter, vertEdgeEndNodes,
+  upperEdgeOf, crossWeaveCellOf,
 } from './weaveSegment';
 
 const bead = (id: string): Bead => ({
@@ -300,6 +301,118 @@ describe('vertEdgeEndNodes', () => {
   it('нечётный ряд: left → (r+1, c), right → (r+1, c+1)', () => {
     expect(vertEdgeEndNodes(1, 0, 'left')).toEqual({ top: { r: 1, c: 0 }, bottom: { r: 2, c: 0 } });
     expect(vertEdgeEndNodes(1, 0, 'right')).toEqual({ top: { r: 1, c: 0 }, bottom: { r: 2, c: 1 } });
+  });
+});
+
+describe('upperEdgeOf', () => {
+  it('чётный ряд: left → (r-1, c-1), right → (r-1, c)', () => {
+    expect(upperEdgeOf(2, 1, 'left')).toEqual({ r: 1, c: 0 });
+    expect(upperEdgeOf(2, 1, 'right')).toEqual({ r: 1, c: 1 });
+  });
+
+  it('нечётный ряд: left → (r-1, c), right → (r-1, c+1)', () => {
+    expect(upperEdgeOf(1, 0, 'left')).toEqual({ r: 0, c: 0 });
+    expect(upperEdgeOf(1, 0, 'right')).toEqual({ r: 0, c: 1 });
+  });
+});
+
+describe('silyankaNodeSpans', () => {
+  // Инструмент «Hole segment» (GridSidebar, «Holes»): в отличие от
+  // silyankaNodeSegment/silyankaNodeClickSegment (одна сторона одного
+  // прохода нити) здесь нужны СРАЗУ все грани узла — обе исходящие вниз, обе
+  // входящие сверху, соседняя top/bottom-кромка (только у своего ряда) и
+  // декор-колонка.
+  it('узел в середине сетки: обе исходящие, обе входящие грани и декор-колонка своей ноды', () => {
+    const idx = buildSegmentIndex([
+      bead('node-2-1'), bead('node-1-0'), bead('node-1-1'), bead('node-3-0'), bead('node-3-1'),
+      // исходящие вниз
+      bead('span-edge-2-1-left-bead-1'),
+      bead('span-edge-2-1-right-bead-1'),
+      // входящие сверху: left — из (1,0) right, right — из (1,1) left
+      bead('span-edge-1-0-right-bead-1'),
+      bead('span-edge-1-1-left-bead-1'),
+      // декор-колонка этого узла
+      bead('decor-2-1-1'),
+      // чужие — не должны попасть
+      bead('span-edge-1-0-left-bead-1'),
+      bead('span-edge-2-2-left-bead-1'),
+      bead('decor-2-1-2'), // декор чужой ноды (2,2) — та же строка id, другая колонка
+    ]);
+    expect(silyankaNodeSpans(2, 1, idx).sort()).toEqual([
+      'decor-2-1-1',
+      'span-edge-1-0-right-bead-1',
+      'span-edge-1-1-left-bead-1',
+      'span-edge-2-1-left-bead-1',
+      'span-edge-2-1-right-bead-1',
+    ]);
+  });
+
+  it('узел ряда 0: соседняя top-кромка входит, входящих граней сверху нет (ряда -1 не существует)', () => {
+    const idx = buildSegmentIndex([
+      bead('node-0-1'),
+      bead('span-edge-0-1-left-bead-1'),
+      bead('span-edge-0-1-right-bead-1'),
+      bead('span-edge-top-link-0-bead-1'),
+      bead('span-edge-top-link-1-bead-1'),
+      bead('decor-0-1-1'),
+      // чужие
+      bead('span-edge-top-link-2-bead-1'),
+      bead('span-edge-bottom-link-0-bead-1'), // bottomRow не передан — не должна попасть
+    ]);
+    expect(silyankaNodeSpans(0, 1, idx).sort()).toEqual([
+      'decor-0-1-1',
+      'span-edge-0-1-left-bead-1',
+      'span-edge-0-1-right-bead-1',
+      'span-edge-top-link-0-bead-1',
+      'span-edge-top-link-1-bead-1',
+    ]);
+  });
+
+  it('узел нижнего ряда (bottomRow передан явно): соседняя bottom-кромка входит', () => {
+    const idx = buildSegmentIndex([
+      bead('node-8-1'),
+      bead('span-edge-7-0-right-bead-1'),
+      bead('span-edge-7-1-left-bead-1'),
+      bead('span-edge-bottom-link-0-bead-1'),
+      bead('span-edge-bottom-link-1-bead-1'),
+      bead('decor-8-1-1'),
+      // чужие
+      bead('span-edge-top-link-0-bead-1'), // r=8 !== 0 — не должна попасть
+      bead('span-edge-bottom-link-2-bead-1'), // другая колонка
+    ]);
+    expect(silyankaNodeSpans(8, 1, idx, { bottomRow: 8 }).sort()).toEqual([
+      'decor-8-1-1',
+      'span-edge-7-0-right-bead-1',
+      'span-edge-7-1-left-bead-1',
+      'span-edge-bottom-link-0-bead-1',
+      'span-edge-bottom-link-1-bead-1',
+    ]);
+  });
+
+  it('регресс: узел в середине полотна не утаскивает чужую top/bottom-кромку той же колонки', () => {
+    // topLink/bottomLink не намерены по ряду (id их не хранит — см. beadId.ts),
+    // поэтому без явной проверки ряда узла (4,1) случайно подхватил бы кромки
+    // чужих рядов 0/8, просто потому что колонка совпала.
+    const idx = buildSegmentIndex([
+      bead('node-4-1'),
+      bead('span-edge-4-1-left-bead-1'),
+      bead('span-edge-4-1-right-bead-1'),
+      bead('span-edge-3-0-right-bead-1'),
+      bead('span-edge-3-1-left-bead-1'),
+      bead('decor-4-1-1'),
+      // существуют в индексе, но принадлежат чужим рядам — не должны попасть
+      bead('span-edge-top-link-0-bead-1'),
+      bead('span-edge-top-link-1-bead-1'),
+      bead('span-edge-bottom-link-0-bead-1'),
+      bead('span-edge-bottom-link-1-bead-1'),
+    ]);
+    expect(silyankaNodeSpans(4, 1, idx, { bottomRow: 8 }).sort()).toEqual([
+      'decor-4-1-1',
+      'span-edge-3-0-right-bead-1',
+      'span-edge-3-1-left-bead-1',
+      'span-edge-4-1-left-bead-1',
+      'span-edge-4-1-right-bead-1',
+    ]);
   });
 });
 

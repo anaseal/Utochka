@@ -5,6 +5,7 @@ import { BEAD_THEME } from '../../config/theme';
 import { PendantsCatalogSection } from './PendantsCatalogSection';
 import { ChainsSection } from './ChainsSection';
 import { DecorSection } from './DecorSection';
+import { HolesSection } from './HolesSection';
 import './Sidebar.css';
 import './PendantsSidebar.css';
 
@@ -44,6 +45,14 @@ interface PendantsSidebarProps {
   chainPendingStart: number | null;
   onRemoveChain: (placementId: string) => void;
   onClearChains: () => void;
+  // Дыра (GridSidebar раньше — теперь здесь, среди остальных инструментов
+  // редактирования содержимого, а не среди чистой геометрии сетки).
+  holeToolActive: boolean;
+  onToggleHoleTool: () => void;
+  holeSegmentToolActive: boolean;
+  onToggleHoleSegmentTool: () => void;
+  hasDeletedBeads: boolean;
+  onClearDeletedBeads: () => void;
 }
 
 export const PendantsSidebar = ({
@@ -75,6 +84,12 @@ export const PendantsSidebar = ({
   chainPendingStart,
   onRemoveChain,
   onClearChains,
+  holeToolActive,
+  onToggleHoleTool,
+  holeSegmentToolActive,
+  onToggleHoleSegmentTool,
+  hasDeletedBeads,
+  onClearDeletedBeads,
 }: PendantsSidebarProps) => {
   const computeCol = useCallback((clientX: number, clientY: number): number | null => {
     const svg = canvasSvgRef.current;
@@ -172,6 +187,15 @@ export const PendantsSidebar = ({
           onUpdateDecorTailLength={onUpdateDecorTailLength}
           onRemoveDecorTail={onRemoveDecorTail}
           onClearDecorTails={onClearDecorTails}
+        />
+
+        <HolesSection
+          holeToolActive={holeToolActive}
+          onToggleHoleTool={onToggleHoleTool}
+          holeSegmentToolActive={holeSegmentToolActive}
+          onToggleHoleSegmentTool={onToggleHoleSegmentTool}
+          hasDeletedBeads={hasDeletedBeads}
+          onClearDeletedBeads={onClearDeletedBeads}
         />
       </div>
 

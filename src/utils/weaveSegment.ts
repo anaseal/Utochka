@@ -11,6 +11,11 @@
 // У крестика пролётов нет — там сегмент это ячейка-крестик из четырёх бисерин
 // (левая, верхняя, нижняя, правая). Одна бисерина входит сразу в две соседние
 // ячейки; берётся та, где бисерина левая/верхняя (crossWeaveCellOf).
+//
+// Второй, независимый потребитель топологии этого файла — инструмент «Hole
+// segment» (GridSidebar, «Holes»): в отличие от плетения ему нужны ВСЕ грани
+// узла сразу (оба направления, обе стороны), а не одна сторона одного прохода
+// — см. silyankaNodeSpans ниже.
 
 import { Bead } from '../types/bead';
 import { decode } from './beadId';
@@ -95,7 +100,7 @@ export const vertEdgeEndNodes = (r: number, c: number, side: WeaveSide) => ({
 export const weavingSide = (mirrored: boolean): WeaveSide => (mirrored ? 'right' : 'left');
 
 /** Грань, входящая в узел (r, c) сверху с указанной стороны (топология generator.ts). */
-const upperEdgeOf = (r: number, c: number, side: WeaveSide) => (side === 'left'
+export const upperEdgeOf = (r: number, c: number, side: WeaveSide) => (side === 'left'
   ? (r % 2 === 0 ? { r: r - 1, c: c - 1 } : { r: r - 1, c })
   : (r % 2 === 0 ? { r: r - 1, c } : { r: r - 1, c: c + 1 }));
 
@@ -154,6 +159,62 @@ export const silyankaNodeSegment = (
     const far = vertEdgeEndNodes(r, c, side).bottom;
     push(`node:${far.r}:${far.c}`);
   }
+
+  return ids;
+};
+
+/**
+ * Все пролёты, физически сходящиеся к узлу (r, c) — обе исходящие грани
+ * (вниз, свои же `vertEdge:{r}:{c}:left/right`), обе входящие грани (сверху,
+ * через `upperEdgeOf`), соседняя top/bottom-кромка и декор-колонка, если
+ * узел их анкер. Единица удаления инструмента «Hole segment» (GridSidebar,
+ * «Holes»): в отличие от `silyankaNodeSegment` (одна сторона одного прохода
+ * нити) здесь нужно СРАЗУ всё, что от узла физически зависит — удаление узла
+ * обязано снять все его грани, а не одну.
+ *
+ * `topLink`/`bottomLink` не индексированы по ряду (сам id их не хранит — см.
+ * beadId.ts, генератор создаёт их только при r=0 / r=bottomRow
+ * соответственно), поэтому ключ `topLink:5` однозначен только если сам узел
+ * реально лежит в этом ряду — иначе можно случайно утащить чужую кромку
+ * верхнего/нижнего края в удаление узла из середины полотна той же колонки.
+ * `bottomRow` явно передаётся вызывающей стороной (в отличие от
+ * `silyankaNodeClickSegment`, где режим плетения сам ищет нижний ряд сканом
+ * `beads` за неимением `gridSize` под рукой) — у `useSilyankaProject.ts` уже
+ * есть точный источник истины, `2 * gridSize.height`.
+ *
+ * Группы структурно не пересекаются (та же гарантия, что у silyankaSegment),
+ * поэтому дедуп не нужен.
+ */
+export const silyankaNodeSpans = (
+  r: number,
+  c: number,
+  index: SegmentIndex,
+  { bottomRow }: { bottomRow?: number } = {},
+): string[] => {
+  const ids: string[] = [];
+  const push = (key: string) => {
+    const group = index.get(key);
+    if (group) ids.push(...group);
+  };
+
+  push(`vertEdge:${r}:${c}:left`);
+  push(`vertEdge:${r}:${c}:right`);
+
+  (['left', 'right'] as const).forEach((side) => {
+    const upper = upperEdgeOf(r, c, side);
+    push(`vertEdge:${upper.r}:${upper.c}:${flipSide(side)}`);
+  });
+
+  if (r === 0) {
+    push(`topLink:${c - 1}`);
+    push(`topLink:${c}`);
+  }
+  if (bottomRow !== undefined && r === bottomRow) {
+    push(`bottomLink:${c - 1}`);
+    push(`bottomLink:${c}`);
+  }
+
+  push(`decor:${r}:${c}`);
 
   return ids;
 };

@@ -19,11 +19,13 @@ import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
 import { chainBeadId } from '../utils/pendantChain';
 import { decorTailBeadId } from '../utils/decorTail';
 import { getDecorRowStep } from '../utils/decorGeometry';
+import { buildSegmentIndex, silyankaNodeSpans } from '../utils/weaveSegment';
 import {
   StampPattern, StampContext, StampAnchorEdge, captureStampPattern, applyStampPattern,
 } from '../utils/stamp';
 import {
   isPendantPlacements, isPendantChains, isDecorTailPlacements, isThreads, isHexColor, isOpacity,
+  isDeletedBeads,
 } from './useSilyankaProject.validators';
 
 // Всё силяночное состояние и обработчики, вынесенные из App.tsx, чтобы
@@ -62,7 +64,124 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     edgeExtension, topEdgeEnabled, taper,
   } = gridConfig;
 
-  const beads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension, topEdgeEnabled, taper);
+  const rawBeads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension, topEdgeEnabled, taper);
+
+  // Дыра (инструмент GridSidebar): id -> true для бисерин, удалённых кликом.
+  // Структурная правка уровня генератора (как taper/rowSpanOverrides) — не
+  // часть Undo/Redo рисования и не сбрасывается Clear All, переживает их так
+  // же, как и остальная геометрия сетки.
+  const [deletedBeads, setDeletedBeads] = usePersistedState<Record<string, true>>(
+    'silyanka:deletedBeads', {}, isDeletedBeads,
+  );
+
+  const beads = useMemo(
+    () => rawBeads.filter(b => !deletedBeads[b.id]),
+    [rawBeads, deletedBeads],
+  );
+
+  // Для рендера «призраков» удалённых бисерин (видны только пока активен
+  // инструмент Hole — см. CanvasView) нужны их исходные позиции, которых уже
+  // нет в отфильтрованном beads.
+  const deletedBeadGhosts = useMemo(
+    () => rawBeads.filter(b => deletedBeads[b.id]),
+    [rawBeads, deletedBeads],
+  );
+
+  const toggleDeletedBead = useCallback((id: string) => {
+    setDeletedBeads(prev => {
+      const next = { ...prev };
+      if (next[id]) delete next[id]; else next[id] = true;
+      return next;
+    });
+  }, [setDeletedBeads]);
+
+  const clearDeletedBeads = useCallback(() => {
+    setDeletedBeads({});
+  }, [setDeletedBeads]);
+
+  // Инструмент «Hole segment» (GridSidebar, «Holes»): клик по ноде удаляет её
+  // саму и все физически сходящиеся к ней спаны разом (см. silyankaNodeSpans,
+  // weaveSegment.ts) — вместо выковыривания грани за гранью инструментом Hole.
+  // beadById — общий индекс для поиска бисерины по id и (в CanvasView) для
+  // «липкой» проверки при наведении, чтобы не строить Map дважды на одно и то
+  // же beads.
+  const beadById = useMemo(() => new Map(beads.map(b => [b.id, b])), [beads]);
+  const holeSegmentIndex = useMemo(() => buildSegmentIndex(beads), [beads]);
+
+  const getHoleSegmentIds = useCallback((nodeId: string): string[] => {
+    const bead = beadById.get(nodeId);
+    if (!bead || bead.type !== 'NODE') return [];
+    const spans = silyankaNodeSpans(
+      bead.logicalIndex.row, bead.logicalIndex.col, holeSegmentIndex,
+      { bottomRow: 2 * gridSize.height },
+    );
+    return [nodeId, ...spans];
+  }, [beadById, holeSegmentIndex, gridSize.height]);
+
+  const [holeSegmentHoverNodeId, setHoleSegmentHoverNodeId] = useState<string | null>(null);
+
+  const holeSegmentPreviewIds = useMemo<Set<string> | null>(() => {
+    if (!holeSegmentHoverNodeId) return null;
+    const ids = getHoleSegmentIds(holeSegmentHoverNodeId);
+    return ids.length > 0 ? new Set(ids) : null;
+  }, [holeSegmentHoverNodeId, getHoleSegmentIds]);
+
+  const deleteBeadIds = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setDeletedBeads(prev => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = true;
+      return next;
+    });
+  }, [setDeletedBeads]);
+
+  // Пометка «на удаление» — общая для Bead и Segment, требует явного
+  // подтверждения (см. ниже), в отличие от восстановления призрака
+  // (toggleDeletedBead выше) и от самого подтверждения: удаление такое же
+  // деструктивное, а Undo/Redo рисования на deletedBeads не действует (см.
+  // spec.md), поэтому именно у него, в отличие от восстановления, есть шаг
+  // предпросмотра. Не персистится (usePersistedState не нужен) — это
+  // черновая пометка на время сессии работы с инструментом, а не часть
+  // сохранённого проекта; сбрасывается при уходе с обоих под-инструментов
+  // Hole (см. useSilyankaToolSwitch.ts).
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Record<string, true>>({});
+
+  // ids[0] — «якорь»: у Bead это сама бисерина, у Segment — нода сегмента.
+  // Если якорь уже помечен, снимаем пометку со всего списка (повторный клик
+  // по той же бисерине/тому же узлу отменяет её метку) — иначе помечаем всё
+  // сразу.
+  const togglePendingDelete = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setPendingDeleteIds(prev => {
+      const next = { ...prev };
+      if (next[ids[0]]) {
+        for (const id of ids) delete next[id];
+      } else {
+        for (const id of ids) next[id] = true;
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleBeadPending = useCallback((id: string) => {
+    togglePendingDelete([id]);
+  }, [togglePendingDelete]);
+
+  const toggleHoleSegmentPending = useCallback((nodeId: string) => {
+    togglePendingDelete(getHoleSegmentIds(nodeId));
+  }, [togglePendingDelete, getHoleSegmentIds]);
+
+  const pendingDeleteCount = Object.keys(pendingDeleteIds).length;
+
+  const confirmPendingDelete = useCallback(() => {
+    deleteBeadIds(Object.keys(pendingDeleteIds));
+    setPendingDeleteIds({});
+  }, [deleteBeadIds, pendingDeleteIds]);
+
+  const clearPendingDelete = useCallback(() => {
+    setPendingDeleteIds({});
+  }, []);
+
   const threadControls = useThreads(threads, drawingControls.applyPatch);
 
   // Прогресс плетения — отдельно от рисунка и от его истории Undo/Redo
@@ -386,7 +505,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     decorTailPlacements, setDecorTailPlacements, decorTailControls,
     threads, threadControls, weave,
     activeThreadColor, setActiveThreadColor, activeThreadOpacity, setActiveThreadOpacity,
-    beads, drawingControls, pendantControls,
+    beads, deletedBeadGhosts, toggleDeletedBead, clearDeletedBeads, drawingControls, pendantControls,
+    beadById, holeSegmentPreviewIds, setHoleSegmentHoverNodeId,
+    toggleBeadPending, toggleHoleSegmentPending, pendingDeleteIds, pendingDeleteCount,
+    confirmPendingDelete, clearPendingDelete,
     hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
     hoveredDecorTailCol, setHoveredDecorTailCol,
     stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewPatch,

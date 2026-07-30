@@ -15,6 +15,8 @@ const TOOL_MODIFIER: Partial<Record<DrawingTool, string>> = {
   stamp: 'stamp',
   'pendant-chain': 'chain',
   thread: 'thread',
+  hole: 'hole',
+  'hole-segment': 'hole',
 };
 
 interface CanvasSurfaceProps {

@@ -116,7 +116,7 @@ export const HeaderEndGroup = ({
             <button
               onClick={silyankaProps.onToggleSidebar}
               className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
-              title="Pendant library"
+              title="Decor"
               aria-pressed={silyankaProps.sidebarOpen}
             >
               <PendantIcon size={22} />
