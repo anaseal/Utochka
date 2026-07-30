@@ -22,13 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-node_modules
-dist
-dist-ssr
-*.local
 .env
 .env.*
 .eslintcache
 claude.md
 .claude/
 .playwright-mcp/
+
+# Скриншоты/картинки для проверки, случайно оставленные в корне
+# (реальные ассеты живут в src/assets и public/) — так в репозиторий
+# однажды попали a1.jpg, check1.png, home-desktop.png
+/*.png
+/*.jpg
+/*.jpeg
