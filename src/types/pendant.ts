@@ -26,11 +26,22 @@ export interface PendantTemplate {
   links: [number, number][];
 }
 
+// Якорь ТОЧЕЧНОЙ подвески: настоящая нода нижнего ряда (по колонке) либо
+// узел-граница меша зубца (bead.side непустой — тот же критерий, что и у
+// конца цепочки-подвески, см. ChainEndpoint и «границы меша» в
+// utils/tooth.ts) — форма идентична ChainEndpoint не случайно: у зубца
+// несколько равноправных точек крепления, а не одна, поэтому подвеска
+// адресуется так же, по (placementId, beadIndex). Зубец занимает свою полосу
+// [startCol, endCol] нижнего ряда целиком — подвеска с {kind:'grid'} на эти
+// колонки не ставится (см. spec.md, «Зубец»).
+export type PendantAnchor =
+  | { kind: 'grid'; col: number }
+  | { kind: 'tooth'; placementId: string; beadIndex: number };
+
 export interface PendantPlacement {
   placementId: string;
   templateId: string;
-  /** Индекс колонки ноды нижнего ряда, к которой крепится подвеска */
-  col: number;
+  anchor: PendantAnchor;
   /** Цвета отдельных бусин: индекс бусины в template.beads → цвет */
   colorMap: Record<number, string>;
 }

@@ -3,7 +3,7 @@ import { usePersistedState } from './usePersistedState';
 import { BEAD_THEME } from '../config/theme';
 import { BottomEdgeDecor, EdgeExtension, GridConfig, Taper } from '../types/bead';
 import {
-  PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint,
+  PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint, PendantAnchor,
 } from '../types/pendant';
 import { clampSpan, resolveSpanCount } from '../utils/spans';
 import { clamp } from '../utils/clamp';
@@ -102,15 +102,21 @@ export const useGridConfig = (
       (e.kind === 'grid' ? { ...e, col: e.col + mirrorDelta } : e);
     const chainEndpointSurvives = (e: ChainEndpoint): boolean =>
       (e.kind === 'grid' ? e.col >= 0 && e.col < newWidth : survivingToothIds.has(e.placementId));
+    // Тот же приём для якоря точечной подвески (PendantAnchor) — зубец-якорь
+    // сам не сдвигается, валиден, пока жив.
+    const shiftPendantAnchor = (a: PendantAnchor): PendantAnchor =>
+      (a.kind === 'grid' ? { ...a, col: a.col + mirrorDelta } : a);
+    const pendantAnchorSurvives = (a: PendantAnchor): boolean =>
+      (a.kind === 'grid' ? a.col >= 0 && a.col < newWidth : survivingToothIds.has(a.placementId));
 
     if (wasMirror) {
       remapDesignMap(map =>
         shiftDesignMapColumns(map, mirrorDelta, newWidth, edgeExtension.left, edgeExtension.right),
       );
-      // Подвески сдвигаем вместе с рисунком, иначе их col отвяжется от нод.
+      // Подвески сдвигаем вместе с рисунком, иначе их якорь отвяжется от нод.
       setPendantPlacements(prev => prev
-        .map(p => ({ ...p, col: p.col + mirrorDelta }))
-        .filter(p => p.col >= 0 && p.col < newWidth));
+        .map(p => ({ ...p, anchor: shiftPendantAnchor(p.anchor) }))
+        .filter(p => pendantAnchorSurvives(p.anchor)));
       // Цепочки сдвигаем целиком по обоим концам; если один конец вышел за
       // границу (сетка) или потерял свой зубец (зубец) — цепочка теряет
       // якорь и удаляется целиком.
@@ -126,7 +132,7 @@ export const useGridConfig = (
       setTeeth(nextTeeth);
     } else if (newWidth < gridSize.width) {
       // При сужении сетки убираем подвески/цепочки/хвосты/зубцы с исчезнувших колонок.
-      setPendantPlacements(prev => prev.filter(p => p.col < newWidth));
+      setPendantPlacements(prev => prev.filter(p => pendantAnchorSurvives(p.anchor)));
       setPendantChains(prev =>
         prev.filter(c => chainEndpointSurvives(c.start) && chainEndpointSurvives(c.end)));
       setDecorTailPlacements(prev => prev.filter(t => t.col < newWidth));

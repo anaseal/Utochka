@@ -10,7 +10,7 @@ interface DecorSectionProps {
   bottomEdgeEnabled: boolean;
   decorBands: Record<number, number>;
   rowGaps: { row: number; midY: number }[];
-  computeRow: (clientY: number) => number | null;
+  computeRow: (clientX: number, clientY: number) => number | null;
   onHoveredRowChange: (row: number | null) => void;
   onDecorDrop: (nodeRow: number) => void;
   onDecorCount: (nodeRow: number, delta: number) => void;
@@ -41,14 +41,8 @@ export const DecorSection = ({
   onRemoveDecorTail,
   onClearDecorTails,
 }: DecorSectionProps) => {
-  // computeRow игнорирует X — сигнатура useSidebarDragDrop единая для обеих
-  // целей (колонка/ряд), поэтому X просто не используется здесь.
-  const computeRowTarget = useCallback(
-    (_clientX: number, clientY: number) => computeRow(clientY),
-    [computeRow],
-  );
   const band = useSidebarDragDrop<undefined, number>({
-    computeTarget: computeRowTarget,
+    computeTarget: computeRow,
     onHoverChange: onHoveredRowChange,
     onDrop: useCallback((_payload: undefined, row: number) => onDecorDrop(row), [onDecorDrop]),
   });

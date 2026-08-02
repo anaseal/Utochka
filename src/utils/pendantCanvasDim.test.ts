@@ -22,7 +22,9 @@ describe('computeSilyankaExtraMaxY', () => {
       id: 't1', name: 'T1', links: [],
       beads: [{ dx: 0, dy: 10, shape: 'circle', type: 'NODE', r: 4 }],
     };
-    const placement: PendantPlacement = { placementId: 'p1', templateId: 't1', col: 0, colorMap: {} };
+    const placement: PendantPlacement = {
+      placementId: 'p1', templateId: 't1', anchor: { kind: 'grid', col: 0 }, colorMap: {},
+    };
     const anchor = makeNode(0, 100);
     const result = computeSilyankaExtraMaxY(
       [placement], { t1: template }, [anchor], [], [], [], 20, NO_TEETH, NO_TOOTH_MESHES,
@@ -31,7 +33,9 @@ describe('computeSilyankaExtraMaxY', () => {
   });
 
   it('ignores a placement with no matching template or anchor', () => {
-    const placement: PendantPlacement = { placementId: 'p1', templateId: 'missing', col: 0, colorMap: {} };
+    const placement: PendantPlacement = {
+      placementId: 'p1', templateId: 'missing', anchor: { kind: 'grid', col: 0 }, colorMap: {},
+    };
     expect(computeSilyankaExtraMaxY(
       [placement], {}, [makeNode(0, 100)], [], [], [], 20, NO_TEETH, NO_TOOTH_MESHES,
     )).toBe(0);
@@ -79,6 +83,27 @@ describe('computeSilyankaExtraMaxY', () => {
     );
     expect(result).toBe(expectedMaxY);
     expect(result).toBeGreaterThan(100 + 26 - 1);
+  });
+
+  it('accounts for a pendant anchored on a tooth tip', () => {
+    const bottomNodes = [makeNode(0, 100), makeNode(1, 100), makeNode(2, 100)];
+    const tooth: ToothPlacement = { placementId: 'z1', startCol: 0, endCol: 2, colorMap: {} };
+    const toothMeshes = computeToothMeshes([tooth], bottomNodes, 65, 3);
+    const mesh = toothMeshes.get('z1')!;
+    const template: PendantTemplate = {
+      id: 't1', name: 'T1', links: [],
+      beads: [{ dx: 0, dy: 10, shape: 'circle', type: 'NODE', r: 4 }],
+    };
+    const placement: PendantPlacement = {
+      placementId: 'p1',
+      templateId: 't1',
+      anchor: { kind: 'tooth', placementId: 'z1', beadIndex: mesh.tipIndex },
+      colorMap: {},
+    };
+    const result = computeSilyankaExtraMaxY(
+      [placement], { t1: template }, [], [], bottomNodes, [], 20, [tooth], toothMeshes,
+    );
+    expect(result).toBeCloseTo(mesh.beads[mesh.tipIndex].y + 14 * PENDANT_SCALE + 26);
   });
 
   it('accounts for a chain anchored on a tooth node', () => {

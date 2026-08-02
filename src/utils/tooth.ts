@@ -54,6 +54,16 @@ export interface ToothMesh {
   // Смежность ВНУТРИ меша по плоскому индексу — для заливки (floodFill.ts).
   neighbors: number[][];
   anchors: ToothAnchor[];
+  // Индекс бисерины-кончика (последний ряд, единственный узел, side у неё —
+  // ['left','right']) — единая точка правды вместо того, чтобы каждый
+  // потребитель заново искал её через beads.findIndex(b => b.side?.length
+  // === 2) (или, что хуже, приближал её через beads.length - 1 — это НЕ
+  // кончик, а один из span-бисерин, ведущих к нему, см. computeToothMesh).
+  // Используется там, где нужна именно эта одна точка (позиция кнопки
+  // удаления зубца в ToothLayer.tsx) — точечная подвеска на границе меша
+  // (PendantAnchor{kind:'tooth'}, types/pendant.ts) кончиком не ограничена,
+  // она адресуется произвольным beadIndex, как и конец цепочки-подвески.
+  tipIndex: number;
 }
 
 const addNeighbor = (neighbors: number[][], a: number, b: number) => {
@@ -91,6 +101,14 @@ export const computeToothMesh = (
     return beads.length - 1;
   };
 
+  // Кончик — единственный узел последнего ряда (k===rows, count===1) —
+  // фиксируем сразу при его создании, а не ищем потом по side (см.
+  // ToothMesh.tipIndex выше): beads.length-1 в конце функции им НЕ является —
+  // после узла ряда k ещё пушатся его span-бисерины к следующему ряду
+  // (или, для последнего ряда, ничего не следует, но связи ВВЕРХ к нему всё
+  // равно допушиваются после самого узла).
+  let tipIndex = -1;
+
   let prevRowIndexByPosKey: Map<number, number> | null = null;
 
   for (let k = 1; k <= rows; k++) {
@@ -102,6 +120,7 @@ export const computeToothMesh = (
       const pos = startCol + k * 0.5 + i;
       const x = pos * stepX;
       const nodeIndex = pushBead(x, y, 'node');
+      if (k === rows) tipIndex = nodeIndex;
       rowIndexByPosKey.set(Math.round(pos * 2), nodeIndex);
       const sides: ('left' | 'right')[] = [];
       if (i === 0) sides.push('left');
@@ -150,7 +169,7 @@ export const computeToothMesh = (
     prevRowIndexByPosKey = rowIndexByPosKey;
   }
 
-  return { beads, neighbors, anchors };
+  return { beads, neighbors, anchors, tipIndex };
 };
 
 // Единая точка входа для всех потребителей геометрии зубца (заливка,
@@ -197,3 +216,63 @@ export const toothOverlaps = (
   endCol: number,
   existing: ToothPlacement[],
 ): boolean => existing.some((t) => startCol <= t.endCol && endCol >= t.startCol);
+
+// true, если col попадает в полосу [startCol, endCol] ЛЮБОГО зубца — зубец
+// занимает эти ноды нижнего ряда целиком (растёт из них), поэтому ничего
+// точечное (обычная подвеска) на них больше не ставится, см. spec.md,
+// «Зубец». Декор-хвост и цепочки-подвески (grid-конец) этим не ограничены —
+// решение сознательно сузили до точечных подвесок.
+export const isColumnInAnyTooth = (col: number, teeth: ToothPlacement[]): boolean =>
+  teeth.some((t) => col >= t.startCol && col <= t.endCol);
+
+// Зеркальная пара зубца по формуле отражения нижнего ряда (col c ↔
+// width-1-c, тот же приём, что addTooth/withMirror в useTeeth.ts) — единая
+// точка правды вместо того, чтобы искать зеркало зубца отдельно в
+// usePendantChains.ts (концы цепочки) и usePendants.ts (подвеска на кончике).
+export const findMirrorTooth = (
+  tooth: ToothPlacement,
+  teeth: ToothPlacement[],
+  width: number,
+): ToothPlacement | null => {
+  const mirrorStart = width - 1 - tooth.endCol;
+  const mirrorEnd = width - 1 - tooth.startCol;
+  return teeth.find((t) => t.startCol === mirrorStart && t.endCol === mirrorEnd) ?? null;
+};
+
+export interface ToothRange {
+  startCol: number;
+  endCol: number;
+}
+
+// Диапазоны, которые реально добавятся при простановке зубца между
+// colA/colB — основной (если не пересекается с existing) и, в зеркальном
+// режиме, его зеркальная пара (если не пересекается с existing И основным, и
+// не совпадает с ним же). Единая точка правды для useTeeth.addTooth (сама
+// простановка) и useSilyankaProject.ts (снятие точечных подвесок с колонок,
+// которые займёт зубец, см. isColumnInAnyTooth) — иначе условие «добавится
+// или нет» разошлось бы двумя копиями.
+export const computeToothInsertionRanges = (
+  colA: number,
+  colB: number,
+  existing: ToothPlacement[],
+  mirrorMode: boolean,
+  width: number,
+): ToothRange[] => {
+  if (colA === colB) return [];
+  const startCol = Math.min(colA, colB);
+  const endCol = Math.max(colA, colB);
+  if (toothOverlaps(startCol, endCol, existing)) return [];
+  const ranges: ToothRange[] = [{ startCol, endCol }];
+  if (mirrorMode && width > 1) {
+    const mirrorStart = width - 1 - endCol;
+    const mirrorEnd = width - 1 - startCol;
+    const withMain = [...existing, { placementId: '', startCol, endCol, colorMap: {} }];
+    if (
+      (mirrorStart !== startCol || mirrorEnd !== endCol) &&
+      !toothOverlaps(mirrorStart, mirrorEnd, withMain)
+    ) {
+      ranges.push({ startCol: mirrorStart, endCol: mirrorEnd });
+    }
+  }
+  return ranges;
+};

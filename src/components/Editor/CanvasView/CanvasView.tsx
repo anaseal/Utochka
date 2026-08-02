@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Bead } from '../../../types/bead';
 import {
   PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint,
+  PendantAnchor,
 } from '../../../types/pendant';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { BeadGrid } from './BeadGrid';
@@ -95,7 +96,7 @@ interface CanvasViewProps {
   // кончик хвоста — см. pendantAnchors в useSilyankaProject.ts. bottomNodes
   // остаётся настоящим якорем для цепочек и самого DecorTailLayer.
   pendantAnchors: Bead[];
-  hoveredCol: number | null;
+  hoveredPendantAnchor: PendantAnchor | null;
   onPaintPendantBead: (placementId: string, beadIndex: number) => void;
   onRemovePlacement: (placementId: string) => void;
   pendantChains: PendantChain[];
@@ -123,6 +124,11 @@ interface CanvasViewProps {
   chainPendingStart: ChainEndpoint | null;
   onChainNodeClick: (endpoint: ChainEndpoint) => void;
   canvasSvgRef: React.RefObject<SVGSVGElement | null>;
+  // Группа-носитель координат бисерин — общая с PendantsSidebar (см.
+  // useSilyankaProject.ts), чтобы драг подвески из каталога переводил
+  // client-координаты через ту же useBeadCoords (getScreenCTM), которой здесь
+  // пользуется нитка/стемп, а не отдельной ручной копией той же формулы.
+  stampGroupRef: React.RefObject<SVGGElement | null>;
   topEdgeEnabled: boolean;
   bottomEdgeEnabled: boolean;
   stampPattern: StampPattern | null;
@@ -188,7 +194,7 @@ export const CanvasView = ({
   pendantTemplates,
   bottomNodes,
   pendantAnchors,
-  hoveredCol,
+  hoveredPendantAnchor,
   onPaintPendantBead,
   onRemovePlacement,
   pendantChains,
@@ -214,6 +220,7 @@ export const CanvasView = ({
   chainPendingStart,
   onChainNodeClick,
   canvasSvgRef,
+  stampGroupRef,
   topEdgeEnabled,
   bottomEdgeEnabled,
   stampPattern,
@@ -233,7 +240,6 @@ export const CanvasView = ({
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
   const { nodeRadius } = BEAD_THEME.sizes;
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const stampGroupRef = useRef<SVGGElement>(null);
   // Сворачиваемый редактор количества бисерин (per-row span controls,
   // CanvasRulers) — свёрнут по умолчанию на всех ширинах экрана (столбик
   // ±/счётчиков — визуальный шум, нужен редко), раскрывается той же ручкой
@@ -639,10 +645,12 @@ export const CanvasView = ({
                   placements={pendantPlacements}
                   templates={pendantTemplates}
                   bottomNodes={pendantAnchors}
+                  toothMeshes={toothMeshes}
+                  teeth={teeth}
                   isDrawing={isDrawing}
                   onPaintBead={onPaintPendantBead}
                   onRemove={onRemovePlacement}
-                  hoveredCol={hoveredCol}
+                  hoveredAnchor={hoveredPendantAnchor}
                   mirrorMode={mirrorMode}
                   width={width}
                   highlightedColor={highlightedColor}

@@ -4,6 +4,7 @@ import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, To
 import { PENDANT_SCALE } from '../data/pendantTemplates';
 import { computeChainBeadPositions, resolveChainAnchor } from './pendantChain';
 import { ToothMesh } from './tooth';
+import { resolvePendantAnchor } from './pendantAnchor';
 
 // Подвески, цепочки-подвески и декор-хвосты свисают ниже сетки — считает,
 // насколько именно нужно расширить высоту SVG-холста (extraMaxY для
@@ -25,9 +26,10 @@ export const computeSilyankaExtraMaxY = (
   toothMeshes: Map<string, ToothMesh>,
 ): number => {
   let pendantMaxY = 0;
+  const pendantAnchorByCol = new Map(pendantAnchors.map(n => [n.logicalIndex.col, n]));
   for (const p of pendantPlacements) {
     const t = pendantTemplates[p.templateId];
-    const anchor = pendantAnchors.find(n => n.logicalIndex.col === p.col);
+    const anchor = resolvePendantAnchor(p.anchor, pendantAnchorByCol, toothMeshes);
     if (!t || !anchor) continue;
     let depth = -Infinity;
     for (const b of t.beads) {

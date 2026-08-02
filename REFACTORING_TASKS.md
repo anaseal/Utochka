@@ -33,261 +33,34 @@ npm-зависимости — только после обсуждения; п�
 > плетения — по дизайну только у силянки (как и было решено для T4 про
 > подвески), это не дублирование, а осознанная асимметрия. Новых задач по этим
 > модулям не заведено — если позже найдётся конкретное дублирование внутри
-> них, добавить отдельным пунктом. Также обновлён статус T12 (Pointer Events
-> частично уже реализованы) — см. ниже.
-
----
-
-## T1 — Единый источник схемы ID бисерин (`beadId.ts`) · P1 · 🔴 красная зона · ✅ выполнено
-
-**Факт.** Добавлен `src/utils/beadId.ts` (`BeadRef`, `encode`, `decode`) —
-единственное место с регэкспами формата ID. `regrid.ts`, `mirror.ts`,
-`stamp.ts`, `floodFill.buildAdjacencyMap` переведены на `decode`/`encode`
-вместо локальных регэкспов; `generator.ts` собирает id через `encode`.
-Байт-в-байт сверка старой/новой генерации на 6 конфигурациях (разные
-width/height/spans/overrides/decorBands/bottomEdge) — id идентичны. `npm test`
-(69/69) и `npm run lint` зелёные.
-
-**Проблема (была).** ID кодируют геометрию строкой (`node-r-c`,
-`span-edge-r-c-side-bead-i`, `span-edge-top-link-c-bead-i`,
-`span-edge-bottom-link-c-bead-i`, `decor-r-k-c`). Строятся в
-[generator.ts](src/utils/generator.ts), а разбираются почти идентичными
-регэкспами в 4 файлах: [floodFill.ts:7-10](src/utils/floodFill.ts#L7-L10),
-[mirror.ts:10-14](src/utils/mirror.ts#L10-L14),
-[stamp.ts:37-41](src/utils/stamp.ts#L37-L41),
-[regrid.ts:5-8](src/utils/regrid.ts#L5-L8). Пять копий одного знания о формате.
-Отдельно: `regrid.shiftId` дублирует не только регэкспы, но и саму
-column-математику чётности рядов, уже описанную в `mirror.mirrorBeadId` —
-только для сдвига, а не отражения.
-
-**Почему важно.** Любое изменение формата ID требует синхронной правки в 5
-местах, компилятор не помогает — рассинхрон проявляется в рантайме как молча
-неработающая заливка/зеркало/штамп. Это первопричина хрупкости; T4-T7
-дешевеют после неё.
-
-**Файлы.** Новый `src/utils/beadId.ts`; миграция потребителей: `mirror.ts`,
-`stamp.ts`, `regrid.ts`, `floodFill.ts`; по возможности `generator.ts` (сборка ID
-через `encode`).
-
-**План.**
-1. Discriminated union `BeadRef`:
-   `{kind:'node',r,c}` | `{kind:'vertEdge',r,c,side,i}` |
-   `{kind:'topLink',c,i}` | `{kind:'bottomLink',c,i}` | `{kind:'decor',r,k,c}`.
-2. `encode(ref): string` и `decode(id): BeadRef | null` — единственное место с
-   регэкспами/шаблонами.
-3. Перевести `mirror`/`stamp`/`regrid` на работу со структурой (`decode` →
-   преобразование полей → `encode`), убрать локальные регэкспы.
-4. `floodFill.buildAdjacencyMap` перевести на `decode` вместо ручного match.
-5. `generator.ts` собирает ID через `encode` (аккуратно — красная зона, отдельно
-   проверить, что строки байт-в-байт совпадают со старыми).
-
-**Порядок миграции (по возрастанию риска).** `regrid` → `mirror` → `stamp` →
-`floodFill` → `generator`. После каждого файла — прогон соответствующих тестов
-из T2 (или ручная проверка функции, если T2 ещё не сделан).
-
-**Критерии готовности.**
-- Регэкспы формата ID существуют только в `beadId.ts`.
-- `switch(kind)` исчерпывающий (компилятор ловит недобавленный тип).
-- Заливка, зеркало, штамп, resize-в-mirror, декор-полосы работают как раньше
-  (ручная проверка сценариев + T2, если готов).
-- ID, генерируемые `generator.ts`, идентичны прежним (важно: в localStorage
-  уже лежат старые ID пользователей).
-
-**Зависимости.** Нет. Желательно делать **после** T2 (тесты как страховка), но
-T2 можно писать и против текущего кода. Требует плана-подтверждения (задевает
-`generator.ts`). CrossWeave не затронут — там один тип бисерины (`bead-r-c`),
-собственный простой формат в `crossWeaveMirror.ts`.
-
----
-
-## T2 — Unit-тесты на чистую геометрию · P2 · ✅ выполнено
-
-**Факт.** 7 test-файлов, 69 тестов, `npm test` зелёный (проверено повторным
-прогоном). Покрыты все пункты плана ниже плюс `crossWeaveMirror`/
-`crossWeaveGenerator` (не были в исходном плане, т.к. CrossWeave тогда ещё не
-было) и `captureStampPattern`/`applyStampPattern` сверх минимального пункта про
-`translateBeadId`.
-
-**Проблема.** Тестов почти нет (силяночные `spans`/`mirror`/`stamp`/`regrid`/
-`floodFill` покрыты слабо, `crossWeaveMirror`/`crossWeaveGenerator` — не покрыты
-вовсе). Самая сложная логика — чистые функции с нетривиальной геометрией
-(чётность рядов, sin-дуги, per-row overrides, декор с измерением `k`,
-округление `i2 = Math.round(t*(dstCount+1))` в [stamp.ts:112](src/utils/stamp.ts#L112)).
-
-**Почему важно.** Корректность держится на ручной проверке в браузере.
-Регрессии в переносе/зеркале не замечаются до жалобы. Страховка для T1 и для
-объединения хуков в T4.
-
-**Файлы.** `vitest.config.ts` (уже есть — `npm test` настроен), `*.test.ts` рядом
-с утилитами (см. пример [crossWeaveMirror.test.ts](src/utils/crossWeaveMirror.test.ts)).
-
-**План / что покрыть.**
-- `spans`: `resolveSpanCount` (чёт/нечёт, override, ключ `-1`), `clampSpan`
-  (границы 3–10).
-- `mirror`: узлы чётных/нечётных рядов, крайний узел нечётного ряда → `null`,
-  верх/низ кромки, декор, обмен `left/right`.
-- `stamp.translateBeadId`: перенос по dRow/dCol, кромки роняются при `dRow≠0`,
-  округление индекса при разном `srcCount/dstCount`, выход за сетку → `null`.
-- `regrid.shiftDesignMapColumns`: сдвиг, отбрасывание вышедших за сетку.
-- `floodFill.computeUnifiedFloodFill`: маленькая сетка, растекание сетка↔подвеска
-  через якорную ноду, стоп на другом цвете.
-
-**Критерии готовности.** `npm test` зелёный; крайние случаи (границы сетки,
-`null`-возвраты) покрыты; тесты выражены в терминах поведения, не реализации.
-
-**Зависимости.** Нет. Делать первой либо параллельно с T1.
-
----
-
-## T3 — Общая утилита `clamp()` + централизация числовых границ · P5 · ✅ выполнено
-
-**Было.** Паттерн `Math.min(max, Math.max(min, v))` был продублирован без
-общей функции в `App.tsx` (zoom), `useSilyankaProject.ts` (spacing ×2),
-`useCrossWeaveProject.ts` (spacing ×2) — и, как выяснилось при реализации, ещё и
-в `ColorPicker.tsx` (свой локальный `clamp` для HSV).
-
-**Стало.** Добавлен `src/utils/clamp.ts` (`clamp(v, min, max)`), подключён во
-всех перечисленных местах; `spans.ts.clampSpan` переписан через него;
-`theme.ts` получил `APP_CONSTRAINTS.minZoom/maxZoom/zoomStep`, на них заменены
-магические `0.25/3`/`25/300` в `App.tsx` и `Header.tsx`.
-
-**Осталось проверить (не блокирует T4, но стоит сверить перед закрытием).**
-- Ручная проверка: zoom-степпер в Header (`min/max` теперь через
-  `APP_CONSTRAINTS`), spacing-степперы обеих техник, HSV-пикер цвета — без
-  регрессий в границах.
-- `npm run lint`/`npm run build` не показывают неиспользуемый импорт в местах,
-  где раньше был локальный `clamp` (`ColorPicker.tsx`).
-
----
-
-## T4 — Общий хук резайза сетки для Silyanka и CrossWeave · P2 · ✅ выполнено
-
-**Факт.** Добавлен `src/utils/gridResize.ts` (`resizeWidthRelative`,
-`resizeWidthAbsolute` — чистая mirror-aware арифметика ширины, возвращает
-`{newWidth, mirrorDelta}` или `null`, если размер не изменился). Подключён в
-обоих хуках: `useSilyankaProject.ts` через общий `applyWidth` (+ снятие
-подвесок при сужении/сдвиге — шаг, специфичный только для силянки, оставлен
-поверх общей базы) и `useCrossWeaveProject.ts` через свой `applyWidth`.
-Очистка `decorBands`/`rowSpanOverrides` внутри `useSilyankaProject.ts`
-объединена в `pruneRowsBelow` + общие `applyHeight`/`applySpanEdge`, вызываемые
-и из relative-, и из absolute-сеттеров — дублирования между ними больше нет.
-`spec.md` обновлён (путь `App.tsx` → `useSilyankaProject.ts`, упоминание
-общего `applyHeight`). `npm test` (69/69), `npm run lint`, `npm run build`
-зелёные.
-
-**Проблема (была).** Логика «относительный/абсолютный сеттер размера с очисткой
-зависимого состояния» продублирована на трёх уровнях:
-1. **Внутри `useSilyankaProject.ts` самого с собой:** очистка `decorBands` при
-   уменьшении высоты — дословно одинаковый блок в
-   [updateDimension('height')](src/hooks/useSilyankaProject.ts#L226-L237) и в
-   [setHeightAbsolute](src/hooks/useSilyankaProject.ts#L289-L302); аналогично
-   [updateTopSpan](src/hooks/useSilyankaProject.ts#L240-L245)/[setTopSpanAbsolute](src/hooks/useSilyankaProject.ts#L304-L309)
-   и bottom-пара — оба зовут `pruneRedundantOverrides`.
-2. **Mirror-resize (±2 с центрированием)** — почти построчно совпадает с
-   [updateDimension('width')](src/hooks/useSilyankaProject.ts#L201-L216)/[setWidthAbsolute](src/hooks/useSilyankaProject.ts#L262-L282)
-   и тем же в
-   [useCrossWeaveProject.ts:69-82](src/hooks/useCrossWeaveProject.ts#L69-L82)/[84-104](src/hooks/useCrossWeaveProject.ts#L84-L104) —
-   отличается только вызываемая функция сдвига design map
-   (`shiftDesignMapColumns` vs `shiftCrossWeaveDesignMapColumns`).
-
-**Почему важно.** Инвариант «при сужении почисти зависимое состояние» размазан
-и продублирован дважды в одном файле и один раз между техниками → правишь одну
-ветку, забываешь другую (и в силянке, и в CrossWeave разом).
-
-**Файлы.** Новый `src/hooks/useGridResize.ts` (или расширение существующих
-хуков общей внутренней функцией); упрощение `useSilyankaProject.ts` и
-`useCrossWeaveProject.ts`.
-
-**План.**
-1. Базовая функция `resizeWidthMirrorAware(current, delta, mirrorMode, shiftFn)`,
-   переиспользуемая для относительного и абсолютного сеттера (абсолютный =
-   `resize(width, target - current)`), общая для обеих техник — параметризуется
-   только функцией сдвига design map.
-2. В `useSilyankaProject.ts` вынести очистку `decorBands`/`rowSpanOverrides` в
-   одну internal-функцию, вызываемую из relative- и absolute-сеттеров.
-3. Особый случай подвесок при сужении width (только у силянки) — оставить
-   отдельным шагом поверх общей базы, с комментарием почему он не общий.
-
-**Критерии готовности.** Нет продублированной логики очистки ни внутри
-`useSilyankaProject.ts`, ни между `useSilyankaProject.ts`/`useCrossWeaveProject.ts`;
-поведение resize/span (в т.ч. mirror, в обеих техниках) без регрессий.
-
-**Зависимости.** T3 (клампы) уже выполнена — можно начинать сразу. Независима от T1.
-
----
-
-## T5 — Общая логика `CanvasView.tsx`/`CrossWeaveCanvasView.tsx` · P5 · ✅ выполнено
-
-**Факт.** Добавлены `src/hooks/useWheelZoom.ts` (Ctrl+wheel zoom),
-`src/hooks/useMirrorPaint.ts` (`applyPaint` + зеркальная пара, mirror-функция
-передаётся замыканием), `src/utils/canvasDim.ts` (`computeCanvasDim`, общий
-`margin=30`; подвески силянки передаются через `extraMaxY`), `src/utils/colorStats.ts`
-(`computeColorStats` — мутируемый `Map`, силянка доусеивает его подвесками
-поверх базового прохода) и `src/components/Editor/CanvasView/CanvasChrome.tsx`
-(theme-toggle + export-btn). Оба `CanvasView`/`CrossWeaveCanvasView` переведены
-на общие куски; заодно (по тем же строкам) убран спред `Math.max(...beads.map(...))`
-в `computeCanvasDim` — частично закрывает T10 (только для `dim`, `paintedBounds`/
-`mirrorAxis` в `CrossWeaveCanvasView` не тронуты). `npm run lint`, `npm run build`,
-`npm test` (69/69) зелёные. Поведение не менялось — `spec.md` не требует правок.
-
-**Проблема (была).** Оба компонента (434 и 242 строки) повторяли один и тот же набор
-кусков логики и разметки:
-- wheel-zoom `useEffect` — идентичен:
-  [CanvasView.tsx:111-124](src/components/Editor/CanvasView/CanvasView.tsx#L111-L124)
-  vs [CrossWeaveCanvasView.tsx:59-72](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L59-L72).
-- `dim` (размер SVG, `margin=30`) —
-  [CanvasView.tsx:126-149](src/components/Editor/CanvasView/CanvasView.tsx#L126-L149)
-  vs [CrossWeaveCanvasView.tsx:74-83](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L74-L83).
-- `colorStats` (свод в `Map` по цвету) —
-  [CanvasView.tsx:161-175](src/components/Editor/CanvasView/CanvasView.tsx#L161-L175)
-  vs [CrossWeaveCanvasView.tsx:85-92](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L85-L92).
-- кнопки theme-toggle и export-btn — байт-в-байт одинаковый JSX
-  ([CanvasView.tsx:414-432](src/components/Editor/CanvasView/CanvasView.tsx#L414-L432)
-  vs [CrossWeaveCanvasView.tsx:221-239](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L221-L239)).
-- `applyPaint` (paintBead + поиск зеркальной пары) — тот же паттерн, отличается
-  только вызываемая mirror-функция.
-
-**Почему важно.** 5 независимых копий одной и той же не-геометрической
-инфраструктуры (zoom, размер холста, статистика, экспорт-кнопки) — правка
-одной, скорее всего, требует такой же правки в другой, и это легко упустить,
-т.к. компоненты сознательно не являются веткой друг друга.
-
-**Файлы.** Новый `src/hooks/useCanvasChrome.ts` (wheel-zoom + `colorStats` +
-theme/export-кнопки как общий presentational-кусок или render-helper);
-упрощение обоих `CanvasView.tsx`.
-
-**План.**
-1. Вынести wheel-zoom в `useWheelZoom(containerRef, onZoomChange)` — общий хук.
-2. Вынести `colorStats`-подсчёт (`beads` + `designMap` + `defaultColorFor`) в
-   общую функцию `computeColorStats(items, designMap, defaultColor)`, если типы
-   позволяют (бисерины силянки и CrossWeave имеют разные доп.-поля, но общие
-   `id`/`type`-подобное).
-3. Кнопки theme-toggle/export вынести в общий компонент `CanvasChrome`
-   (props: `canvasTheme`, `onToggleCanvasTheme`, `onExport`), рендерящийся в
-   обоих `CanvasView`.
-4. `dim`-расчёт с общим `margin=30` — общая маленькая функция, специфичные
-   добавки (глубина подвесок у силянки) остаются сверху как параметр.
-
-**Критерии готовности.** Wheel-zoom, подсчёт статистики и chrome-кнопки не
-продублированы; оба канваса визуально и функционально без регрессий.
-
-**Зависимости.** Нет. Можно делать параллельно с T4.
+> них, добавить отдельным пунктом.
+>
+> Обновление 2026-07-30 (сверка с кодом): T1–T5, T8, T15–T17 подтверждены
+> выполненными и убраны из документа (детали — в git-истории). Также
+> `App.tsx` в проекте больше нет — раскладка страницы переехала в
+> `SilyankaEditor.tsx`/`CrossWeaveEditor.tsx`, ссылки на него ниже
+> актуализированы под T13.
 
 ---
 
 ## T6 — Общий «скелет» `BeadView.tsx`/`CrossWeaveBeadView.tsx` · P5
 
 **Проблема.** Оба компонента рендерят одинаковую структуру `<g>` (hitbox →
-highlight → body), одинаковые обработчики `onMouseEnter`/`onMouseDown`, ту же
-CSS-переменную `--bead-color`; отличаются только формой примитива
-(`circle` у силянки, `ellipse` у CrossWeave) и выбором радиуса
-(тип бисерины vs ориентация).
+highlight → body), одинаковые обработчики `onPointerEnter`/`onPointerDown`
+(включая идентичный `releasePointerCapture(e.target)` с одинаковым
+комментарием-объяснением в обоих файлах), ту же CSS-переменную `--bead-color`;
+отличаются только формой примитива (`circle` у силянки, `ellipse` у
+CrossWeave) и выбором радиуса (тип бисерины vs ориентация). У силянки с тех
+пор появились ещё и `deletePreview`/`pendingDelete`/`previewColor` слои,
+которых нет у CrossWeave — они тоже часть общего `<g>`-скелета, просто
+условные.
 
 **Почему важно.** Небольшое, но точное дублирование — при правке hitbox/highlight
-поведения (например, T8 про Pointer Events) придётся синхронно править оба файла.
+поведения придётся синхронно править оба файла.
 
-**Файлы.** `BeadView.tsx`, `CrossWeaveBeadView.tsx`, возможно общий
-`BeadShell.tsx`.
+**Файлы.** [BeadView.tsx](src/components/Editor/BeadView/BeadView.tsx),
+[CrossWeaveBeadView.tsx](src/components/Editor/BeadView/CrossWeaveBeadView.tsx),
+возможно общий `BeadShell.tsx`.
 
 **План.** Вынести общий `<g>`-скелет с рендер-пропом/параметром формы
 (`shape: { cx, cy, rBody, rHitbox, rHighlight }` — где под капотом рисуется
@@ -304,7 +77,7 @@ CSS-переменную `--bead-color`; отличаются только фо�
 
 ## T7 — Свернуть 4 цикла min/max в `stamp.captureStampPattern` · P5
 
-**Проблема.** [captureStampPattern:147-167](src/utils/stamp.ts#L147-L167) считает
+**Проблема.** [captureStampPattern:126-146](src/utils/stamp.ts#L126-L146) считает
 `anchorRow`/`anchorCol`/`anchorRowBottom`/`anchorColBottom` четырьмя почти
 идентичными циклами `for...if(...<...)`.
 
@@ -318,38 +91,7 @@ CSS-переменную `--bead-color`; отличаются только фо�
 maxRow, minColAtMaxRow}` за один `for`, либо явный `reduce`.
 
 **Критерии готовности.** Один проход вместо четырёх; штамп (top/bottom anchor)
-работает как раньше — проверить вручную или тестом из T2.
-
-**Зависимости.** Нет.
-
----
-
-## T8 — Не писать в localStorage на каждую бусину · P3
-
-**Проблема.** [usePersistedState.ts:20-24](src/hooks/usePersistedState.ts#L20-L24) пишет в
-`useEffect` при любом изменении состояния. Во время мазка
-[useDrawing.ts:98](src/hooks/useDrawing.ts#L98) (`paintBead` → `setDesignMap`)
-вызывается на каждом `mouseenter` → синхронный `JSON.stringify(весь designMap)
-+ setItem` на каждую бусину при протягивании. Актуально для обеих техник —
-`useDrawing` общий.
-
-**Почему важно.** На большой схеме — заметный джанк при рисовании (синхронная
-запись на диск каждый кадр мыши).
-
-**Файлы.** `usePersistedState.ts` и/или `useDrawing.ts`.
-
-**План (выбрать одно, обсудить).**
-- **A.** Дебаунс записи в `usePersistedState` (напр. 300 мс) — общее решение,
-  но задерживает персист всех потребителей.
-- **B.** Персистить `designMap` на конце мазка (`stopDrawing`)/через отдельный
-  «flush», не на каждый `setDesignMap`. Точечно, но требует различать транзиентные
-  и финальные изменения.
-
-Рекомендация: обсудить A vs B; A проще и покрывает все persisted-состояния.
-
-**Критерии готовности.** При протягивании кисти нет `setItem` на каждую бусину;
-после паузы/отпускания состояние в localStorage актуально; перезагрузка
-восстанавливает рисунок (в обеих техниках).
+работает как раньше — проверить вручную или тестом (`stamp.test.ts`).
 
 **Зависимости.** Нет.
 
@@ -357,11 +99,11 @@ maxRow, minColAtMaxRow}` за один `for`, либо явный `reduce`.
 
 ## T9 — Строить граф смежности один раз · P3
 
-**Проблема.** [computeUnifiedFloodFill](src/utils/floodFill.ts#L161) вызывает
-`buildAdjacencyMap(beads)` при каждом клике; в зеркале
-[applyUnifiedFloodFill (useSilyankaProject.ts:386-417)](src/hooks/useSilyankaProject.ts#L386-L417)
-зовёт его дважды (строки [391-392](src/hooks/useSilyankaProject.ts#L391-L392)) →
-два полных пересоздания графа (O(n) + регэксп на бусину) на один клик.
+**Проблема.** `computeUnifiedFloodFill` вызывает `buildAdjacencyMap(beads)`
+внутри себя при каждом клике ([floodFill.ts:288](src/utils/floodFill.ts#L288));
+в зеркале ([useSilyankaProject.ts:377-379](src/hooks/useSilyankaProject.ts#L377-L379))
+функция зовётся дважды подряд (для `startId` и для `mirrorStartId`) → два
+полных пересоздания графа (O(n) + разбор id на бусину) на один клик.
 
 **Почему важно.** Дублированная O(n)-работа без нужды; граф зависит только от
 `beads`.
@@ -371,61 +113,62 @@ maxRow, minColAtMaxRow}` за один `for`, либо явный `reduce`.
 
 **План.** Вынести `buildAdjacencyMap` в `useMemo` от `beads` внутри
 `useSilyankaProject`, передавать готовый `adjMap` в `computeUnifiedFloodFill`;
-убрать внутренний вызов. После T1 — строить на `decode`.
+убрать внутренний вызов. Декодирование id внутри `buildAdjacencyMap` уже идёт
+через `beadId.decode` (T1 выполнена) — дополнительной подготовки не требуется.
 
 **Критерии готовности.** На один клик заливки (в т.ч. зеркальной) граф строится
 максимум один раз на изменение `beads`; заливка без регрессий.
 
-**Зависимости.** Мягко зависит от T1 (декодирование), но выполнима и до неё.
+**Зависимости.** Нет.
 
 ---
 
 ## T10 — Убрать спред больших массивов в `Math.max`/`Math.min` · P3
 
-**Частично закрыто в T5.** Спред в расчёте `dim` (бывший
-`CanvasView.tsx:128-129`) убран — теперь это `reduce`-проход внутри
-`computeCanvasDim` (`src/utils/canvasDim.ts`). Осталось: `paintedBounds`
-([CrossWeaveCanvasView.tsx:87-93](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L87-L93))
-и `mirrorAxis` ([CrossWeaveCanvasView.tsx:109-110](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L109-L110)) —
-не тронуты, т.к. специфичны только для CrossWeave и не были частью
-дублирования, вынесенного в T5.
+**Факт.** Спред в расчёте `dim` убран ещё при обобщении канваса — теперь это
+`reduce`-проход внутри `computeCanvasDim` (`src/utils/canvasDim.ts`).
 
-**Проблема (оставшаяся часть).** `Math.min/max(...ys)` в
-[CanvasRulers.tsx:155-156](src/components/Editor/CanvasRulers/CanvasRulers.tsx#L155-L156)
-и в двух местах `CrossWeaveCanvasView.tsx`, перечисленных выше.
+**Проблема (оставшаяся часть).** Спред `Math.min/max(...arr)` по массивам
+координат/бусин остаётся в:
+- [CanvasRulers.tsx:140](src/components/Editor/CanvasRulers/CanvasRulers.tsx#L140),
+  [204-205](src/components/Editor/CanvasRulers/CanvasRulers.tsx#L204-L205)
+- [CrossWeaveCanvasView.tsx:250-256](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L250-L256),
+  [272-273](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L272-L273)
+  (`paintedBounds`/`mirrorAxis` — специфичны только для CrossWeave)
+- [pendantCanvasDim.ts:67](src/utils/pendantCanvasDim.ts#L67)
+- [PendantLayer.tsx:109](src/components/Editor/PendantLayer/PendantLayer.tsx#L109)
 
 **Почему важно.** На больших сетках массив — тысячи элементов; спред рискует
 переполнить стек аргументов и аллоцирует промежуточный `.map`.
 
-**Файлы.** `CanvasView.tsx`, `CrossWeaveCanvasView.tsx`, `CanvasRulers.tsx`.
+**Файлы.** См. список выше.
 
 **План.** Заменить на `reduce` в один проход (без промежуточного массива и спреда).
 
 **Критерии готовности.** Нет `Math.max(...arr)`/`Math.min(...arr)` по массивам
 бусин/координат; размеры SVG и оси считаются как раньше.
 
-**Зависимости.** Нет. Можно делать заодно с T5 (там всё равно трогаем эти же куски).
+**Зависимости.** Нет.
 
 ---
 
 ## T11 — Исключить `transparent` из спецификации материалов · P4
 
-**Проблема.** `colorStats` в
-[CanvasView.tsx:161-175](src/components/Editor/CanvasView/CanvasView.tsx#L161-L175)
-берёт `designMap[bead.id] || defaultColorFor(...)`, а `defaultColorFor`
-возвращает `'transparent'` ([theme.ts:47-48](src/config/theme.ts#L47-L48)).
-Незакрашенные бусины попадают в статистику и в PNG-легенду как
-`transparent × N`. То же самое устройство теперь и в
-[CrossWeaveCanvasView.tsx:85-92](src/components/Editor/CanvasView/CrossWeaveCanvasView.tsx#L85-L92)
-(`defaultColorForCrossWeave`).
+**Проблема.** `computeColorStats` ([colorStats.ts](src/utils/colorStats.ts))
+берёт `designMap[item.id] || defaultColorOf(item)`, а дефолтный цвет для
+непокрашенной бусины — `'transparent'` (`defaultColorFor`/
+`defaultColorForCrossWeave` в `theme.ts`/`crossWeaveTheme.ts`). Незакрашенные
+бусины попадают в статистику `useColorHighlight.colorStats` и оттуда — в
+`CanvasStats.tsx` и в PNG-легенду (`exportScheme.ts`) как `transparent × N`.
+Общая функция уже используется в обеих техниках, так что дубликата бага нет —
+но сам баг остался.
 
 **Почему важно.** `CanvasStats` — «реальная спецификация материалов» (что купить).
 Непокрашенная бусина не материал; она искажает разбивку по цветам, общий счётчик
 и легенду в экспорте — в обеих техниках.
 
-**Файлы.** `CanvasView.tsx`, `CrossWeaveCanvasView.tsx` (`colorStats`, возможно
-`totalCount`), проверить [exportScheme.ts](src/utils/exportScheme.ts) (легенда)
-и `CanvasStats.tsx`.
+**Файлы.** `colorStats.ts` (или точка вызова в `useColorHighlight.ts`),
+`CanvasStats.tsx`, `exportScheme.ts` (легенда).
 
 **Решение обсудить.** Считать материалом только реально покрашенные бусины
 (отбрасывать `transparent`). Уточнить, должен ли `Total Count` считать все бусины
@@ -436,27 +179,24 @@ maxRow, minColAtMaxRow}` за один `for`, либо явный `reduce`.
 `transparent`-бакета (в обеих техниках); поведение согласовано между экраном и
 PNG; обновлён [spec.md](src/spec.md), если меняется смысл счётчиков.
 
-**Зависимости.** Мягко стыкуется с T5 (там `colorStats` всё равно обобщается).
+**Зависимости.** Нет — `colorStats` уже общий для обеих техник, чинить один раз.
 
 ---
 
 ## T12 — Pointer Events на холсте (тач-поддержка) · P4 · частично выполнено
 
-**Факт (проверено 2026-07-26).** Основная покраска уже переведена на Pointer
-Events: `BeadView.tsx`, `CrossWeaveBeadView.tsx` (оба — `onPointerDown` +
-`onPointerEnter`, с явным `releasePointerCapture(e.target)`, чтобы протягивание
-пальцем не залипало на первой тронутой бисерине), `CanvasView.tsx`/
-`CrossWeaveCanvasView.tsx` (`onPointerDown` на контейнере + `touchGesture`).
-Похоже, сделано попутно с добавлением `useTouchPanZoom`, но документ это не
-отражал.
+**Факт.** Основная покраска уже на Pointer Events: `BeadView.tsx`,
+`CrossWeaveBeadView.tsx` (оба — `onPointerDown` + `onPointerEnter`, с явным
+`releasePointerCapture(e.target)`), `CanvasView.tsx`/`CrossWeaveCanvasView.tsx`
+(`onPointerDown` на контейнере + `touchGesture`).
 
 **Осталось.** [PendantLayer.tsx:128](src/components/Editor/PendantLayer/PendantLayer.tsx#L128)
 всё ещё на `onMouseDownCapture` — но это не покраска, а десктопный жест
 «ПКМ по подвеске → удалить» (`e.button === 2` + `onContextMenu`). У правого
 клика нет прямого тач-аналога, поэтому перевод в Pointer Events сам по себе
 не даёт тач-эквивалента — нужно решить, каким жестом/кнопкой удалять подвеску
-на тач-экране (например, кнопка-крестик по аналогии с T15/T16), и только потом
-переводить обработчик.
+на тач-экране (например, кнопка-крестик по аналогии с реализованными
+`ThreadTraceControls.tsx`), и только потом переводить обработчик.
 
 **Файлы.** `PendantLayer.tsx`.
 
@@ -472,14 +212,15 @@ Events: `BeadView.tsx`, `CrossWeaveBeadView.tsx` (оба — `onPointerDown` +
 
 ## T13 — Явные пропсы вместо `{...drawingControls}` · P4
 
-**Проблема.** [App.tsx:207](src/App.tsx#L207) разворачивает весь возврат
-`useDrawing` в пропсы `CanvasView`, тогда как `CanvasViewProps` объявляет лишь
-часть.
+**Проблема.** [SilyankaEditor.tsx:199](src/components/Editor/SilyankaEditor.tsx#L199)
+разворачивает весь возврат `useDrawing` (`silyanka.drawingControls`) в пропсы
+`CanvasView`, тогда как `CanvasViewProps` объявляет лишь часть. (Раньше это
+было в `App.tsx` — компонент с тех пор переехал в `SilyankaEditor.tsx`.)
 
 **Почему важно.** Лишние поля протекают молча; переименование поля хука ломается
 без ошибки типов; неясно, что реально нужно компоненту.
 
-**Файлы.** `App.tsx`, `CanvasView.tsx`.
+**Файлы.** `SilyankaEditor.tsx`, `CanvasView.tsx`.
 
 **План.** Передать явные пропсы, либо единый типизированный объект
 `drawing={drawingControls}` c соответствующим типом в `CanvasViewProps`.
@@ -493,12 +234,13 @@ Events: `BeadView.tsx`, `CrossWeaveBeadView.tsx` (оба — `onPointerDown` +
 
 ## T14 — Именованные сентинелы рядов и сигнатура `mirrorBeadId` · P5
 
-**Проблема.** `rowSpanOverrides[-1]` = верхняя кромка ([generator.ts:26](src/utils/generator.ts#L26))
+**Проблема.** `rowSpanOverrides[-1]` = верхняя кромка (используется буквальным
+`-1`, например в [CanvasRulers.tsx:171](src/components/Editor/CanvasRulers/CanvasRulers.tsx#L171))
 — магический индекс, разделяемый через комментарии между `generator.ts`,
 `CanvasRulers.tsx` и `useSilyankaProject.ts`. Отдельно:
-`mirrorBeadId(id, width, internalTop, internalBottom?)` — непоследовательная
-опциональность ([mirror.ts:19-24](src/utils/mirror.ts#L19-L24)), хотя все вызовы
-передают оба аргумента.
+`mirrorBeadId(id, width, internalTop, internalBottom?, extendLeft?, extendRight?)`
+([mirror.ts:36-43](src/utils/mirror.ts#L36-L43)) — `internalBottom` по-прежнему
+опционален, хотя все вызовы передают его.
 
 **Почему важно.** Неочевидная связь между модулями; легко сломать при
 рефакторинге спанов. Мелкий запашок API.
@@ -507,63 +249,13 @@ Events: `BeadView.tsx`, `CrossWeaveBeadView.tsx` (оба — `onPointerDown` +
 `mirror.ts` (сигнатура).
 
 **План.** Ввести именованную константу вместо `-1`; выровнять сигнатуру
-`mirrorBeadId` (оба internal-параметра обязательны).
+`mirrorBeadId` (`internalBottom` — обязательный).
 
 **Критерии готовности.** Нет «голого» `-1` как индекса кромки; сигнатура
 `mirrorBeadId` единообразна.
 
-**Зависимости.** Стыкуется с T1 (там же переезжает трактовка кромок).
-
----
-
-## T15 — Тач: явная кнопка «отменить последнюю точку» трассировки нитки · P4 · ✅ выполнено
-
-**Факт.** `ThreadTraceControls.tsx` — плавающая пара кнопок над холстом (см.
-T16, реализованы вместе). Кнопка «шаг назад» (`Undo2`) видна, пока
-трассировка нитки активна и точек ≥2; вызывает уже существующий
-`removeLastTracePoint`.
-
-**Проблема (была).** Крестик-подсказка «убрать последнюю точку» в
-`ThreadLayer` показывается только по hover (`threadCursor.magnetId`) — на
-тач-экранах hover не существует, фича была физически недостижима с телефона.
-
-**Файлы.** Новый `src/components/Editor/CanvasView/ThreadTraceControls.tsx`;
-подключение в `CanvasView.tsx`/`CrossWeaveCanvasView.tsx`; стили в
-`CanvasView.css` (`.thread-trace-controls*`).
-
----
-
-## T16 — Тач: явная кнопка «отменить нитку целиком» (замена Escape) · P4 · ✅ выполнено
-
-**Факт.** Вторая кнопка в той же `ThreadTraceControls` («✕», видна с первой
-точки трассировки) — сбрасывает `threadTrace`/`threadCursor`, тот же эффект,
-что и `Escape`.
-
-**Проблема (была).** `Escape` сбрасывает незавершённую трассировку нитки, но
-физической клавиши Escape на тач-устройствах нет. Обходные пути (переключить
-инструмент туда-обратно, второй палец) существовали, но не были очевидны
-пользователю.
-
-**Файлы.** Те же, что в T15 — одна плавающая панель на обе кнопки.
-
-**Зависимости.** Сделано вместе с T15.
-
----
-
-## T17 — Увеличить touch-таргет бейджей `.tool-btn-group__badge` · P5 · ✅ выполнено
-
-**Факт.** Добавлен `.tool-btn-group__badge::before` с `inset: -5px` —
-невидимая зона ~24px вместо видимых 14px (масштаб выровнен с `hitboxRadius`
-бисерин, не с рекомендуемыми ~40-44px — бейджи сидят на углу 26px кнопки
-инструмента, больший отступ перекрыл бы половину её собственной
-кликабельной области). Правка в одном месте — применяется сразу ко всем
-использованиям класса (тоггл точки привязки штампа, сброс штампа, очистка
-всех ниток у обеих техник).
-
-**Проблема (была).** 14×14px — заметно меньше рекомендуемого тач-таргета,
-неудобно попадать пальцем.
-
-**Файлы.** `Header.css`.
+**Зависимости.** Нет — T1 (`beadId.ts`) выполнена, но трактовка кромок в неё не
+попала, остаётся отдельной задачей здесь.
 
 ---
 
@@ -583,25 +275,21 @@ T16, реализованы вместе). Кнопка «шаг назад» (`
 **Файлы.** `CanvasView.tsx`/`CrossWeaveCanvasView.tsx` (`beginThreadReroute`).
 
 **Возможный план (если решим чинить).** Либо блокировать захват новой ручки,
-пока текущая перепрокладка не завершена/не отменена явно (Escape/кнопка ✕ из
-T16), либо явно потребовать подтверждения при потере ≥2 точек в процессе.
+пока текущая перепрокладка не завершена/не отменена явно (Escape/кнопка ✕ в
+уже реализованном `ThreadTraceControls.tsx`), либо явно потребовать
+подтверждения при потере ≥2 точек в процессе.
 
-**Зависимости.** Стыкуется с T15/T16 — там уже есть явная кнопка отмены,
-на которую можно сослаться в UI-подсказке, если решим блокировать.
+**Зависимости.** Нет — кнопка отмены (`ThreadTraceControls.tsx`) уже есть, на
+неё можно сослаться в UI-подсказке, если решим блокировать.
 
 ---
 
 ## Порядок выполнения (рекомендация)
 
-1. ~~**T3** (`clamp()`)~~ — ✅ выполнено.
-2. ~~**T2** (тесты)~~ — ✅ выполнено, страховка готова.
-3. ~~**T1** (`beadId.ts`)~~ — ✅ выполнено.
-4. ~~**T4**~~ (общий resize-хук, обе техники) — ✅ выполнено.
-5. ~~**T5**~~ (общая логика канваса между техниками) — ✅ выполнено. **T6**
-   (общий скелет бусин между техниками) — независима, можно делать в любой момент.
-6. **T7** — мелкая точечная правка внутри стемпа, в любой момент.
-7. **T9, T10, T8** (производительность) — T9 удобнее после T1.
-8. **T11, T13, T14** — быстрые точечные правки.
-9. **T12** (тач) — дешевле после T6, по потребности отдельно.
-10. ~~**T15, T16, T17**~~ (тач-UX нитки) — ✅ выполнено.
-11. **T18** — отложено, ждёт реальной жалобы пользователей.
+1. **T7** — мелкая точечная правка внутри стемпа, в любой момент.
+2. **T9, T10** — производительность.
+3. **T11, T13, T14** — быстрые точечные правки.
+4. **T6** (общий скелет бусин между техниками) — независима, можно делать в
+   любой момент.
+5. **T12** (тач-удаление подвески) — дешевле после T6, по потребности отдельно.
+6. **T18** — отложено, ждёт реальной жалобы пользователей.

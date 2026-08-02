@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, SetStateAction } from 'react';
 import { useGrid } from './useGrid';
 import { useDrawing } from './useDrawing';
-import { usePendants } from './usePendants';
+import { usePendants, findMirrorPendant } from './usePendants';
 import { usePendantChains, findMirrorChain } from './usePendantChains';
 import { useDecorTails } from './useDecorTails';
 import { useTeeth } from './useTeeth';
@@ -11,7 +11,7 @@ import { usePersistedState } from './usePersistedState';
 import { useGridConfig } from './useGridConfig';
 import { THREAD_STRAND_DEFAULT_COLORS, DEFAULT_THREAD_OPACITY } from '../config/theme';
 import {
-  PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint,
+  PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement, ChainEndpoint, PendantAnchor,
 } from '../types/pendant';
 import { Thread } from '../types/thread';
 import { PENDANT_TEMPLATES_BY_ID } from '../data/pendantTemplates';
@@ -21,7 +21,7 @@ import { fillMissingMirror } from '../utils/symmetrize';
 import { computeUnifiedFloodFill, pendantBeadId } from '../utils/floodFill';
 import { chainBeadId, chainEndpointsEqual } from '../utils/pendantChain';
 import { decorTailBeadId } from '../utils/decorTail';
-import { toothBeadId, computeToothMeshes } from '../utils/tooth';
+import { toothBeadId, computeToothMeshes, computeToothInsertionRanges } from '../utils/tooth';
 import { getDecorRowStep } from '../utils/decorGeometry';
 import { buildSegmentIndex, silyankaNodeSpans } from '../utils/weaveSegment';
 import {
@@ -29,7 +29,7 @@ import {
 } from '../utils/stamp';
 import {
   isPendantPlacements, isPendantChains, isDecorTailPlacements, isTeeth, isThreads, isHexColor,
-  isOpacity, isDeletedBeads,
+  isOpacity, isDeletedBeads, normalizePendantPlacements,
 } from './useSilyankaProject.validators';
 
 // Всё силяночное состояние и обработчики, вынесенные из App.tsx, чтобы
@@ -37,9 +37,29 @@ import {
 // Геометрия сетки (размеры/спаны/скос/края) вынесена в useGridConfig —
 // см. комментарий там же.
 export const useSilyankaProject = (palette: readonly string[]) => {
-  const [pendantPlacements, setPendantPlacements] = usePersistedState<PendantPlacement[]>(
+  const [rawPendantPlacements, setRawPendantPlacements] = usePersistedState<PendantPlacement[]>(
     'silyanka:pendantPlacements', [], isPendantPlacements,
   );
+  // Раньше подвеска хранила плоский col — теперь anchor:{kind:'grid'|'tooth',
+  // ...} (см. types/pendant.ts, «Зубец» в spec.md). normalizePendantPlacements
+  // переносит старые записи в новый формат; обёрнутый сеттер прогоняет через
+  // неё и prev (для функциональных апдейтов), и итоговое значение (для
+  // прямой записи — так восстанавливается снимок истории Undo/Redo,
+  // см. useDrawing.ts) — все потребители ниже (usePendants, floodFill,
+  // рендер) видят только anchor-форму, независимо от того, что реально
+  // лежит в localStorage/файле проекта/истории на момент запуска.
+  const pendantPlacements = useMemo(
+    () => normalizePendantPlacements(rawPendantPlacements), [rawPendantPlacements],
+  );
+  const setPendantPlacements = useCallback((action: SetStateAction<PendantPlacement[]>) => {
+    setRawPendantPlacements((prev) => {
+      const normalizedPrev = normalizePendantPlacements(prev);
+      const next = typeof action === 'function'
+        ? (action as (p: PendantPlacement[]) => PendantPlacement[])(normalizedPrev)
+        : action;
+      return normalizePendantPlacements(next);
+    });
+  }, [setRawPendantPlacements]);
 
   const [pendantChains, setPendantChains] = usePersistedState<PendantChain[]>(
     'silyanka:pendantChains', [], isPendantChains,
@@ -203,11 +223,13 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     'silyanka:activeThreadOpacity', DEFAULT_THREAD_OPACITY, isOpacity,
   );
 
-  const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  // Цель драга карточки подвески — нода нижнего ряда (grid) либо кончик
+  // зубца (tooth), см. PendantAnchor в types/pendant.ts.
+  const [hoveredPendantAnchor, setHoveredPendantAnchor] = useState<PendantAnchor | null>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   // Драг карточки «Tail» (декор-хвост) — своя колонка-наведение, отдельная от
-  // hoveredCol (тот подсвечивает цель драга ПОДВЕСКИ) и от hoveredRow (тот —
-  // цель драга полосы Decor Bands на зазор между рядами).
+  // hoveredPendantAnchor (тот подсвечивает цель драга ПОДВЕСКИ) и от
+  // hoveredRow (тот — цель драга полосы Decor Bands на зазор между рядами).
   const [hoveredDecorTailCol, setHoveredDecorTailCol] = useState<number | null>(null);
   // Незавершённый выбор узла-начала цепочки (инструмент 'pendant-chain') —
   // null, пока не кликнули по первому узлу (сетки или зубца, см. ChainEndpoint
@@ -227,6 +249,16 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   // toggleStampAnchorEdge и одинаково меняют это состояние насовсем.
   const [stampAnchorEdge, setStampAnchorEdge] = useState<StampAnchorEdge>('top');
   const canvasSvgRef = useRef<SVGSVGElement>(null);
+  // Группа-носитель координат бисерин (translate по offsetX/offsetY/shiftX,
+  // см. CanvasView.tsx) — общая с canvasSvgRef, чтобы PendantsSidebar мог
+  // переводить client-координаты драга через ту же useBeadCoords (getScreenCTM),
+  // которой уже пользуется сам холст (нитка/стемп), а не ручной копией той же
+  // формулы: раньше toSvgPoint в PendantsSidebar.tsx считал сдвиг сам, жёстко
+  // через BEAD_THEME.gridDefaults.offsetX — расходился с реальным
+  // effectiveOffsetX/dim.shiftX холста (напр. при свёрнутых span-контролах,
+  // офсет по умолчанию), из-за чего цель драга подвески на зубец промахивалась
+  // мимо видимого узла на десятки пикселей.
+  const stampGroupRef = useRef<SVGGElement>(null);
 
   const rowGaps = useMemo(() => {
     const nodeRowYMap = new Map<number, number>();
@@ -258,7 +290,7 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   const pendantControls = usePendants(
     pendantPlacements, setPendantPlacements,
     drawingControls.activeColor, drawingControls.activeTool,
-    mirrorMode, gridSize.width,
+    mirrorMode, gridSize.width, teeth,
   );
 
   const chainControls = usePendantChains(
@@ -467,17 +499,14 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     const startId = pendantBeadId(placementId, beadIndex);
     let mirrorStartId: string | null = null;
     if (mirrorMode && gridSize.width > 1) {
-      const placement = pendantPlacements.find(p => p.placementId === placementId);
-      const mirrorCol = placement ? gridSize.width - 1 - placement.col : null;
-      const mirrorPlacement = mirrorCol !== null
-        ? pendantPlacements.find(p => p.col === mirrorCol)
-        : undefined;
-      if (mirrorPlacement && mirrorPlacement.placementId !== placementId) {
-        mirrorStartId = pendantBeadId(mirrorPlacement.placementId, beadIndex);
-      }
+      const mirrorPlacement = findMirrorPendant(pendantPlacements, placementId, teeth, gridSize.width);
+      if (mirrorPlacement) mirrorStartId = pendantBeadId(mirrorPlacement.placementId, beadIndex);
     }
     applyUnifiedFloodFill(startId, mirrorStartId);
-  }, [drawingControls.activeTool, pendantControls, mirrorMode, gridSize.width, pendantPlacements, applyUnifiedFloodFill]);
+  }, [
+    drawingControls.activeTool, pendantControls, mirrorMode, gridSize.width, pendantPlacements,
+    teeth, applyUnifiedFloodFill,
+  ]);
 
   const handleChainPaint = useCallback((placementId: string, beadIndex: number) => {
     if (drawingControls.activeTool !== 'flood-fill') {
@@ -564,6 +593,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   // другому узлу — конец и создаёт зубец. Пересечение с существующим зубцом
   // (включая касание общей колонкой) toothControls.addTooth молча
   // игнорирует — pending всё равно сбрасывается, как при успешной простановке.
+  // Зубец занимает ноды своей полосы целиком (см. spec.md, «Зубец») —
+  // computeToothInsertionRanges (та же точка правды, что использует
+  // addTooth) говорит, какие диапазоны реально добавятся (основной и,
+  // возможно, зеркальный), и с их колонок снимаются точечные подвески.
   const handleToothNodeClick = useCallback((col: number) => {
     if (toothPendingStart === null) {
       setToothPendingStart(col);
@@ -573,9 +606,11 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       setToothPendingStart(null);
       return;
     }
+    const ranges = computeToothInsertionRanges(toothPendingStart, col, teeth, mirrorMode, gridSize.width);
+    for (const r of ranges) pendantControls.removeGridPlacementsInRange(r.startCol, r.endCol);
     toothControls.addTooth(toothPendingStart, col);
     setToothPendingStart(null);
-  }, [toothPendingStart, toothControls]);
+  }, [toothPendingStart, toothControls, pendantControls, teeth, mirrorMode, gridSize.width]);
 
   return {
     ...gridConfig,
@@ -589,11 +624,11 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     beadById, holeSegmentPreviewIds, setHoleSegmentHoverNodeId,
     toggleBeadPending, toggleHoleSegmentPending, pendingDeleteIds, pendingDeleteCount,
     confirmPendingDelete, clearPendingDelete,
-    hoveredCol, setHoveredCol, hoveredRow, setHoveredRow,
+    hoveredPendantAnchor, setHoveredPendantAnchor, hoveredRow, setHoveredRow,
     hoveredDecorTailCol, setHoveredDecorTailCol,
     stampPattern, setStampPattern, stampHoverNodeId, setStampHoverNodeId, stampPreviewPatch,
     stampAnchorEdge, toggleStampAnchorEdge,
-    canvasSvgRef, rowGaps, bottomNodes, pendantAnchors, decorRowStep, internalTop, internalBottom,
+    canvasSvgRef, stampGroupRef, rowGaps, bottomNodes, pendantAnchors, decorRowStep, internalTop, internalBottom,
     handleStampSelect, handleStampPlace,
     handleFloodFill, handlePendantPaint, handleChainPaint, handleDecorTailPaint, handleToothPaint,
     handleChainNodeClick, handleToothNodeClick,

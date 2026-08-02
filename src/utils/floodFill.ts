@@ -7,6 +7,7 @@ import {
 } from './pendantChain';
 import { decorTailBeadId, isDecorTailBeadId, parseDecorTailBeadId } from './decorTail';
 import { toothBeadId, isToothBeadId, parseToothBeadId, ToothMesh } from './tooth';
+import { resolvePendantAnchor } from './pendantAnchor';
 
 type AdjMap = Map<string, string[]>;
 
@@ -168,11 +169,12 @@ interface UnifiedFloodFillResult {
 }
 
 // Заливка через сетку, подвески, цепочки-подвески и декор-хвосты как единый
-// граф: подвеска соединена с сеткой через свою якорную ноду (beads[0] всегда
-// касается ноды нижнего ряда — или кончика декор-хвоста той же колонки, если
-// он есть, см. pendantAnchorNodes), цепочка — через оба конца (startCol/endCol
-// на нижнем ряду), хвост — через свою якорную ноду (всегда настоящую, хвост
-// не может расти из другого хвоста).
+// граф: подвеска соединена с сеткой через свой якорь (beads[0] всегда касается
+// ноды нижнего ряда, кончика декор-хвоста той же колонки — см.
+// pendantAnchorNodes, — либо узла-границы меша зубца, см. resolvePendantAnchor/
+// PendantAnchor{kind:'tooth'}), цепочка — через оба конца (startCol/endCol
+// на нижнем ряду или узел зубца), хвост — через свою якорную ноду (всегда
+// настоящую, хвост не может расти из другого хвоста).
 export function computeUnifiedFloodFill(
   startId: string,
   beads: Bead[],
@@ -205,7 +207,7 @@ export function computeUnifiedFloodFill(
 
   const anchorPendants = (nodeId: string): PendantPlacement[] =>
     placements.filter(p => {
-      const anchor = pendantAnchorByCol.get(p.col);
+      const anchor = resolvePendantAnchor(p.anchor, pendantAnchorByCol, toothMeshes);
       return anchor?.id === nodeId && templates[p.templateId];
     });
 
@@ -299,7 +301,7 @@ export function computeUnifiedFloodFill(
         else if (b === index) result.push(pendantBeadId(placementId, a));
       }
       if (index === 0) {
-        const anchor = pendantAnchorByCol.get(p.col);
+        const anchor = resolvePendantAnchor(p.anchor, pendantAnchorByCol, toothMeshes);
         if (anchor) result.push(anchor.id);
       }
       return result;
@@ -358,11 +360,14 @@ export function computeUnifiedFloodFill(
           if (node) result.push(node.id);
         }
       }
-      // Симметрично корню сетки (chainRoots ниже): если эта бисерина зубца
-      // сама — конец цепочки-подвески, заливка должна перетекать и в неё.
+      // Симметрично корню сетки (chainRoots/pendantRoots ниже): если эта
+      // бисерина зубца сама — конец цепочки-подвески или якорь точечной
+      // подвески на этой границе (см. PendantAnchor{kind:'tooth'}), заливка
+      // должна перетекать и в неё.
       const chainRoots = anchorChains(id).map(({ chain, isStart }) =>
         chainBeadId(chain.placementId, isStart ? 0 : Math.max(0, chainCount(chain) - 1)));
-      result.push(...chainRoots);
+      const pendantRoots = anchorPendants(id).map(p => pendantBeadId(p.placementId, 0));
+      result.push(...chainRoots, ...pendantRoots);
       return result;
     }
     const gridNeighbors = adjMap.get(id) ?? [];

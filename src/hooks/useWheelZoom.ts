@@ -10,10 +10,20 @@ import { computeZoomToPointScroll } from '../utils/zoomToPoint';
 // см. комментарий там), а не через React state → эффект. Если сначала
 // закоммитить zoom в state и подвинуть scroll уже после ре-рендера, браузер
 // клампит scrollLeft/Top по ещё старому (не увеличенному) scrollWidth/Height
-// первого кадра — курсор на мгновение «уезжает» от точки. onZoomChange
-// вызывается следом лишь для того, чтобы синхронизировать персистентный
-// React state (usePersistedState) — коммит проставляет те же значения,
-// что уже лежат в DOM, без визуального скачка.
+// первого кадра — курсор на мгновение «уезжает» от точки.
+//
+// onZoomChange коммитит React state не на каждый тик, а раз в
+// WHEEL_COMMIT_DELAY_MS после последнего тика серии. Трекпад отдаёт по
+// несколько десятков wheel-событий в секунду — setState на каждое из них
+// перерисовывал бы всё дерево от App (Header, сотни BeadView), из-за чего
+// зум дёргался и подтормаживал. Тот же паттерн уже чинили для pinch-zoom в
+// useTouchPanZoom, там гейтом служит естественный конец жеста (pointerup);
+// у wheel отдельного события окончания нет, поэтому используется таймер.
+// Дельты копятся и коммитятся одной суммой — телескопически она равна
+// разнице между zoom в начале и в конце серии, независимо от клампинга
+// на промежуточных тиках.
+const WHEEL_COMMIT_DELAY_MS = 120;
+
 export const useWheelZoom = (
   containerRef: RefObject<HTMLDivElement | null>,
   svgRef: RefObject<SVGSVGElement | null>,
@@ -39,6 +49,17 @@ export const useWheelZoom = (
     const container = containerRef.current;
     if (!container) return;
 
+    let pendingDelta = 0;
+    let commitTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const commit = () => {
+      commitTimer = null;
+      if (pendingDelta !== 0) {
+        onZoomChange(pendingDelta);
+        pendingDelta = 0;
+      }
+    };
+
     const handleWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
@@ -48,13 +69,13 @@ export const useWheelZoom = (
       const newZoom = clamp(oldZoom + delta, APP_CONSTRAINTS.minZoom, APP_CONSTRAINTS.maxZoom);
       const svg = svgRef.current;
       if (svg && newZoom !== oldZoom) {
-        const containerRect = container.getBoundingClientRect();
-        const svgRect = svg.getBoundingClientRect();
         // containerLeft/Top — позиция контейнера на экране (скролл её не
         // меняет). paddingLeft/Top — расстояние от неё до <svg> при
         // scrollLeft/Top = 0, т.е. реальный CSS-padding карточки
         // (.canvas__svg) — вычислено через текущий скролл, а не взято из
         // стилей напрямую.
+        const containerRect = container.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
         const { scrollLeft, scrollTop } = computeZoomToPointScroll({
           containerLeft: containerRect.left,
           containerTop: containerRect.top,
@@ -75,15 +96,22 @@ export const useWheelZoom = (
       }
       liveZoomRef.current = newZoom;
 
-      // Клампнутая дельта, а не сырая: onZoomChange (App.tsx) сам делает
-      // clamp(prev + delta, ...) — передавая уже посчитанный newZoom-oldZoom,
-      // получаем на коммите ровно то значение, что только что записали в
-      // DOM, даже если liveZoomRef успел на тик разойтись с ещё не
-      // закоммиченным React state.
-      onZoomChange(newZoom - oldZoom);
+      pendingDelta += newZoom - oldZoom;
+      if (commitTimer !== null) clearTimeout(commitTimer);
+      commitTimer = setTimeout(commit, WHEEL_COMMIT_DELAY_MS);
     };
 
     container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      // Размонтирование посреди серии (например, переключение техники) не
+      // должно терять уже накопленный, но ещё не закоммиченный zoom — DOM к
+      // этому моменту уже перерисован, а без флаша при следующем монтировании
+      // persisted state откатит его обратно к старому значению.
+      if (commitTimer !== null) {
+        clearTimeout(commitTimer);
+        commit();
+      }
+    };
   }, [containerRef, svgRef, onZoomChange]);
 };

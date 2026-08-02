@@ -5,6 +5,7 @@ import { pendantBeadId } from './floodFill';
 import { chainBeadId, computeChainBeadPositions, resolveChainAnchor } from './pendantChain';
 import { decorTailBeadId, computeDecorTailBeadPositions } from './decorTail';
 import { toothBeadId, ToothMesh } from './tooth';
+import { resolvePendantAnchor } from './pendantAnchor';
 
 export interface ThreadAnchor {
   x: number;
@@ -42,7 +43,7 @@ export const buildBeadPositionIndex = (
 
   for (const placement of pendantPlacements) {
     const template = pendantTemplates[placement.templateId];
-    const anchor = pendantAnchorByCol.get(placement.col);
+    const anchor = resolvePendantAnchor(placement.anchor, pendantAnchorByCol, toothMeshes);
     if (!template || !anchor) continue;
     template.beads.forEach((bead, i) => {
       index.set(pendantBeadId(placement.placementId, i), {

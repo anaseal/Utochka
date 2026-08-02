@@ -81,7 +81,7 @@ describe('computeUnifiedFloodFill — grid ↔ pendant transition', () => {
   const placement: PendantPlacement = {
     placementId: 'p1',
     templateId: 't1',
-    col: 1,
+    anchor: { kind: 'grid', col: 1 },
     colorMap: {},
   };
 
@@ -175,7 +175,7 @@ describe('computeUnifiedFloodFill — grid ↔ decor tail transition', () => {
     const placement: PendantPlacement = {
       placementId: 'p1',
       templateId: 't1',
-      col: 1,
+      anchor: { kind: 'grid', col: 1 },
       colorMap: {},
     };
     // pendantAnchorNodes подменяет якорь колонки 1 на кончик хвоста (index 1) —
@@ -318,5 +318,43 @@ describe('computeUnifiedFloodFill — tooth ↔ chain transition', () => {
     expect(res.gridIds).toContain('node-2-2');
     expect(res.gridIds).not.toContain('node-2-0');
     expect(res.gridIds).not.toContain('node-2-1');
+  });
+});
+
+describe('computeUnifiedFloodFill — grid ↔ pendant-on-tooth transition', () => {
+  // Зубец на всю ширину — точечная подвеска повешена на его кончик
+  // (PendantAnchor{kind:'tooth', placementId, beadIndex}, см. spec.md,
+  // «Зубец») — но с тем же успехом это мог быть любой другой узел-граница.
+  const tooth: ToothPlacement = { placementId: 'z1', startCol: 0, endCol: 2, colorMap: {} };
+  const toothMeshes = computeToothMeshes([tooth], bottomNodes, 65, 3);
+  const tipIndex = toothMeshes.get('z1')!.tipIndex;
+  const template: PendantTemplate = {
+    id: 't1',
+    name: 'test',
+    beads: [{ dx: 0, dy: 10, shape: 'circle', type: 'SPAN' }],
+    links: [],
+  };
+  const placement: PendantPlacement = {
+    placementId: 'p1',
+    templateId: 't1',
+    anchor: { kind: 'tooth', placementId: 'z1', beadIndex: tipIndex },
+    colorMap: {},
+  };
+
+  it('fill flows from a grid anchor through the tooth mesh into the pendant bead', () => {
+    const res = computeUnifiedFloodFill(
+      'node-2-0', beads, {}, 'red', [placement], { t1: template },
+      bottomNodes, bottomNodes, [], [], [tooth], toothMeshes,
+    );
+    expect(res.pendantHits).toEqual([{ placementId: 'p1', index: 0 }]);
+    expect(res.toothHits.length).toBeGreaterThan(0);
+  });
+
+  it('a pendant with a different anchor bead color is not filled', () => {
+    const res = computeUnifiedFloodFill(
+      'node-2-0', beads, {}, 'red', [{ ...placement, colorMap: { 0: 'blue' } }], { t1: template },
+      bottomNodes, bottomNodes, [], [], [tooth], toothMeshes,
+    );
+    expect(res.pendantHits).toHaveLength(0);
   });
 });

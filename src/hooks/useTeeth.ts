@@ -1,6 +1,6 @@
 import { useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import { ToothPlacement } from '../types/pendant';
-import { toothOverlaps } from '../utils/tooth';
+import { computeToothInsertionRanges } from '../utils/tooth';
 import { DrawingTool } from './useDrawing';
 
 export const useTeeth = (
@@ -15,36 +15,19 @@ export const useTeeth = (
   // (см. spec.md, «Зубец») — попытка поставить пересекающийся зубец молча
   // не добавляет ничего, вызывающая сторона (handleToothNodeClick) всё равно
   // сбрасывает pending-выбор, как при обычной успешной простановке.
+  // computeToothInsertionRanges — та же точка правды, которой пользуется
+  // useSilyankaProject.ts, чтобы снять точечные подвески именно с тех
+  // колонок, которые реально займёт зубец (см. spec.md, «Зубец»).
   const addTooth = useCallback((colA: number, colB: number) => {
-    if (colA === colB) return;
-    const startCol = Math.min(colA, colB);
-    const endCol = Math.max(colA, colB);
     setTeeth((prev) => {
-      if (toothOverlaps(startCol, endCol, prev)) return prev;
-      const next = [
+      const ranges = computeToothInsertionRanges(colA, colB, prev, mirrorMode, width);
+      if (ranges.length === 0) return prev;
+      return [
         ...prev,
-        { placementId: crypto.randomUUID(), startCol, endCol, colorMap: {} },
+        ...ranges.map((r) => (
+          { placementId: crypto.randomUUID(), startCol: r.startCol, endCol: r.endCol, colorMap: {} }
+        )),
       ];
-      // Нижний ряд — чётный, зеркало точное: col c ↔ col (width-1-c). Если
-      // зеркальный диапазон пересекается с чем-то существующим (включая
-      // только что добавленный основной) — пропускаем именно зеркало, не всю
-      // операцию: пользователь всё равно получает то, что кликнул.
-      if (mirrorMode && width > 1) {
-        const mirrorStart = width - 1 - endCol;
-        const mirrorEnd = width - 1 - startCol;
-        if (
-          (mirrorStart !== startCol || mirrorEnd !== endCol) &&
-          !toothOverlaps(mirrorStart, mirrorEnd, next)
-        ) {
-          next.push({
-            placementId: crypto.randomUUID(),
-            startCol: mirrorStart,
-            endCol: mirrorEnd,
-            colorMap: {},
-          });
-        }
-      }
-      return next;
     });
   }, [setTeeth, mirrorMode, width]);
 

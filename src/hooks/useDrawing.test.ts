@@ -45,7 +45,7 @@ const paintStroke = (harness: Harness, ids: string[]) => {
 };
 
 const pendant = (id: string, colorMap: Record<number, string> = {}): PendantPlacement =>
-  ({ placementId: id, templateId: 'drop', col: 0, colorMap });
+  ({ placementId: id, templateId: 'drop', anchor: { kind: 'grid', col: 0 }, colorMap });
 
 const chain = (id: string, colorMap: Record<number, string> = {}): PendantChain =>
   ({ placementId: id, start: { kind: 'grid', col: 0 }, end: { kind: 'grid', col: 2 }, colorMap });

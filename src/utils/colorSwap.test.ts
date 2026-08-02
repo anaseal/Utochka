@@ -32,7 +32,7 @@ describe('swapColorInPendants', () => {
   const makePlacement = (colorMap: Record<number, string>): PendantPlacement => ({
     placementId: 'p1',
     templateId: 't1',
-    col: 0,
+    anchor: { kind: 'grid', col: 0 },
     colorMap,
   });
 

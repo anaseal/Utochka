@@ -112,13 +112,42 @@ export const pruneRowsBelow = (
   return next;
 };
 
+// Якорь подвески — {kind:'grid', col} либо {kind:'tooth', placementId,
+// beadIndex}, см. PendantAnchor в types/pendant.ts.
+const isPendantAnchor = (v: unknown): boolean => {
+  if (typeof v !== 'object' || v === null) return false;
+  const a = v as Record<string, unknown>;
+  if (a.kind === 'grid') return typeof a.col === 'number';
+  if (a.kind === 'tooth') return typeof a.placementId === 'string' && typeof a.beadIndex === 'number';
+  return false;
+};
+
+// anchor — актуальный формат крепления; col — формат ДО появления зубца-якоря
+// (плоская колонка нижнего ряда). Принимаем оба, чтобы не терять подвески,
+// сохранённые прежней версией (localStorage, история Undo/Redo, файл
+// проекта — все читают этот же валидатор) — перенос col → anchor происходит
+// один раз при загрузке, см. normalizePendantPlacements ниже и её
+// использование в useSilyankaProject.ts.
 export const isPendantPlacements = (v: unknown): v is PendantPlacement[] =>
   Array.isArray(v) && v.every(p =>
     typeof p === 'object' && p !== null &&
     typeof p.placementId === 'string' &&
     typeof p.templateId === 'string' &&
-    typeof p.col === 'number' &&
+    (isPendantAnchor(p.anchor) || typeof p.col === 'number') &&
     typeof p.colorMap === 'object' && p.colorMap !== null);
+
+// Переносит подвески старого формата (плоский col) в anchor:{kind:'grid',
+// col} — единственная точка правды, применяется и к «живому» реестру
+// подвесок, и к любому снимку истории Undo/Redo, который его заменяет (см.
+// setPendantPlacements в useSilyankaProject.ts). Уже перенесённые записи
+// возвращаются как есть (без лишнего копирования).
+export const normalizePendantPlacements = (placements: PendantPlacement[]): PendantPlacement[] =>
+  placements.map(raw => {
+    const p = raw as PendantPlacement & { col?: number };
+    if (p.anchor) return p;
+    const { col, ...rest } = p;
+    return { ...rest, anchor: { kind: 'grid' as const, col: col! } };
+  });
 
 // Конец цепочки — узел сетки ({kind:'grid', col}) либо узел зубца
 // ({kind:'tooth', placementId, beadIndex}), см. ChainEndpoint в

@@ -1,19 +1,27 @@
 import { memo, useCallback } from 'react';
 import { Bead } from '../../../types/bead';
-import { PendantPlacement, PendantTemplate, PendantTemplateBead } from '../../../types/pendant';
+import {
+  PendantAnchor, PendantPlacement, PendantTemplate, PendantTemplateBead, ToothPlacement,
+} from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
 import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
 import { pendantBeadId } from '../../../utils/floodFill';
+import { ToothMesh } from '../../../utils/tooth';
+import { resolvePendantAnchor, pendantAnchorsEqual, mirrorPendantAnchor } from '../../../utils/pendantAnchor';
 import './PendantLayer.css';
 
 interface PendantLayerProps {
   placements: PendantPlacement[];
   templates: Record<string, PendantTemplate>;
   bottomNodes: Bead[];
+  // Геометрия меша каждого зубца — резолв якоря {kind:'tooth'} в координаты
+  // конкретного узла-границы, см. resolvePendantAnchor.
+  toothMeshes: Map<string, ToothMesh>;
+  teeth: ToothPlacement[];
   isDrawing: boolean;
   onPaintBead: (placementId: string, beadIndex: number) => void;
   onRemove: (placementId: string) => void;
-  hoveredCol: number | null;
+  hoveredAnchor: PendantAnchor | null;
   mirrorMode: boolean;
   width: number;
   highlightedColor?: string | null;
@@ -38,26 +46,26 @@ export const PendantLayer = memo(({
   placements,
   templates,
   bottomNodes,
+  toothMeshes,
+  teeth,
   isDrawing,
   onPaintBead,
   onRemove,
-  hoveredCol,
+  hoveredAnchor,
   mirrorMode,
   width,
   highlightedColor,
   threadToolActive,
   onThreadPoint,
 }: PendantLayerProps) => {
-  const nodeByCol = new Map<number, Bead>();
-  bottomNodes.forEach((n) => nodeByCol.set(n.logicalIndex.col, n));
+  const pendantAnchorByCol = new Map<number, Bead>();
+  bottomNodes.forEach((n) => pendantAnchorByCol.set(n.logicalIndex.col, n));
 
-  // Занятыми считаем только ноды с реально отрисованной подвеской (шаблон
-  // существует + нода существует), иначе индикатор краснеет на пустой ноде.
-  const occupiedCols = new Set(
-    placements
-      .filter((p) => templates[p.templateId] && nodeByCol.has(p.col))
-      .map((p) => p.col),
-  );
+  // Занятыми считаем только якоря с реально отрисованной подвеской (шаблон
+  // существует + якорь резолвится), иначе индикатор краснеет на пустом месте.
+  const occupiedAnchors = placements
+    .filter((p) => templates[p.templateId] && resolvePendantAnchor(p.anchor, pendantAnchorByCol, toothMeshes))
+    .map((p) => p.anchor);
 
   const handlePointerDown = useCallback((id: string) => {
     const [placementId, idx] = id.split(ID_SEP);
@@ -78,19 +86,21 @@ export const PendantLayer = memo(({
 
   return (
     <g className="pendant-layer">
-      {hoveredCol !== null && (() => {
-        // В зеркальном режиме подсвечиваем и симметричную колонку — туда
-        // подвеска добавится автоматически (нижний ряд чётный: зеркало width-1-c).
-        const cols = mirrorMode && width > 1
-          ? [...new Set([hoveredCol, width - 1 - hoveredCol])]
-          : [hoveredCol];
-        return cols.map((col) => {
-          const anchor = nodeByCol.get(col);
+      {hoveredAnchor !== null && (() => {
+        // В зеркальном режиме подсвечиваем и симметричный якорь — туда
+        // подвеска добавится автоматически (см. mirrorPendantAnchor).
+        const targets = [hoveredAnchor];
+        if (mirrorMode && width > 1) {
+          const mirror = mirrorPendantAnchor(hoveredAnchor, teeth, width);
+          if (mirror && !pendantAnchorsEqual(mirror, hoveredAnchor)) targets.push(mirror);
+        }
+        return targets.map((target) => {
+          const anchor = resolvePendantAnchor(target, pendantAnchorByCol, toothMeshes);
           if (!anchor) return null;
-          const occupied = occupiedCols.has(col);
+          const occupied = occupiedAnchors.some((a) => pendantAnchorsEqual(a, target));
           return (
             <circle
-              key={col}
+              key={anchor.id}
               className={`pendant-drop-target${occupied ? ' pendant-drop-target--replace' : ''}`}
               cx={anchor.x}
               cy={anchor.y}
@@ -103,7 +113,7 @@ export const PendantLayer = memo(({
 
       {placements.map((placement) => {
         const template = templates[placement.templateId];
-        const anchor = nodeByCol.get(placement.col);
+        const anchor = resolvePendantAnchor(placement.anchor, pendantAnchorByCol, toothMeshes);
         if (!template || !anchor) return null;
 
         const maxBottom = Math.max(...template.beads.map(beadBottom)) * PENDANT_SCALE;

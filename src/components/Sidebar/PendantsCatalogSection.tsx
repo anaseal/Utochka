@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { RotateCcw } from 'lucide-react';
-import { PendantPlacement, PendantTemplate } from '../../types/pendant';
+import { PendantAnchor, PendantPlacement, PendantTemplate } from '../../types/pendant';
 import { SectionHelp } from '../common/SectionHelp';
 import { PendantPreview } from './PendantPreviews';
 import { useSidebarDragDrop } from '../../hooks/useSidebarDragDrop';
@@ -9,9 +9,9 @@ interface PendantsCatalogSectionProps {
   templates: PendantTemplate[];
   placements: PendantPlacement[];
   bottomEdgeEnabled: boolean;
-  computeCol: (clientX: number, clientY: number) => number | null;
-  onHoveredColChange: (col: number | null) => void;
-  onAddPlacement: (templateId: string, col: number) => void;
+  computeAnchor: (clientX: number, clientY: number) => PendantAnchor | null;
+  onHoveredAnchorChange: (anchor: PendantAnchor | null) => void;
+  onAddPlacement: (templateId: string, anchor: PendantAnchor) => void;
   onClearAll: () => void;
 }
 
@@ -19,14 +19,14 @@ export const PendantsCatalogSection = ({
   templates,
   placements,
   bottomEdgeEnabled,
-  computeCol,
-  onHoveredColChange,
+  computeAnchor,
+  onHoveredAnchorChange,
   onAddPlacement,
   onClearAll,
 }: PendantsCatalogSectionProps) => {
-  const { drag, start, move, cancel } = useSidebarDragDrop<string, number>({
-    computeTarget: computeCol,
-    onHoverChange: onHoveredColChange,
+  const { drag, start, move, cancel } = useSidebarDragDrop<string, PendantAnchor>({
+    computeTarget: computeAnchor,
+    onHoverChange: onHoveredAnchorChange,
     onDrop: onAddPlacement,
   });
 

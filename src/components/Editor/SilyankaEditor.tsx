@@ -156,7 +156,7 @@ export const SilyankaEditor = ({
       pendantTemplates={PENDANT_TEMPLATES_BY_ID}
       bottomNodes={silyanka.bottomNodes}
       pendantAnchors={silyanka.pendantAnchors}
-      hoveredCol={silyanka.hoveredCol}
+      hoveredPendantAnchor={silyanka.hoveredPendantAnchor}
       onPaintPendantBead={silyanka.handlePendantPaint}
       onRemovePlacement={silyanka.pendantControls.removePlacement}
       pendantChains={silyanka.pendantChains}
@@ -182,6 +182,7 @@ export const SilyankaEditor = ({
       chainPendingStart={silyanka.chainPendingStart}
       onChainNodeClick={silyanka.handleChainNodeClick}
       canvasSvgRef={silyanka.canvasSvgRef}
+      stampGroupRef={silyanka.stampGroupRef}
       onFloodFill={silyanka.handleFloodFill}
       topEdgeEnabled={silyanka.topEdgeEnabled}
       bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
@@ -203,12 +204,12 @@ export const SilyankaEditor = ({
       open={activeSidebar === 'pendants'}
       templates={PENDANT_TEMPLATES}
       placements={silyanka.pendantPlacements}
-      onHoveredColChange={silyanka.setHoveredCol}
+      onHoveredPendantAnchorChange={silyanka.setHoveredPendantAnchor}
       onAddPlacement={silyanka.pendantControls.addPlacement}
       onClearAll={silyanka.pendantControls.clearAllPlacements}
       canvasSvgRef={silyanka.canvasSvgRef}
+      stampGroupRef={silyanka.stampGroupRef}
       bottomNodes={silyanka.bottomNodes}
-      zoom={settings.zoom}
       decorBands={silyanka.decorBands}
       rowGaps={silyanka.rowGaps}
       onDecorDrop={silyanka.handleDecorDrop}
@@ -231,6 +232,7 @@ export const SilyankaEditor = ({
       onRemoveChain={silyanka.chainControls.removeChain}
       onClearChains={silyanka.chainControls.clearAllChains}
       teeth={silyanka.teeth}
+      toothMeshes={silyanka.toothMeshes}
       toothToolActive={silyanka.drawingControls.activeTool === 'tooth'}
       onToggleToothTool={() => setSilyankaTool(
         silyanka.drawingControls.activeTool === 'tooth' ? 'pencil' : 'tooth',

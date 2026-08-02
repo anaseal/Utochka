@@ -31,14 +31,18 @@ export const usePendantStats = ({
   toothMeshes,
 }: UsePendantStatsOptions) => {
   // Подвеска учитывается в статистике, только если у неё есть и валидный
-  // шаблон, и живая нода-якорь на нижнем ряду (та же проверка, что и в
-  // PendantLayer для occupiedCols).
+  // шаблон, и живой якорь — нода нижнего ряда (та же проверка, что и в
+  // PendantLayer для occupiedCols) либо конкретная бисерина-граница меша
+  // зубца (не просто «зубец существует» — сама бисерина тоже должна
+  // резолвиться, см. resolvePendantAnchor).
   const validPendantPlacements = useMemo(() => {
     const bottomCols = new Set(bottomNodes.map(n => n.logicalIndex.col));
-    return pendantPlacements.filter(
-      (p) => pendantTemplates[p.templateId] && bottomCols.has(p.col),
-    );
-  }, [pendantPlacements, pendantTemplates, bottomNodes]);
+    return pendantPlacements.filter((p) => pendantTemplates[p.templateId] && (
+      p.anchor.kind === 'grid'
+        ? bottomCols.has(p.anchor.col)
+        : !!toothMeshes.get(p.anchor.placementId)?.beads[p.anchor.beadIndex]
+    ));
+  }, [pendantPlacements, pendantTemplates, bottomNodes, toothMeshes]);
 
   // Цепочка учитывается в статистике, только если у неё живы оба конца —
   // узел нижнего ряда либо узел зубца (см. ChainEndpoint, types/pendant.ts;

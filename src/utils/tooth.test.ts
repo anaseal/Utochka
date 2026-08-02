@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   toothBeadId, isToothBeadId, parseToothBeadId, getToothRows, computeToothMesh, toothOverlaps,
+  isColumnInAnyTooth, findMirrorTooth, computeToothInsertionRanges,
 } from './tooth';
 import { ToothPlacement } from '../types/pendant';
 
@@ -99,6 +100,84 @@ describe('computeToothMesh', () => {
   it('span beads never get a side tag', () => {
     const mesh = computeToothMesh(2, 4, 0, STEP_X, ROW_Y_STEP, 2);
     expect(mesh.beads.filter(b => b.kind === 'span').every(b => b.side === undefined)).toBe(true);
+  });
+
+  it('tipIndex points at the bead with both sides (the convergence point), for several widths/internalCount', () => {
+    for (const [startCol, endCol] of [[2, 6], [0, 3], [1, 8]] as [number, number][]) {
+      for (const internalCount of [0, 2]) {
+        const mesh = computeToothMesh(startCol, endCol, 0, STEP_X, ROW_Y_STEP, internalCount);
+        expect(mesh.beads[mesh.tipIndex].side).toEqual(['left', 'right']);
+      }
+    }
+  });
+});
+
+describe('isColumnInAnyTooth', () => {
+  const teeth: ToothPlacement[] = [
+    { placementId: 'a', startCol: 2, endCol: 5, colorMap: {} },
+  ];
+
+  it('true for columns inside a tooth strip, including its endpoints', () => {
+    expect(isColumnInAnyTooth(2, teeth)).toBe(true);
+    expect(isColumnInAnyTooth(3, teeth)).toBe(true);
+    expect(isColumnInAnyTooth(5, teeth)).toBe(true);
+  });
+
+  it('false for columns outside any tooth strip', () => {
+    expect(isColumnInAnyTooth(1, teeth)).toBe(false);
+    expect(isColumnInAnyTooth(6, teeth)).toBe(false);
+  });
+
+  it('false against an empty list', () => {
+    expect(isColumnInAnyTooth(2, [])).toBe(false);
+  });
+});
+
+describe('findMirrorTooth', () => {
+  const width = 10;
+  const tooth: ToothPlacement = { placementId: 'a', startCol: 2, endCol: 4, colorMap: {} };
+
+  it('finds the reflected tooth by startCol/endCol (col c <-> width-1-c)', () => {
+    const mirror: ToothPlacement = { placementId: 'b', startCol: 5, endCol: 7, colorMap: {} };
+    expect(findMirrorTooth(tooth, [tooth, mirror], width)).toBe(mirror);
+  });
+
+  it('returns null when there is no reflected tooth', () => {
+    expect(findMirrorTooth(tooth, [tooth], width)).toBeNull();
+  });
+});
+
+describe('computeToothInsertionRanges', () => {
+  const width = 10;
+
+  it('returns the single normalized range with mirror mode off', () => {
+    expect(computeToothInsertionRanges(4, 2, [], false, width)).toEqual([{ startCol: 2, endCol: 4 }]);
+  });
+
+  it('returns an empty array when colA === colB', () => {
+    expect(computeToothInsertionRanges(3, 3, [], false, width)).toEqual([]);
+  });
+
+  it('returns an empty array when the range overlaps an existing tooth', () => {
+    const existing: ToothPlacement[] = [{ placementId: 'x', startCol: 3, endCol: 6, colorMap: {} }];
+    expect(computeToothInsertionRanges(2, 4, existing, false, width)).toEqual([]);
+  });
+
+  it('adds the mirrored range too in mirror mode, when it does not overlap', () => {
+    expect(computeToothInsertionRanges(2, 4, [], true, width)).toEqual([
+      { startCol: 2, endCol: 4 },
+      { startCol: 5, endCol: 7 },
+    ]);
+  });
+
+  it('adds only the main range in mirror mode when the mirrored range would overlap', () => {
+    const existing: ToothPlacement[] = [{ placementId: 'x', startCol: 5, endCol: 8, colorMap: {} }];
+    expect(computeToothInsertionRanges(2, 4, existing, true, width)).toEqual([{ startCol: 2, endCol: 4 }]);
+  });
+
+  it('does not duplicate a self-mirrored range', () => {
+    // width=10 -> ось между col 4 и col 5: диапазон [2,7] отражается сам в себя.
+    expect(computeToothInsertionRanges(2, 7, [], true, width)).toEqual([{ startCol: 2, endCol: 7 }]);
   });
 });
 

@@ -1,17 +1,17 @@
 import { useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import { PendantChain, ChainEndpoint, ToothPlacement } from '../types/pendant';
 import { chainEndpointsEqual, chainEndpointsAllowed } from '../utils/pendantChain';
-import { ToothMesh } from '../utils/tooth';
+import { ToothMesh, findMirrorTooth } from '../utils/tooth';
 import { DrawingTool } from './useDrawing';
 
 // Зеркалит один конец цепочки: сетка — по формуле width-1-col (нижний ряд
-// чётный, зеркало точное); зубец — ищет зеркальную пару в teeth (та же
-// reflection-формула, что и addTooth в useTeeth.ts) и берёт тот же beadIndex
-// (меши зеркальных зубцов генерируются идентично по структуре — тот же
-// приём, на который уже опирается paintToothBead в useTeeth.ts). null, если
-// зеркала нет (зубец без пары или ссылка на несуществующий placementId) —
-// тогда зеркало цепочки не создаётся, но основная цепочка остаётся как есть
-// (см. addChain — «пропускаем только зеркало»).
+// чётный, зеркало точное); зубец — ищет зеркальную пару в teeth
+// (findMirrorTooth, tooth.ts) и берёт тот же beadIndex (меши зеркальных
+// зубцов генерируются идентично по структуре — тот же приём, на который уже
+// опирается paintToothBead в useTeeth.ts). null, если зеркала нет (зубец без
+// пары или ссылка на несуществующий placementId) — тогда зеркало цепочки не
+// создаётся, но основная цепочка остаётся как есть (см. addChain —
+// «пропускаем только зеркало»).
 const mirrorEndpoint = (
   endpoint: ChainEndpoint,
   width: number,
@@ -20,9 +20,7 @@ const mirrorEndpoint = (
   if (endpoint.kind === 'grid') return { kind: 'grid', col: width - 1 - endpoint.col };
   const tooth = teeth.find((t) => t.placementId === endpoint.placementId);
   if (!tooth) return null;
-  const mirrorStart = width - 1 - tooth.endCol;
-  const mirrorEnd = width - 1 - tooth.startCol;
-  const mirrorTooth = teeth.find((t) => t.startCol === mirrorStart && t.endCol === mirrorEnd);
+  const mirrorTooth = findMirrorTooth(tooth, teeth, width);
   if (!mirrorTooth) return null;
   return { kind: 'tooth', placementId: mirrorTooth.placementId, beadIndex: endpoint.beadIndex };
 };

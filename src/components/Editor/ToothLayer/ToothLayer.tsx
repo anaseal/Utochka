@@ -70,7 +70,7 @@ export const ToothLayer = memo(({
       {teeth.map((tooth) => {
         const mesh = toothMeshes.get(tooth.placementId);
         if (!mesh || mesh.beads.length === 0) return null;
-        const tip = mesh.beads[mesh.beads.length - 1];
+        const tip = mesh.beads[mesh.tipIndex];
 
         return (
           <g
