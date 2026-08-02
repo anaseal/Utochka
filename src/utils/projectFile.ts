@@ -54,7 +54,7 @@ export const exportProject = () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'silyanka-project.json';
+  link.download = 'beadlace-project.json';
   link.click();
   URL.revokeObjectURL(url);
 };
