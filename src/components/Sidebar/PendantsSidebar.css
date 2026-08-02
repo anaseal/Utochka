@@ -13,7 +13,7 @@
   align-items: center;
   gap: 4px;
   padding: 6px 4px;
-  background: var(--color-canvas);
+  background: var(--color-panel);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   cursor: grab;
@@ -32,7 +32,7 @@
 
 .pendant-card:hover {
   border-color: #22d3ee;
-  background: #243349;
+  background: rgba(34, 211, 238, 0.15);
 }
 
 .pendant-card:active {
@@ -60,8 +60,8 @@
 }
 
 .pendant-preview__anchor {
-  fill: rgba(165, 189, 207, 0.25);
-  stroke: rgba(165, 189, 207, 0.6);
+  fill: rgba(140, 185, 220, 0.25);
+  stroke: rgba(140, 185, 220, 0.6);
   stroke-width: 2;
   stroke-dasharray: 4 3;
 }
@@ -154,7 +154,7 @@
   border-radius: 5px;
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  color: #f1f5f9;
+  color: #e3f3ff;
   font-size: 14px;
   line-height: 1;
   cursor: pointer;

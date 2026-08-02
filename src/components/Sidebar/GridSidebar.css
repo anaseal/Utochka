@@ -56,7 +56,7 @@
 
 .grid-sidebar__link-btn:hover {
   background: rgba(148, 163, 184, 0.12);
-  color: #e2e8f0;
+  color: #e3f3ff;
 }
 
 .grid-sidebar__link-btn[aria-pressed="true"] {
@@ -93,7 +93,7 @@
 }
 
 .bottom-chain-control__toggle--active {
-  background: rgba(34, 211, 238, 0.25);
+  background: rgba(34, 211, 238, 0.15);
   border-color: #22d3ee;
 }
 

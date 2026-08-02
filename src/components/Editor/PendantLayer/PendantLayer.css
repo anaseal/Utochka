@@ -16,15 +16,15 @@
 }
 
 .pendant-drop-target {
-  fill: rgba(34, 211, 238, 0.2);
+  fill: rgba(34, 211, 238, 0.15);
   stroke: #22d3ee;
   stroke-width: 2;
   stroke-dasharray: 5 3;
 }
 
 .pendant-drop-target--replace {
-  fill: rgba(255, 211, 42, 0.2);
-  stroke: #ffd32a;
+  fill: rgba(251, 191, 36, 0.2);
+  stroke: #fbbf24;
 }
 
 .pendant-remove-btn {
@@ -46,11 +46,11 @@
 }
 
 .pendant-remove-btn:hover .pendant-remove-btn__bg {
-  fill: #ff6b7a;
+  fill: #f87171;
 }
 
 .pendant-remove-btn__icon {
-  stroke: #ffffff;
+  stroke: #e3f3ff;
   stroke-width: 2;
   stroke-linecap: round;
   pointer-events: none;

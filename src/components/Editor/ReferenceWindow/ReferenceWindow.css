@@ -51,7 +51,7 @@
 .reference-window__title {
   font-size: 12px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: #e3f3ff;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   flex: 1;
@@ -83,7 +83,7 @@
   justify-content: center;
   transition: all 0.2s;
 }
-.reference-window__icon-btn:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; }
+.reference-window__icon-btn:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.2); color: #e3f3ff; }
 
 .reference-window__warning {
   flex-shrink: 0;
@@ -123,7 +123,7 @@
 }
 .reference-window__dropzone--active {
   border-color: #22d3ee;
-  background: rgba(34, 211, 238, 0.08);
+  background: rgba(34, 211, 238, 0.15);
 }
 
 .reference-window__viewport {
@@ -179,7 +179,7 @@
   font-size: 11px;
   transition: all 0.2s;
 }
-.reference-window__text-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; }
+.reference-window__text-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: #e3f3ff; }
 
 /* Собственный resize-хэндл (заменяет нативный `resize: both`, см. выше) —
    уголок внизу справа, диагональные полоски нарисованы градиентом (тот же

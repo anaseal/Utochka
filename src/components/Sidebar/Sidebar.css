@@ -29,7 +29,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: #e3f3ff;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -93,7 +93,7 @@
 }
 
 .sidebar__section-clear:hover:not(:disabled) {
-  color: #f1f5f9;
+  color: #e3f3ff;
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -139,7 +139,7 @@
   width: calc(100% - 28px);
   margin: 14px 14px 0;
   padding: 8px 12px;
-  background: var(--color-canvas);
+  background: var(--color-panel);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   color: #94a3b8;
@@ -152,7 +152,7 @@
 .sidebar__clear:hover:not(:disabled) {
   border-color: rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.06);
-  color: #f1f5f9;
+  color: #e3f3ff;
 }
 
 .sidebar__clear:disabled {
@@ -176,7 +176,7 @@
   width: calc(100% - 28px);
   margin: 0 14px 8px;
   padding: 7px 12px;
-  background: var(--color-canvas);
+  background: var(--color-panel);
   border: 1px solid rgba(34, 211, 238, 0.35);
   border-radius: 8px;
   color: #22d3ee;
@@ -188,13 +188,13 @@
 
 .sidebar__tool-toggle:hover {
   border-color: #22d3ee;
-  background: #243349;
+  background: rgba(34, 211, 238, 0.15);
 }
 
 .sidebar__tool-toggle--active {
-  background: rgba(34, 211, 238, 0.25);
+  background: rgba(34, 211, 238, 0.15);
   border-color: #22d3ee;
-  color: #e2e8f0;
+  color: #e3f3ff;
 }
 
 /* :hover и --active бьют по одному и тому же background/border-color с
@@ -203,7 +203,7 @@
    бы её подсветку соседним :hover, и активная кнопка при наведении на
    секунду выглядела бы неактивной. */
 .sidebar__tool-toggle--active:hover {
-  background: rgba(34, 211, 238, 0.32);
+  background: rgba(34, 211, 238, 0.15);
   border-color: #22d3ee;
 }
 
@@ -233,7 +233,7 @@
   align-items: center;
   gap: 2px;
   padding: 6px 4px;
-  background: var(--color-canvas);
+  background: var(--color-panel);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   color: #94a3b8;
@@ -246,7 +246,7 @@
 .sidebar__tool-picker__btn:hover {
   border-color: rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.06);
-  color: #cbd5e1;
+  color: #e3f3ff;
 }
 
 .sidebar__tool-picker__btn--active {
@@ -261,7 +261,7 @@
    соседним :hover (была именно эта жалоба — активная Segment на наведении
    выглядела как обычная неактивная кнопка). */
 .sidebar__tool-picker__btn--active:hover {
-  background: rgba(34, 211, 238, 0.22);
+  background: rgba(34, 211, 238, 0.15);
   border-color: #22d3ee;
   color: #22d3ee;
 }
@@ -277,7 +277,7 @@
   width: calc(100% - 28px);
   margin: 0 14px 8px;
   padding: 7px 12px;
-  background: var(--color-canvas);
+  background: var(--color-panel);
   border: 1px solid rgba(34, 211, 238, 0.35);
   border-radius: 8px;
   color: #22d3ee;
@@ -289,7 +289,7 @@
 
 .sidebar__confirm-delete:hover:not(:disabled) {
   border-color: #22d3ee;
-  background: #243349;
+  background: rgba(34, 211, 238, 0.15);
 }
 
 .sidebar__confirm-delete:disabled {

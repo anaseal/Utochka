@@ -54,11 +54,11 @@
 }
 
 .thread-group__remove-btn:hover .thread-group__remove-btn-bg {
-  fill: #ff6b7a;
+  fill: #f87171;
 }
 
 .thread-group__remove-btn-icon {
-  stroke: #ffffff;
+  stroke: #e3f3ff;
   stroke-width: 2;
   stroke-linecap: round;
   pointer-events: none;

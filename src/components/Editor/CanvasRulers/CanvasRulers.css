@@ -25,28 +25,34 @@
   cursor: pointer;
 }
 
-/* Ножки (r чётный, even→odd) — янтарный. Значения в fallback — тёмная тема. */
+/* Ножки (r чётный, even→odd) — янтарный, плечи (r нечётный) — синий/циан.
+   Полупрозрачная заливка + сплошная обводка — тот же приём, что у активных
+   чипов инструментов по всему проекту (rgba(акцент,.15) + сплошной цвет,
+   см. .tool-btn--active в Header.css). Раньше заливка была тёмной сплошной
+   (#451a03/#082f49) — на тёмном холсте она почти сливалась с фоном
+   (--canvas-surface: #0f172a), кнопки было плохо видно. Среднетоновые
+   #d97706/#0284c7 читаются на обеих темах холста одинаково, поэтому
+   значения общие, без переопределения под [data-canvas-theme="light"]. */
 .span-ctrl__btn--bottom {
-  fill: var(--span-btn-bottom-fill, #451a03);
-  stroke: var(--span-btn-bottom-stroke, #92400e);
+  fill: var(--span-btn-bottom-fill, rgba(217, 119, 6, 0.15));
+  stroke: var(--span-btn-bottom-stroke, #d97706);
   stroke-width: 1;
 }
 
 .span-ctrl__btn-group--bottom:hover .span-ctrl__btn--bottom {
-  fill: var(--span-btn-bottom-fill-hover, #78350f);
-  stroke: var(--span-btn-bottom-stroke-hover, #d97706);
+  fill: var(--span-btn-bottom-fill-hover, rgba(217, 119, 6, 0.3));
+  stroke: var(--span-btn-bottom-stroke-hover, #fbbf24);
 }
 
-/* Плечи (r нечётный, odd→even) — синий */
 .span-ctrl__btn--top {
-  fill: var(--span-btn-top-fill, #082f49);
-  stroke: var(--span-btn-top-stroke, #075985);
+  fill: var(--span-btn-top-fill, rgba(2, 132, 199, 0.15));
+  stroke: var(--span-btn-top-stroke, #0284c7);
   stroke-width: 1;
 }
 
 .span-ctrl__btn-group--top:hover .span-ctrl__btn--top {
-  fill: var(--span-btn-top-fill-hover, #0c4a6e);
-  stroke: var(--span-btn-top-stroke-hover, #0284c7);
+  fill: var(--span-btn-top-fill-hover, rgba(2, 132, 199, 0.3));
+  stroke: var(--span-btn-top-stroke-hover, #22d3ee);
 }
 
 
@@ -71,16 +77,16 @@
 }
 
 .span-ctrl__count--bottom {
-  fill: #92400e;
+  fill: #d97706;
 }
 
 .span-ctrl__count--top {
-  fill: #0369a1;
+  fill: #0284c7;
 }
 
-/* Ряд с индивидуальным значением — ярче */
+/* Ряд с индивидуальным значением — ярче, общий цвет для обоих типов рядов */
 .span-ctrl__count--overridden {
-  fill: #f59e0b;
+  fill: #fbbf24;
 }
 
 /* Весь столбик per-row ±/счётчиков (по одному на каждый зазор между рядами)
@@ -105,14 +111,7 @@
 .canvas__svg[data-canvas-theme="light"] {
   --canvas-mirror-axis: rgba(15, 23, 42, 0.35);
 
-  /* Светлые чипы span-контролов вместо тяжёлых тёмных заливок на белом. */
---span-btn-bottom-fill: #fee2e2;
---span-btn-bottom-stroke: #e11d48;
---span-btn-bottom-fill-hover: #fecaca;
---span-btn-bottom-stroke-hover: #be123c;
-  --span-btn-top-fill: #e0f2fe;
-  --span-btn-top-stroke: #0284c7;
-  --span-btn-top-fill-hover: #bae6fd;
-  --span-btn-top-stroke-hover: #0369a1;
-  --span-btn-text: #475569;
+  /* Span-контролы (ножки/плечи) больше не переопределяются для светлой темы —
+     их среднетоновые цвета (см. .span-ctrl__btn--bottom/--top выше) читаются
+     одинаково на обеих поверхностях холста. */
 }

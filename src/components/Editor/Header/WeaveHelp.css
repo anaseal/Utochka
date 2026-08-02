@@ -21,7 +21,7 @@
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
   padding: 12px 14px;
   z-index: 110;
-  color: #cbd5e1;
+  color: #e3f3ff;
   font-size: 11px;
   line-height: 1.5;
   text-align: left;
@@ -73,7 +73,7 @@
 
 .weave-help__lead {
   margin: 0 0 10px;
-  color: #e2e8f0;
+  color: #e3f3ff;
 }
 
 .weave-help__title {
@@ -107,7 +107,7 @@
 }
 
 .weave-help__bubble b {
-  color: #f1f5f9;
+  color: #e3f3ff;
   font-weight: 600;
 }
 

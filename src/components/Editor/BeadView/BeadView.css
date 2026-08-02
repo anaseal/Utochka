@@ -21,9 +21,9 @@
 /* Базовый (незакрашенный) бисер. Значения в fallback — тёмная тема;
    светлую задаёт .canvas__svg[data-canvas-theme="light"] через токены. */
 .bead--empty .bead__body {
-  stroke: var(--bead-empty-stroke, rgba(160, 200, 230, 0.6));
+  stroke: var(--bead-empty-stroke, rgba(140, 185, 220, 0.6));
   stroke-width: 1px;
-  fill: var(--bead-empty-fill, rgba(255, 255, 255, 0.04));
+  fill: var(--bead-empty-fill, rgba(140, 185, 220, 0.04));
 }
 
 .bead--type-node.bead--empty .bead__body {
@@ -39,7 +39,7 @@
   --bead-empty-stroke: rgba(100, 116, 139, 0.5);
   --bead-empty-fill: transparent;
   --bead-node-empty-fill: transparent;
-  --bead-node-empty-stroke: rgba(71, 85, 105, 0.75);
+  --bead-node-empty-stroke: rgba(100, 116, 139, 0.75);
   --bead-node-empty-glow: transparent;
 }
 
@@ -67,8 +67,8 @@
    нагромождение толстых пересекающихся окружностей, тон просто подсвечивает
    сами бисерины. */
 .bead__delete-preview {
-  fill: rgba(229, 90, 78, 0.45);
-  stroke: #e55a4e;
+  fill: rgba(255, 71, 87, 0.45);
+  stroke: #ff4757;
   stroke-width: 1px;
   opacity: 0.9;
 }
@@ -80,7 +80,7 @@
    однозначно говорит «ждёт», заливка была лишней. */
 .bead__pending-delete {
   fill: none;
-  stroke: #e55a4e;
+  stroke: #ff4757;
   stroke-width: 1.4px;
   stroke-dasharray: 3 2;
   opacity: 0.9;
@@ -88,7 +88,7 @@
 
 .bead__preview {
   opacity: 0.6;
-  stroke: #ffffff;
+  stroke: #e3f3ff;
   stroke-width: 1px;
   stroke-dasharray: 2 1.5;
 }

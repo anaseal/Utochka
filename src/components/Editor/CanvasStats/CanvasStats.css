@@ -48,7 +48,7 @@
 }
 
 .stats__value {
-  color: #e2e8f0;
+  color: #e3f3ff;
   font-family: monospace;
   font-size: 14px;
   font-weight: 700;
@@ -118,7 +118,7 @@
 
 .stats__color-badge--active {
   border-color: #22d3ee;
-  background-color: rgba(34, 211, 238, 0.12);
+  background-color: rgba(34, 211, 238, 0.15);
 }
 
 .stats__indicator-btn {
@@ -144,7 +144,7 @@
 }
 
 .stats__count {
-  color: #e2e8f0;
+  color: #e3f3ff;
   font-family: monospace;
   font-size: 11px;
   line-height: 1;
@@ -164,12 +164,12 @@
 }
 
 .stats__replace-btn:hover {
-  color: #e2e8f0;
+  color: #e3f3ff;
   background-color: rgba(255, 255, 255, 0.1);
 }
 
 .stats__replace-btn:disabled {
-  color: #475569;
+  color: #64748b;
   cursor: default;
   background: none;
 }
@@ -202,7 +202,7 @@
 }
 
 .stats__toggle:hover {
-  color: #e2e8f0;
+  color: #e3f3ff;
   background-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -314,8 +314,8 @@
     padding: 0;
     gap: 0;
     justify-content: center;
-    background: #111727;
-    border: 1px solid #607086;
+    background: #0f172a;
+    border: 1px solid #64748b;
     border-radius: 8px;
     backdrop-filter: none;
     max-width: none;
@@ -323,18 +323,18 @@
   }
 
   .stats:hover {
-    border-color: #21cfe9;
+    border-color: #22d3ee;
   }
 
   .stats__toggle {
     display: flex;
     width: 100%;
     height: 100%;
-    color: #607086;
+    color: #64748b;
   }
 
   .stats__toggle:hover {
-    color: #21cfe9;
+    color: #22d3ee;
     background: none;
   }
 

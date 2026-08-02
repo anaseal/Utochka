@@ -8,7 +8,7 @@
   bottom: 0;
   overflow: hidden;
   display: flex;
-  background-color: #020617;
+  background-color: #0f172a;
   transition: right var(--transition-speed) ease;
 }
 
@@ -33,7 +33,7 @@
      через [data-canvas-theme="light"] ниже. Область — только карточка холста. */
   --canvas-surface: #0f172a;
   --canvas-border: rgba(255, 255, 255, 0.05);
-  --canvas-scrollbar-thumb: #334155;
+  --canvas-scrollbar-thumb: #1e293b;
   --canvas-scrollbar-track: rgba(15, 23, 42, 0.5);
   /* Нитка (ThreadLayer) — тёплый льняной оттенок, отличимый и от cyan-акцента
      (stamp/mirror), и от красных кнопок удаления. --thread-color-2 — вторая
@@ -165,9 +165,9 @@
   gap: 6px;
   padding: 0 16px;
   height: 32px;
-  background: #111727;
-  color: #607086;
-  border: 1px solid #607086;
+  background: #0f172a;
+  color: #64748b;
+  border: 1px solid #64748b;
   border-radius: 8px;
   font-size: 11px;
   font-weight: 800;
@@ -179,8 +179,8 @@
 }
 
 .export-btn:hover {
-  color: #21cfe9;
-  border-color: #21cfe9;
+  color: #22d3ee;
+  border-color: #22d3ee;
 }
 
 .export-btn:active {
@@ -199,9 +199,9 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #111727;
-  color: #607086;
-  border: 1px solid #607086;
+  background: #0f172a;
+  color: #64748b;
+  border: 1px solid #64748b;
   border-radius: 8px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s,
@@ -209,8 +209,8 @@
 }
 
 .canvas-theme-toggle:hover {
-  color: #21cfe9;
-  border-color: #21cfe9;
+  color: #22d3ee;
+  border-color: #22d3ee;
 }
 
 .canvas-theme-toggle:active {
@@ -237,17 +237,17 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #111727;
-  color: #607086;
-  border: 1px solid #607086;
+  background: #0f172a;
+  color: #64748b;
+  border: 1px solid #64748b;
   border-radius: 8px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
 
 .thread-trace-controls__btn:hover {
-  color: #21cfe9;
-  border-color: #21cfe9;
+  color: #22d3ee;
+  border-color: #22d3ee;
 }
 
 .thread-trace-controls__btn:active {
@@ -255,8 +255,8 @@
 }
 
 .thread-trace-controls__btn--cancel:hover {
-  color: #ff6b7a;
-  border-color: #ff6b7a;
+  color: #f87171;
+  border-color: #f87171;
 }
 
 /* Ручка выдвижной панели редактора количества бисерин (per-row span controls
@@ -281,9 +281,9 @@
   justify-content: center;
   width: 28px;
   height: 48px;
-  background: #111727;
-  color: #607086;
-  border: 1px solid #607086;
+  background: #0f172a;
+  color: #64748b;
+  border: 1px solid #64748b;
   border-left: none;
   border-radius: 0 10px 10px 0;
   cursor: pointer;
@@ -291,8 +291,8 @@
 }
 
 .span-controls-toggle:hover {
-  color: #21cfe9;
-  border-color: #21cfe9;
+  color: #22d3ee;
+  border-color: #22d3ee;
 }
 
 /* Скрыт, пока .canvas__svg проскроллен вправо от левого края (см.
@@ -360,7 +360,7 @@
 }
 .canvas-scrollbar__thumb:active {
   cursor: grabbing;
-  background: rgba(34, 211, 238, 0.7);
+  background: rgba(34, 211, 238, 0.55);
 }
 /* Толщина бегунка (10px) тоньше трека (var(--canvas-scrollbar-gutter)) —
    отцентрирована внутри него margin-ом в половину толщины. Длина и сдвиг
