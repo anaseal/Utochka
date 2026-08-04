@@ -3,13 +3,17 @@ import {
   HelpCircle, Diamond, MousePointerClick, Eraser, Crosshair, Undo2, RotateCcw, FlipHorizontal,
   Percent, MoveHorizontal, Maximize2,
 } from 'lucide-react';
+import { Technique } from './Header.types';
 import './WeaveHelp.css';
 
 // Короткая инструкция к режиму плетения — пузырёк из кнопки «?» в хедере,
 // а не модалка: режим и так занимает весь экран, а подсказку читают одним
 // глазом, не прерывая работу. Открытие/закрытие — как у MirrorMenu
 // (клик снаружи + Escape), текст английский, как и весь UI.
-export const WeaveHelp = ({ technique, className }: { technique: 'silyanka' | 'crossWeave'; className?: string }) => {
+// technique типизирован как весь Technique — чисто расширение типа (Peyote
+// не поддерживает режим плетения и сюда не попадёт в рантайме, см.
+// WeaveControls.tsx), но проп приходит из Header.tsx уже типа Technique.
+export const WeaveHelp = ({ technique, className }: { technique: Technique; className?: string }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);

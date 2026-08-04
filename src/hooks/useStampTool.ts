@@ -1,9 +1,16 @@
 /* FILE: src\hooks\useStampTool.ts */
 import { useCallback, useRef, useState } from 'react';
-import { Bead } from '../types/bead';
-import { StampPattern } from '../utils/stamp';
 import { ToBeadCoords } from './useBeadCoords';
 import { useFrameThrottle } from './useFrameThrottle';
+
+// Минимальная структурная форма места, куда штамп может встать — принимает и
+// Bead силянки (после фильтра по NODE на стороне вызывающего кода, см.
+// CanvasView.tsx), и PeyoteBead (там валидны все бисерины без фильтра).
+interface StampPlaceable {
+  id: string;
+  x: number;
+  y: number;
+}
 
 // Порог в экранных пикселях, отличающий клик (постановка штампа) от драга
 // (выделение рамкой) — независим от zoom, т.к. сравнивается в client-координатах.
@@ -15,13 +22,15 @@ import { useFrameThrottle } from './useFrameThrottle';
 const STAMP_DRAG_THRESHOLD = 4;
 const STAMP_DRAG_THRESHOLD_TOUCH = 10;
 
-interface UseStampToolOptions {
+interface UseStampToolOptions<TPattern> {
   // !weaveMode && activeTool === 'stamp' — считается в компоненте, тому же
   // условию подчинена и маршрутизация к 'thread' на уровне контейнера.
   active: boolean;
-  beads: Bead[];
+  beads: StampPlaceable[];
   toBeadCoords: ToBeadCoords;
-  stampPattern: StampPattern | null;
+  // Тип узора (StampPattern силянки / PeyoteStampPattern) хуку не важен — он
+  // используется только как признак «узор загружен», без обращения к полям.
+  stampPattern: TPattern | null;
   onStampHover: (nodeId: string | null) => void;
   onStampSelect: (ids: string[]) => void;
   onStampPlace: (nodeId: string) => void;
@@ -32,7 +41,7 @@ interface UseStampToolOptions {
 // копию уже загруженного узора, драг без узора рисует рамку выделения нового
 // узора, тач с загруженным узором сразу таскает живое превью (см. spec.md,
 // «Штамп»).
-export const useStampTool = ({
+export const useStampTool = <TPattern,>({
   active,
   beads,
   toBeadCoords,
@@ -41,7 +50,7 @@ export const useStampTool = ({
   onStampSelect,
   onStampPlace,
   isMultiTouch,
-}: UseStampToolOptions) => {
+}: UseStampToolOptions<TPattern>) => {
   const stampDragRef = useRef<{
     startClient: { x: number; y: number };
     startBead: { x: number; y: number };
@@ -55,11 +64,10 @@ export const useStampTool = ({
   } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  const findNearestNode = useCallback((point: { x: number; y: number }): Bead | null => {
-    let nearest: Bead | null = null;
+  const findNearestNode = useCallback((point: { x: number; y: number }): StampPlaceable | null => {
+    let nearest: StampPlaceable | null = null;
     let bestDist = Infinity;
     for (const bead of beads) {
-      if (bead.type !== 'NODE') continue;
       const dx = bead.x - point.x;
       const dy = bead.y - point.y;
       const dist = dx * dx + dy * dy;

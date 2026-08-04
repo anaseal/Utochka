@@ -7,7 +7,7 @@ import { ThreadMenu } from './ThreadMenu';
 import { ThreadStyleButton } from './ThreadStyleButton';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { Thread } from '../../../types/thread';
-import { SilyankaHeaderProps, CrossWeaveHeaderProps } from './Header.types';
+import { SilyankaHeaderProps, CrossWeaveHeaderProps, PeyoteHeaderProps } from './Header.types';
 
 interface HeaderToolGroupProps {
   activeTool: DrawingTool;
@@ -16,13 +16,15 @@ interface HeaderToolGroupProps {
   onClearAllThreads: () => void;
   silyankaProps?: SilyankaHeaderProps;
   crossWeaveProps?: CrossWeaveHeaderProps;
+  peyoteProps?: PeyoteHeaderProps;
 }
 
 // Тулбар рисования: карандаш/ластик — общие; нитка/заливка/mirror — общие по
 // смыслу, но с технико-зависимыми деталями (ThreadMenu vs ThreadStyleButton,
-// штамп есть только у силянки). Скрыт целиком в режиме плетения (см. Header.tsx).
+// штамп есть у силянки и Peyote, нитки у Peyote нет вовсе). Скрыт целиком в
+// режиме плетения (см. Header.tsx).
 export const HeaderToolGroup = ({
-  activeTool, setActiveTool, threads, onClearAllThreads, silyankaProps, crossWeaveProps,
+  activeTool, setActiveTool, threads, onClearAllThreads, silyankaProps, crossWeaveProps, peyoteProps,
 }: HeaderToolGroupProps) => {
   return (
     <div className="tool-group">
@@ -145,6 +147,51 @@ export const HeaderToolGroup = ({
             setMirrorMode={silyankaProps.setMirrorMode}
             onMakeSymmetric={silyankaProps.onMakeSymmetric}
             canMakeSymmetric={silyankaProps.canMakeSymmetric}
+          />
+        </>
+      )}
+
+      {peyoteProps && (
+        <>
+          <button
+            onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
+            className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
+            title="Flood Fill (G)"
+            aria-pressed={activeTool === 'flood-fill'}
+          >
+            <PaintBucket size={14} />
+          </button>
+
+          {/* Штамп есть у Peyote (в отличие от crossWeave), но без бейджа
+              anchor-edge — Peyote не различает «низ»/«верх» узора, якорь
+              штампа всегда левый верхний угол выделения (см. peyoteStamp.ts).
+              Только X-бейдж сброса, как у силянки. */}
+          <div className="tool-btn-group">
+            <button
+              onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
+              className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
+              title="Stamp (S)"
+              aria-pressed={activeTool === 'stamp'}
+            >
+              <Stamp size={14} />
+            </button>
+
+            {activeTool === 'stamp' && peyoteProps.hasStampPattern && (
+              <button
+                onClick={peyoteProps.onCancelStampPattern}
+                className="tool-btn-group__badge tool-btn-group__badge--cancel"
+                title="Reset stamp pattern (Esc/Alt)"
+              >
+                <X size={9} />
+              </button>
+            )}
+          </div>
+
+          <MirrorMenu
+            mirrorMode={peyoteProps.mirrorMode}
+            setMirrorMode={peyoteProps.setMirrorMode}
+            onMakeSymmetric={peyoteProps.onMakeSymmetric}
+            canMakeSymmetric={peyoteProps.canMakeSymmetric}
           />
         </>
       )}

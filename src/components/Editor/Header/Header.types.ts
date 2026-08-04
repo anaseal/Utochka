@@ -3,7 +3,7 @@ import { Thread } from '../../../types/thread';
 import { StampAnchorEdge } from '../../../utils/stamp';
 import { WeaveTool, WeaveOrientation } from './WeaveControls';
 
-export type Technique = 'silyanka' | 'crossWeave';
+export type Technique = 'silyanka' | 'crossWeave' | 'peyote';
 
 export interface SharedHeaderProps {
   palette: string[];
@@ -97,7 +97,21 @@ export interface CrossWeaveHeaderProps {
   onThreadOpacityChange: (opacity: number) => void;
 }
 
+// Peyote — штамп есть (в отличие от crossWeave), нитки нет (в отличие от
+// обеих других техник, см. spec.md, «Peyote»). Без stampAnchorEdge — у
+// Peyote нет структурного различия «низа»/«верха» узора, якорь штампа
+// всегда левый верхний угол выделения (см. peyoteStamp.ts).
+export interface PeyoteHeaderProps {
+  mirrorMode: boolean;
+  setMirrorMode: (v: boolean) => void;
+  onMakeSymmetric: () => void;
+  canMakeSymmetric: boolean;
+  hasStampPattern: boolean;
+  onCancelStampPattern: () => void;
+}
+
 export type HeaderProps = SharedHeaderProps & (
-  | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; crossWeaveProps?: undefined }
-  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveHeaderProps; silyankaProps?: undefined }
+  | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; crossWeaveProps?: undefined; peyoteProps?: undefined }
+  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveHeaderProps; silyankaProps?: undefined; peyoteProps?: undefined }
+  | { technique: 'peyote'; peyoteProps: PeyoteHeaderProps; silyankaProps?: undefined; crossWeaveProps?: undefined }
 );

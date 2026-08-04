@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { ListChecks } from 'lucide-react';
 import './Header.css';
-import { SilyankaIcon, CrossWeaveIcon } from './icons';
+import { TechniqueMenu } from './TechniqueMenu';
 import { Stepper } from '../../common/Stepper';
 import { APP_CONSTRAINTS } from '../../../config/theme';
 import { WeaveControls } from './WeaveControls';
@@ -33,32 +33,12 @@ export const Header = (props: HeaderProps) => {
 
   const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
   const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
+  const peyoteProps = props.technique === 'peyote' ? props.peyoteProps : undefined;
 
   return (
     <header className={`header${weaveMode ? ' header--weave' : ''}`}>
       <nav className="header__nav">
-        <div className="technique-switch" role="group" aria-label="Switch technique">
-          <button
-            onClick={() => onTechniqueChange('silyanka')}
-            className={`technique-switch__btn ${technique === 'silyanka' ? 'technique-switch__btn--active' : ''}`}
-            title="Traditional Ukrainian beadwork"
-            aria-pressed={technique === 'silyanka'}
-          >
-            <SilyankaIcon size={25} />
-            <span>sylianka</span>
-          </button>
-          <button
-            onClick={() => onTechniqueChange('crossWeave')}
-            className={`technique-switch__btn ${technique === 'crossWeave' ? 'technique-switch__btn--active' : ''}`}
-            title="Right-Angle Weave"
-            aria-pressed={technique === 'crossWeave'}
-          >
-            <CrossWeaveIcon size={25} />
-            <span>RAW</span>
-          </button>
-        </div>
-
-        <div className="header__divider" />
+        <TechniqueMenu technique={technique} onTechniqueChange={onTechniqueChange} weaveMode={weaveMode} />
 
         {/* Вход в режим плетения — рядом с выбором техники, а не среди иконок
             панелей справа. Причины: это не панель, а мод (техника отвечает
@@ -66,17 +46,25 @@ export const Header = (props: HeaderProps) => {
             соседи справа (референс, подвески, сетка) в режиме скрываются, и
             кнопка оставалась там одна, съезжая по строке при каждом входе и
             выходе — искать «выход» приходилось на новом месте. Левый край
-            хедера одинаков в обоих режимах. Отдельной кнопкой, а не третьим
-            элементом .technique-switch: та группа — выбор одного из двух
-            полотен, тумблер внутри неё читался бы как третья техника. */}
-        <button
-          onClick={onToggleWeaveMode}
-          className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
-          title={weaveMode ? 'Exit weave mode' : 'Weave mode: mark your progress as you go'}
-          aria-pressed={weaveMode}
-        >
-          <ListChecks size={20} />
-        </button>
+            хедера одинаков в обоих режимах. Отдельной кнопкой, а не пунктом
+            TechniqueMenu: тот попап — выбор одной из техник, тумблер внутри
+            него читался бы как ещё одна техника. Скрыта для Peyote целиком —
+            эта техника не поддерживает режим плетения (см. spec.md,
+            «Peyote»): нет естественного понятия «сегмент», как у крестика/
+            силянки. */}
+        {technique !== 'peyote' && (
+          <>
+            <div className="header__divider" />
+            <button
+              onClick={onToggleWeaveMode}
+              className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
+              title={weaveMode ? 'Exit weave mode' : 'Weave mode: mark your progress as you go'}
+              aria-pressed={weaveMode}
+            >
+              <ListChecks size={20} />
+            </button>
+          </>
+        )}
 
         <div className="header__divider" />
 
@@ -107,6 +95,7 @@ export const Header = (props: HeaderProps) => {
             onClearAllThreads={onClearAllThreads}
             silyankaProps={silyankaProps}
             crossWeaveProps={crossWeaveProps}
+            peyoteProps={peyoteProps}
           />
         )}
 

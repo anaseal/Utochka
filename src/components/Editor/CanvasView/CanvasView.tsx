@@ -524,7 +524,11 @@ export const CanvasView = ({
 
   const stamp = useStampTool({
     active: !weaveMode && activeTool === 'stamp',
-    beads,
+    // Штамп силянки годится только на узлы — фильтр раньше жил внутри
+    // useStampTool.ts, вынесен сюда, чтобы хук принимал уже готовый список
+    // мест для штампа и годился для Peyote (там валидны все бисерины, см.
+    // PeyoteCanvasView.tsx).
+    beads: useMemo(() => beads.filter(b => b.type === 'NODE'), [beads]),
     toBeadCoords,
     stampPattern,
     onStampHover,

@@ -1,10 +1,10 @@
 // Сохранение/загрузка проекта одним файлом. Всё состояние приложения уже
-// лежит в localStorage под префиксами app:/silyanka:/crossWeave: (см.
-// usePersistedState) — файл проекта просто упаковывает и восстанавливает эти
-// ключи. Картинка референса (IndexedDB) сознательно не включается.
+// лежит в localStorage под префиксами app:/silyanka:/crossWeave:/peyote:
+// (см. usePersistedState) — файл проекта просто упаковывает и восстанавливает
+// эти ключи. Картинка референса (IndexedDB) сознательно не включается.
 
 const PROJECT_FILE_VERSION = 1;
-const KEY_PREFIXES = ['app:', 'silyanka:', 'crossWeave:'];
+const KEY_PREFIXES = ['app:', 'silyanka:', 'crossWeave:', 'peyote:'];
 
 export interface ProjectFile {
   version: number;

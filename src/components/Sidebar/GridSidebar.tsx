@@ -3,6 +3,7 @@ import { Stepper } from '../common/Stepper';
 import { SectionHelp } from '../common/SectionHelp';
 import { APP_CONSTRAINTS, BEAD_THEME } from '../../config/theme';
 import { CROSS_WEAVE_THEME } from '../../config/crossWeaveTheme';
+import { PEYOTE_THEME } from '../../config/peyoteTheme';
 import { Taper } from '../../types/bead';
 import './Sidebar.css';
 import './GridSidebar.css';
@@ -54,7 +55,11 @@ interface SilyankaGridSidebarProps {
   resetAllDisabled: boolean;
 }
 
-interface CrossWeaveGridSidebarProps {
+// Общий костяк панели «Grid» у crossWeave и Peyote — обе техники не знают
+// про span/edges/taper/decor силянки, только размер сетки. Единый интерфейс,
+// а не два дословно одинаковых (CrossWeaveGridSidebarProps/
+// PeyoteGridSidebarProps), чтобы третья техника не дублировала его снова.
+interface BasicGridSidebarProps {
   gridWidth: number;
   gridHeight: number;
   spacing: number;
@@ -68,20 +73,31 @@ interface CrossWeaveGridSidebarProps {
   resetAllDisabled: boolean;
 }
 
+type CrossWeaveGridSidebarProps = BasicGridSidebarProps;
+type PeyoteGridSidebarProps = BasicGridSidebarProps;
+
 type GridSidebarProps = SharedGridSidebarProps & (
-  | { technique: 'silyanka'; silyankaProps: SilyankaGridSidebarProps; crossWeaveProps?: undefined }
-  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveGridSidebarProps; silyankaProps?: undefined }
+  | { technique: 'silyanka'; silyankaProps: SilyankaGridSidebarProps; crossWeaveProps?: undefined; peyoteProps?: undefined }
+  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveGridSidebarProps; silyankaProps?: undefined; peyoteProps?: undefined }
+  | { technique: 'peyote'; peyoteProps: PeyoteGridSidebarProps; silyankaProps?: undefined; crossWeaveProps?: undefined }
 );
 
 export const GridSidebar = (props: GridSidebarProps) => {
   const { open } = props;
   const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
   const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
+  const peyoteProps = props.technique === 'peyote' ? props.peyoteProps : undefined;
+  // crossWeave и Peyote делят один интерфейс (BasicGridSidebarProps) — вместо
+  // тройного `? :` на каждом поле ниже, один merge и дальше двойной `? :`
+  // (силянка / остальное), как было раньше.
+  const basicProps = crossWeaveProps ?? peyoteProps;
 
-  const width = silyankaProps ? silyankaProps.gridWidth : crossWeaveProps!.gridWidth;
-  const height = silyankaProps ? silyankaProps.gridHeight : crossWeaveProps!.gridHeight;
-  const spacing = silyankaProps ? silyankaProps.spacing : crossWeaveProps!.spacing;
-  const spacingConstraints = silyankaProps ? BEAD_THEME.constraints : CROSS_WEAVE_THEME.constraints;
+  const width = silyankaProps ? silyankaProps.gridWidth : basicProps!.gridWidth;
+  const height = silyankaProps ? silyankaProps.gridHeight : basicProps!.gridHeight;
+  const spacing = silyankaProps ? silyankaProps.spacing : basicProps!.spacing;
+  const spacingConstraints = silyankaProps
+    ? BEAD_THEME.constraints
+    : crossWeaveProps ? CROSS_WEAVE_THEME.constraints : PEYOTE_THEME.constraints;
 
   // Depth — общий пол ширины для активных сторон: пока обе стороны выключены
   // (rows=0), он не срезает ничего (см. taper.ts), поэтому степпер гасим, а не
@@ -108,8 +124,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
             <Stepper
               label="Width"
               value={width}
-              onDelta={silyankaProps ? silyankaProps.onWidthChange : crossWeaveProps!.onWidthChange}
-              onSet={silyankaProps ? silyankaProps.onSetWidth : crossWeaveProps!.onSetWidth}
+              onDelta={silyankaProps ? silyankaProps.onWidthChange : basicProps!.onWidthChange}
+              onSet={silyankaProps ? silyankaProps.onSetWidth : basicProps!.onSetWidth}
               inputValue={width}
               min={1}
               max={APP_CONSTRAINTS.maxGridWidth}
@@ -117,8 +133,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
             <Stepper
               label="Height"
               value={height}
-              onDelta={silyankaProps ? silyankaProps.onHeightChange : crossWeaveProps!.onHeightChange}
-              onSet={silyankaProps ? silyankaProps.onSetHeight : crossWeaveProps!.onSetHeight}
+              onDelta={silyankaProps ? silyankaProps.onHeightChange : basicProps!.onHeightChange}
+              onSet={silyankaProps ? silyankaProps.onSetHeight : basicProps!.onSetHeight}
               inputValue={height}
               min={silyankaProps ? 2 : 1}
               max={APP_CONSTRAINTS.maxGridHeight}
@@ -128,8 +144,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
               value={spacing}
               onDelta={(s) => (silyankaProps
                 ? silyankaProps.onSpacingChange(s * spacingConstraints.spacingStep)
-                : crossWeaveProps!.onSpacingChange(s * spacingConstraints.spacingStep))}
-              onSet={silyankaProps ? silyankaProps.onSetSpacing : crossWeaveProps!.onSetSpacing}
+                : basicProps!.onSpacingChange(s * spacingConstraints.spacingStep))}
+              onSet={silyankaProps ? silyankaProps.onSetSpacing : basicProps!.onSetSpacing}
               inputValue={spacing}
               min={spacingConstraints.minSpacing}
               max={spacingConstraints.maxSpacing}
@@ -332,8 +348,8 @@ export const GridSidebar = (props: GridSidebarProps) => {
         <button
           type="button"
           className="sidebar__clear"
-          onClick={silyankaProps ? silyankaProps.onResetAll : crossWeaveProps!.onResetAll}
-          disabled={silyankaProps ? silyankaProps.resetAllDisabled : crossWeaveProps!.resetAllDisabled}
+          onClick={silyankaProps ? silyankaProps.onResetAll : basicProps!.onResetAll}
+          disabled={silyankaProps ? silyankaProps.resetAllDisabled : basicProps!.resetAllDisabled}
         >
           Reset all
         </button>

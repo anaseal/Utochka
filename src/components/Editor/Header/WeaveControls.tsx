@@ -3,13 +3,18 @@ import {
   MoveHorizontal, MoveVertical, Maximize2, Minimize2,
 } from 'lucide-react';
 import { WeaveHelp } from './WeaveHelp';
+import { Technique } from './Header.types';
 
 export type WeaveTool = 'segment' | 'bead' | 'erase';
 export type WeaveOrientation = 'vertical' | 'horizontal';
 
 interface WeaveControlsProps {
   // Правило сегмента у техник разное — подсказка показывает своё для каждой.
-  technique: 'silyanka' | 'crossWeave';
+  // Тип — весь Technique (а не только 'silyanka' | 'crossWeave'), чисто
+  // расширение: Header.tsx передаёт сюда technique целиком, а значение
+  // 'peyote' в рантайме сюда не попадёт — вход в режим плетения для Peyote
+  // заблокирован (см. Header.tsx, кнопка скрыта при technique === 'peyote').
+  technique: Technique;
   tool: WeaveTool;
   onToolChange: (tool: WeaveTool) => void;
   markedCount: number;

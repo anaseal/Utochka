@@ -2,7 +2,7 @@
 .canvas__axis-text {
   fill: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
   pointer-events: none;
   user-select: none;
@@ -16,7 +16,23 @@
    с offsetX в CanvasView.tsx — см. useMediaQuery). */
 @media (max-width: 767.98px) {
   .canvas__axis-text {
-    font-size: 14px;
+    font-size: 12px;
+  }
+}
+
+/* Peyote: шаг сетки заметно меньше, чем у силянки/crossWeave (бисерины
+   стоят вплотную друг к другу без зазора — см. spec.md, «Peyote», размер
+   бисерины = шаг сетки), а базовый .canvas__axis-text рассчитан на куда
+   более просторный шаг тех двух техник — поверх узкого шага Peyote
+   двузначные номера колонок сливались в нечитаемую кашу. Модификатор только
+   у PeyoteRulers.tsx — силянку/crossWeave не трогает. */
+.canvas__axis-text--compact {
+  font-size: 10px;
+}
+
+@media (max-width: 767.98px) {
+  .canvas__axis-text--compact {
+    font-size: 8px;
   }
 }
 

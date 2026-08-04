@@ -1,3 +1,6 @@
+import { generatePeyoteGrid } from '../../../utils/peyoteGenerator';
+import { pitchYFromX } from '../../../config/peyoteTheme';
+
 // Inline-иконки инструментов, наследующие цвет через `currentColor`,
 // чтобы вести себя одинаково с lucide-иконками (.tool-btn: серый → белый).
 // Раньше это были внешние .svg с зашитым #22d3ee, вставленные через <img>,
@@ -122,6 +125,36 @@ export const CrossWeaveIcon = ({ size = 14, strokeWidth = 1.2}: RingIconProps) =
     <g className="cross-weave-icon__rings" fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
       {CROSS_WEAVE_RINGS.map(([cx, cy, rx, ry], i) => (
         <ellipse key={i} cx={cx} cy={cy} rx={rx} ry={ry} vectorEffect="non-scaling-stroke" />
+      ))}
+    </g>
+  </svg>
+);
+
+// Иконка Peyote: для этой техники нет готового референс-SVG (в отличие от
+// silyanka/RAW выше, извлечённых из пользовательских Union.svg), поэтому
+// геометрия иконки строится тем же генератором, что рисует сами бисерины —
+// маленькая сетка 4×5 с той же зубчатой кирпичной кладкой (см.
+// peyoteGenerator.ts). Если появится референс-SVG — заменить на извлечённые
+// координаты по тому же образцу, что и у двух других иконок.
+const PEYOTE_ICON_PITCH_X = 14;
+const PEYOTE_ICON_GRID = generatePeyoteGrid(4, 5, PEYOTE_ICON_PITCH_X, pitchYFromX(PEYOTE_ICON_PITCH_X));
+// Ровно шаг сетки — та же логика, что и у реальных бисерин (PeyoteCanvasView.tsx),
+// иначе даже иконка показывала бы зазор, которого на холсте нет.
+const PEYOTE_ICON_BEAD = { width: PEYOTE_ICON_PITCH_X, height: pitchYFromX(PEYOTE_ICON_PITCH_X) };
+
+export const PeyoteIcon = ({ size = 14, strokeWidth = 1.2 }: RingIconProps) => (
+  <svg width={size} height={size} viewBox="-12 -14 73 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g className="peyote-icon__beads" fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
+      {PEYOTE_ICON_GRID.map((b) => (
+        <rect
+          key={b.id}
+          x={b.x - PEYOTE_ICON_BEAD.width / 2}
+          y={b.y - PEYOTE_ICON_BEAD.height / 2}
+          width={PEYOTE_ICON_BEAD.width}
+          height={PEYOTE_ICON_BEAD.height}
+          rx={1.5}
+          vectorEffect="non-scaling-stroke"
+        />
       ))}
     </g>
   </svg>
