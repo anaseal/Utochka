@@ -7,7 +7,7 @@ import { ThreadMenu } from './ThreadMenu';
 import { ThreadStyleButton } from './ThreadStyleButton';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { Thread } from '../../../types/thread';
-import { SilyankaHeaderProps, CrossWeaveHeaderProps, PeyoteHeaderProps } from './Header.types';
+import { SilyankaHeaderProps, CrossWeaveHeaderProps, PeyoteHeaderProps, LoomHeaderProps } from './Header.types';
 
 interface HeaderToolGroupProps {
   activeTool: DrawingTool;
@@ -17,15 +17,20 @@ interface HeaderToolGroupProps {
   silyankaProps?: SilyankaHeaderProps;
   crossWeaveProps?: CrossWeaveHeaderProps;
   peyoteProps?: PeyoteHeaderProps;
+  loomProps?: LoomHeaderProps;
 }
 
 // Тулбар рисования: карандаш/ластик — общие; нитка/заливка/mirror — общие по
 // смыслу, но с технико-зависимыми деталями (ThreadMenu vs ThreadStyleButton,
-// штамп есть у силянки и Peyote, нитки у Peyote нет вовсе). Скрыт целиком в
-// режиме плетения (см. Header.tsx).
+// штамп есть у силянки/Peyote/Loom, нитки у Peyote/Loom нет вовсе). Скрыт
+// целиком в режиме плетения (см. Header.tsx).
 export const HeaderToolGroup = ({
-  activeTool, setActiveTool, threads, onClearAllThreads, silyankaProps, crossWeaveProps, peyoteProps,
+  activeTool, setActiveTool, threads, onClearAllThreads, silyankaProps, crossWeaveProps, peyoteProps, loomProps,
 }: HeaderToolGroupProps) => {
+  // Peyote и Loom делят один и тот же блок заливка/штамп/mirror (LoomHeaderProps
+  // = PeyoteHeaderProps, см. Header.types.ts) — тот же приём, что GridSidebar
+  // использует для crossWeave/Peyote (basicProps = crossWeaveProps ?? peyoteProps).
+  const stampMirrorProps = peyoteProps ?? loomProps;
   return (
     <div className="tool-group">
       <button
@@ -151,7 +156,7 @@ export const HeaderToolGroup = ({
         </>
       )}
 
-      {peyoteProps && (
+      {stampMirrorProps && (
         <>
           <button
             onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
@@ -162,10 +167,11 @@ export const HeaderToolGroup = ({
             <PaintBucket size={14} />
           </button>
 
-          {/* Штамп есть у Peyote (в отличие от crossWeave), но без бейджа
-              anchor-edge — Peyote не различает «низ»/«верх» узора, якорь
-              штампа всегда левый верхний угол выделения (см. peyoteStamp.ts).
-              Только X-бейдж сброса, как у силянки. */}
+          {/* Штамп есть у Peyote и Loom (в отличие от crossWeave), но без
+              бейджа anchor-edge — ни та ни другая техника не различает
+              «низ»/«верх» узора, якорь штампа всегда левый верхний угол
+              выделения (см. peyoteStamp.ts/loomStamp.ts). Только X-бейдж
+              сброса, как у силянки. */}
           <div className="tool-btn-group">
             <button
               onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
@@ -176,9 +182,9 @@ export const HeaderToolGroup = ({
               <Stamp size={14} />
             </button>
 
-            {activeTool === 'stamp' && peyoteProps.hasStampPattern && (
+            {activeTool === 'stamp' && stampMirrorProps.hasStampPattern && (
               <button
-                onClick={peyoteProps.onCancelStampPattern}
+                onClick={stampMirrorProps.onCancelStampPattern}
                 className="tool-btn-group__badge tool-btn-group__badge--cancel"
                 title="Reset stamp pattern (Esc/Alt)"
               >
@@ -188,10 +194,10 @@ export const HeaderToolGroup = ({
           </div>
 
           <MirrorMenu
-            mirrorMode={peyoteProps.mirrorMode}
-            setMirrorMode={peyoteProps.setMirrorMode}
-            onMakeSymmetric={peyoteProps.onMakeSymmetric}
-            canMakeSymmetric={peyoteProps.canMakeSymmetric}
+            mirrorMode={stampMirrorProps.mirrorMode}
+            setMirrorMode={stampMirrorProps.setMirrorMode}
+            onMakeSymmetric={stampMirrorProps.onMakeSymmetric}
+            canMakeSymmetric={stampMirrorProps.canMakeSymmetric}
           />
         </>
       )}

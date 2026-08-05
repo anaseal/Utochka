@@ -59,6 +59,7 @@ export const SilyankaEditor = ({
       weaveMode={weavePanel.weaveMode}
       onToggleWeaveMode={weavePanel.toggleWeaveMode}
       weaveControls={weavePanel.weaveControls}
+      canvasView={weavePanel.canvasView}
       silyankaProps={{
         mirrorMode: silyanka.mirrorMode,
         setMirrorMode: silyanka.setMirrorMode,
@@ -191,10 +192,10 @@ export const SilyankaEditor = ({
       onStampSelect={silyanka.handleStampSelect}
       onStampHover={silyanka.setStampHoverNodeId}
       onStampPlace={silyanka.handleStampPlace}
+      orientation={weavePanel.canvasOrientation}
+      flipped={weavePanel.canvasFlipped}
       weaveMode={weavePanel.weaveMode}
       weaveTool={weavePanel.weaveTool}
-      weaveOrientation={weavePanel.weaveOrientation}
-      weaveFlipped={weavePanel.weaveFlipped}
       weave={silyanka.weave}
       weaveShowLast={weavePanel.weaveShowLast}
       {...silyanka.drawingControls}

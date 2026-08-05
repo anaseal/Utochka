@@ -1,23 +1,23 @@
 import { useMemo } from 'react';
-import { PeyoteBead } from '../../../types/peyoteBead';
+import { LoomBead } from '../../../types/loomBead';
 import '../CanvasRulers/CanvasRulers.css';
 
-interface PeyoteRulersProps {
-  beads: PeyoteBead[];
+interface LoomRulersProps {
+  beads: LoomBead[];
   width: number;
   height: number;
   // См. CanvasRulers — контр-преобразование подписей в режиме плетения
-  // (поворот/отражение полотна). Peyote поддерживает режим плетения (сегмент
-  // — ряд, см. spec.md), поэтому проп нужен — по образцу LoomRulers/
+  // (поворот/отражение полотна). Loom поддерживает режим плетения (сегмент
+  // — ряд, см. spec.md), поэтому проп нужен — по образцу PeyoteRulers/
   // CrossWeaveRulers.
   labelTransform?: (x: number, y: number) => string | undefined;
 }
 
-// Простая нумерация рядов/колонок — по образцу CrossWeaveRulers, но проще:
-// у Peyote все ряды одной ширины (см. peyoteGenerator.ts), поэтому и ряды, и
+// Простая нумерация рядов/колонок — по образцу PeyoteRulers: у Loom все ряды
+// одной ширины и в одной фазе (см. loomGenerator.ts), поэтому и ряды, и
 // колонки считаются по ЛЮБОМУ ряду/колонке — в отличие от crossWeave, где
 // колонки критично считать именно по r=0 (там вертикальный ряд короче).
-export const PeyoteRulers = ({ beads, width, height, labelTransform }: PeyoteRulersProps) => {
+export const LoomRulers = ({ beads, width, height, labelTransform }: LoomRulersProps) => {
   const axisMarginX = 30;
   const axisMarginY = 40;
 

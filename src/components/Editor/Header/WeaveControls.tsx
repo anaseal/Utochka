@@ -1,19 +1,14 @@
 import {
-  Undo2, RotateCcw, Crosshair, FlipHorizontal, MousePointerClick, Eraser, Diamond,
-  MoveHorizontal, MoveVertical, Maximize2, Minimize2,
+  Undo2, RotateCcw, Crosshair, MousePointerClick, Eraser, Diamond, Maximize2, Minimize2,
 } from 'lucide-react';
 import { WeaveHelp } from './WeaveHelp';
 import { Technique } from './Header.types';
 
 export type WeaveTool = 'segment' | 'bead' | 'erase';
-export type WeaveOrientation = 'vertical' | 'horizontal';
 
 interface WeaveControlsProps {
-  // Правило сегмента у техник разное — подсказка показывает своё для каждой.
-  // Тип — весь Technique (а не только 'silyanka' | 'crossWeave'), чисто
-  // расширение: Header.tsx передаёт сюда technique целиком, а значение
-  // 'peyote' в рантайме сюда не попадёт — вход в режим плетения для Peyote
-  // заблокирован (см. Header.tsx, кнопка скрыта при technique === 'peyote').
+  // Правило сегмента у техник разное — подсказка показывает своё для каждой
+  // (см. WeaveHelp.tsx). Header.tsx передаёт сюда technique целиком.
   technique: Technique;
   tool: WeaveTool;
   onToolChange: (tool: WeaveTool) => void;
@@ -24,10 +19,6 @@ interface WeaveControlsProps {
   onReset: () => void;
   onLocate: () => void;
   canLocate: boolean;
-  orientation: WeaveOrientation;
-  onToggleOrientation: () => void;
-  flipped: boolean;
-  onToggleFlip: () => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
 }
@@ -49,10 +40,6 @@ export const WeaveControls = ({
   onReset,
   onLocate,
   canLocate,
-  orientation,
-  onToggleOrientation,
-  flipped,
-  onToggleFlip,
   isFullscreen,
   onToggleFullscreen,
 }: WeaveControlsProps) => {
@@ -112,11 +99,14 @@ export const WeaveControls = ({
 
       <div className="grid-controls">
         <div className="grid-controls__toolbar">
-          {/* Undo/Locate/Поворот — 2 строки по тому же приёму, что уже даёт
+          {/* Undo/Locate — 2 строки по тому же приёму, что уже даёт
               компактность Undo/Redo/Clear/Save/Load/Share в Header.tsx
               (см. .grid-controls__actions-row/-divider в Header.css): на
               десктопе/планшете обе строки "растворяются" в один ряд
-              (display: contents), на ≤1024px становятся физическими рядами. */}
+              (display: contents), на ≤1024px становятся физическими рядами.
+              Поворот/отражение полотна отсюда уехали в CanvasViewMenu
+              (Header.tsx) — контрол общий для рисования и режима плетения,
+              копии здесь больше нет. */}
           <div className="grid-controls__actions-row">
             <button
               onClick={onUndo}
@@ -134,27 +124,9 @@ export const WeaveControls = ({
             >
               <Crosshair size={14} />
             </button>
-            {/* Стрелка поворота — иконка lucide, а не текстовые ↔/↕: у юникодных
-                стрелок своя высота и толщина внутри кегля, рядом с соседними
-                иконками они читались заметно мельче и тоньше. */}
-            <button
-              onClick={onToggleOrientation}
-              className="grid-controls__btn"
-              title={orientation === 'vertical' ? 'Lay the canvas horizontally' : 'Stand the canvas vertically'}
-            >
-              {orientation === 'vertical' ? <MoveHorizontal size={14} /> : <MoveVertical size={14} />}
-            </button>
           </div>
           <span className="grid-controls__toolbar-divider" aria-hidden="true" />
           <div className="grid-controls__actions-row">
-            <button
-              onClick={onToggleFlip}
-              className={`grid-controls__btn ${flipped ? 'grid-controls__btn--on' : ''}`}
-              title="Mirror the canvas"
-              aria-pressed={flipped}
-            >
-              <FlipHorizontal size={14} />
-            </button>
             {/* Полноэкранный режим браузера — максимум места на экране при
                 работе с изделием в руках (телефон/планшет). Независимый
                 тумблер, не завязан на вход/выход из режима плетения самого

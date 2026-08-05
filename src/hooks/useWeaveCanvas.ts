@@ -1,14 +1,14 @@
 import { RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
 import { WeaveBeadPositions } from '../components/Editor/WeaveLayer/WeaveLayer';
-import { WeaveTool, WeaveOrientation } from '../components/Editor/Header/WeaveControls';
-import { weaveLabelTransform } from '../utils/weaveView';
+import { WeaveTool } from '../components/Editor/Header/WeaveControls';
 import { WeaveProgressControls } from './useWeaveProgress';
 import { useWeaveMarks } from './useWeaveMarks';
 
 // Механика режима плетения, общая для обеих техник (см. spec.md, «Режим
-// плетения»): мазок отметок, вид полотна (поворот/отражение) и позиции для
-// слоя меток. Холст здесь ничего не рисует — только отмечает, что уже
-// сплетено; порядок плетения режим не знает и не навязывает.
+// плетения»): мазок отметок и позиции для слоя меток. Холст здесь ничего не
+// рисует — только отмечает, что уже сплетено; порядок плетения режим не
+// знает и не навязывает. Вид полотна (поворот/отражение) сюда не входит —
+// он общий для рисования и режима плетения и живёт в useCanvasView.
 //
 // Различие техник — только в том, что считать «сегментом»: у силянки это
 // проход нити от узла до узла, у крестика — ячейка из четырёх бисерин. Оно
@@ -21,10 +21,6 @@ interface UseWeaveCanvasOptions<B extends { id: string; x: number; y: number }> 
   weave: WeaveProgressControls;
   active: boolean;
   tool: WeaveTool;
-  orientation: WeaveOrientation;
-  flipped: boolean;
-  /** Размер полотна без учёта поворота (см. computeCanvasDim). */
-  dim: { w: number; h: number };
   /** Радиус метки для этой бисерины — у техник разные размеры бусин. */
   radiusOf: (bead: B) => number;
   /**
@@ -41,9 +37,6 @@ export const useWeaveCanvas = <B extends { id: string; x: number; y: number }>({
   weave,
   active,
   tool,
-  orientation,
-  flipped,
-  dim,
   radiusOf,
   resolveStrokeIds,
 }: UseWeaveCanvasOptions<B>) => {
@@ -103,37 +96,8 @@ export const useWeaveCanvas = <B extends { id: string; x: number; y: number }>({
     if (!active) endStroke();
   }, [active, endStroke]);
 
-  // Поворот и отражение полотна — только внутри режима плетения: работу удобно
-  // положить рядом так же, как она лежит на столе. Одна матрица на все четыре
-  // положения; отражение применяется к полотну (правый край становится левым)
-  // и потому идёт ДО поворота. Всё, что нарисовано в координатах бисерин —
-  // сетка, отметки, подвески — наследует преобразование без единой правки, а
-  // перевод координат курсора (useBeadCoords) продолжает работать, потому что
-  // считает через getScreenCTM внутренней группы.
-  const rotated = active && orientation === 'horizontal';
-  const viewW = rotated ? dim.h : dim.w;
-  const viewH = rotated ? dim.w : dim.h;
-  const transform = useMemo(() => {
-    if (!active) return undefined;
-    const flip = flipped ? `translate(${dim.w}, 0) scale(-1, 1)` : '';
-    const rotate = orientation === 'horizontal' ? `translate(0, ${dim.w}) rotate(-90)` : '';
-    const combined = `${rotate} ${flip}`.trim();
-    return combined === '' ? undefined : combined;
-  }, [active, flipped, orientation, dim.w]);
-
-  // Подписи линеек получают обратное преобразование вокруг своей точки —
-  // см. utils/weaveView.ts. useMemo — уходит в сетку под memo.
-  const labelTransform = useMemo(
-    () => weaveLabelTransform(rotated, active && flipped),
-    [rotated, active, flipped],
-  );
-
   return {
     positions,
-    transform,
-    labelTransform,
-    viewW,
-    viewH,
     touch,
     touchWhileDrawing,
     beginStroke,

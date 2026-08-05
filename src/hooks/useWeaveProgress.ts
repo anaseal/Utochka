@@ -31,7 +31,7 @@ const isWeavePasses = (v: unknown): v is WeavePasses =>
 const isStringArray = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((s) => typeof s === 'string');
 
-export const useWeaveProgress = (technique: 'silyanka' | 'crossWeave') => {
+export const useWeaveProgress = (technique: 'silyanka' | 'crossWeave' | 'peyote' | 'loom') => {
   const [passes, setPasses] = usePersistedState<WeavePasses>(
     `${technique}:weavePasses`, {}, isWeavePasses,
   );

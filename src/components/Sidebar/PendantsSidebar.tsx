@@ -174,15 +174,20 @@ export const PendantsSidebar = ({
     const pt = toSvgPoint(clientX, clientY);
     if (!pt) return null;
 
+    // Обычный for вместо .forEach: при мутации best внутри вложенного
+    // замыкания (внутри for...of с continue) TS теряет сужение типа и
+    // читает best.dist как never (воспроизводится в изоляции) — плоский
+    // индексный цикл в той же области видимости сужается корректно.
     let best: { placementId: string; beadIndex: number; dist: number } | null = null;
     for (const t of teeth) {
       const mesh = toothMeshes.get(t.placementId);
       if (!mesh) continue;
-      mesh.beads.forEach((bead, beadIndex) => {
-        if (!bead.side || bead.side.length === 0) return;
+      for (let beadIndex = 0; beadIndex < mesh.beads.length; beadIndex++) {
+        const bead = mesh.beads[beadIndex];
+        if (!bead.side || bead.side.length === 0) continue;
         const dist = Math.hypot(pt.x - bead.x, pt.y - bead.y);
         if (!best || dist < best.dist) best = { placementId: t.placementId, beadIndex, dist };
-      });
+      }
     }
     if (best && best.dist <= stepX / 2) {
       return { kind: 'tooth', placementId: best.placementId, beadIndex: best.beadIndex };

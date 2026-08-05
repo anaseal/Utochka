@@ -4,6 +4,7 @@ import { GridSidebar } from '../Sidebar/GridSidebar';
 import { PeyoteCanvasView } from './CanvasView/PeyoteCanvasView';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
+import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
 import { PeyoteProject } from '../../hooks/usePeyoteProject';
 import { DrawingTool } from '../../hooks/useDrawing';
 import { exportProject } from '../../utils/projectFile';
@@ -16,14 +17,16 @@ interface PeyoteEditorProps {
   cancelPeyoteStampPattern: () => void;
   activeSidebar: 'pendants' | 'grid' | null;
   onToggleGridSidebar: () => void;
+  weavePanel: WeaveModePanel;
 }
 
-// Peyote — третья техника: без панели «Pendants & Decor» и режима плетения
-// (см. spec.md, «Peyote»), поэтому Editor заметно проще SilyankaEditor —
-// собирает Header/GridSidebar/PeyoteCanvasView из usePeyoteProject.
+// Peyote — третья техника: без панели «Pendants & Decor» (см. spec.md,
+// «Peyote»), поэтому Editor заметно проще SilyankaEditor. Режим плетения
+// подключён так же, как у SilyankaEditor/CrossWeaveEditor/LoomEditor —
+// сегмент здесь целая колонка, не ряд (см. usePeyoteProject.ts, weaveSegment.ts).
 export const PeyoteEditor = ({
   settings, projectIO, peyote, setPeyoteTool, cancelPeyoteStampPattern,
-  activeSidebar, onToggleGridSidebar,
+  activeSidebar, onToggleGridSidebar, weavePanel,
 }: PeyoteEditorProps) => (
   <>
     <Header
@@ -54,25 +57,10 @@ export const PeyoteEditor = ({
       onClearAllThreads={() => {}}
       gridSidebarOpen={activeSidebar === 'grid'}
       onToggleGridSidebar={onToggleGridSidebar}
-      weaveMode={false}
-      onToggleWeaveMode={() => {}}
-      weaveControls={{
-        tool: 'segment',
-        onToolChange: () => {},
-        markedCount: 0,
-        totalCount: 0,
-        canUndo: false,
-        onUndo: () => {},
-        onReset: () => {},
-        onLocate: () => {},
-        canLocate: false,
-        orientation: 'vertical',
-        onToggleOrientation: () => {},
-        flipped: false,
-        onToggleFlip: () => {},
-        isFullscreen: false,
-        onToggleFullscreen: () => {},
-      }}
+      weaveMode={weavePanel.weaveMode}
+      onToggleWeaveMode={weavePanel.toggleWeaveMode}
+      weaveControls={weavePanel.weaveControls}
+      canvasView={weavePanel.canvasView}
       peyoteProps={{
         mirrorMode: peyote.mirrorMode,
         setMirrorMode: peyote.setMirrorMode,
@@ -127,6 +115,12 @@ export const PeyoteEditor = ({
       onStampHover={peyote.setStampHoverNodeId}
       onStampPlace={peyote.handleStampPlace}
       applyPatch={peyote.drawingControls.applyPatch}
+      orientation={weavePanel.canvasOrientation}
+      flipped={weavePanel.canvasFlipped}
+      weaveMode={weavePanel.weaveMode}
+      weaveTool={weavePanel.weaveTool}
+      weave={peyote.weave}
+      weaveShowLast={weavePanel.weaveShowLast}
     />
   </>
 );

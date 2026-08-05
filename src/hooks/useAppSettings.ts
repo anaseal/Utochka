@@ -9,7 +9,8 @@ export const DEFAULT_PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ff
 const isZoom = (v: unknown): v is number =>
   typeof v === 'number' && v >= APP_CONSTRAINTS.minZoom && v <= APP_CONSTRAINTS.maxZoom;
 
-const isTechnique = (v: unknown): v is Technique => v === 'silyanka' || v === 'crossWeave' || v === 'peyote';
+const isTechnique = (v: unknown): v is Technique =>
+  v === 'silyanka' || v === 'crossWeave' || v === 'peyote' || v === 'loom';
 
 const isPalette = (v: unknown): v is string[] =>
   Array.isArray(v) && v.length > 0 && v.every(c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c));

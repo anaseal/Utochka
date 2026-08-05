@@ -2,30 +2,28 @@ import { useCallback, useMemo, useState } from 'react';
 import { useDrawing } from './useDrawing';
 import { usePersistedState } from './usePersistedState';
 import { useWeaveProgress } from './useWeaveProgress';
-import { PEYOTE_THEME, defaultColorForPeyote, pitchYFromX } from '../config/peyoteTheme';
+import { LOOM_THEME, defaultColorForLoom, pitchYFromX } from '../config/loomTheme';
 import { APP_CONSTRAINTS } from '../config/theme';
-import { PeyoteGridConfig } from '../types/peyoteBead';
+import { LoomGridConfig } from '../types/loomBead';
 import { PendantPlacement, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
 import { Thread } from '../types/thread';
-import { generatePeyoteGrid } from '../utils/peyoteGenerator';
-import { mirrorPeyoteBeadId, shiftPeyoteDesignMapColumns } from '../utils/peyoteMirror';
-import { computePeyoteFloodFill } from '../utils/peyoteFloodFill';
+import { generateLoomGrid } from '../utils/loomGenerator';
+import { mirrorLoomBeadId, shiftLoomDesignMapColumns } from '../utils/loomMirror';
+import { computeLoomFloodFill } from '../utils/loomFloodFill';
 import {
-  PeyoteStampPattern, PeyoteStampContext, capturePeyoteStampPattern, applyPeyoteStampPattern,
-} from '../utils/peyoteStamp';
+  LoomStampPattern, LoomStampContext, captureLoomStampPattern, applyLoomStampPattern,
+} from '../utils/loomStamp';
 import { fillMissingMirror } from '../utils/symmetrize';
 import { clamp } from '../utils/clamp';
 import { resizeWidthAbsolute, resizeWidthRelative, WidthResizeResult } from '../utils/gridResize';
 import { isIntInRange } from './useSilyankaProject.validators';
 
-// Peyote не поддерживает подвески, цепочки, декор-хвосты, зубцы И нитку
-// (MVP, см. spec.md, «Peyote») — стабильные пустые ссылки и no-op сеттеры,
-// чтобы useDrawing не считал их «изменившимися» на каждый рендер. В отличие
-// от CrossWeave, у Peyote заглушена и нитка — там инструментов рисования
-// ровно пять (карандаш/ластик/заливка/штамп/зеркало), без трассировки нити.
-// Режим плетения при этом ЕСТЬ (как у Loom) — но сегмент, в отличие от Loom,
-// целая КОЛОНКА, не ряд, см. useWeaveProgress ниже и utils/weaveSegment.ts
-// (peyoteColumnSegment).
+// Loom не поддерживает подвески, цепочки, декор-хвосты, зубцы И нитку (MVP,
+// см. spec.md, «Loom») — стабильные пустые ссылки и no-op сеттеры, чтобы
+// useDrawing не считал их «изменившимися» на каждый рендер. Как и у Peyote,
+// нитки нет — но режим плетения ЕСТЬ у обеих: у Loom сегмент — целый ряд
+// (см. useWeaveProgress ниже), у Peyote — целая колонка (другая геометрия
+// проекта, см. usePeyoteProject.ts).
 const EMPTY_PENDANT_PLACEMENTS: PendantPlacement[] = [];
 const noopSetPendantPlacements = () => {};
 const EMPTY_PENDANT_CHAINS: PendantChain[] = [];
@@ -37,35 +35,35 @@ const noopSetTeeth = () => {};
 const EMPTY_THREADS: Thread[] = [];
 const noopSetThreads = () => {};
 
-const isPeyoteGridConfig = (v: unknown): v is PeyoteGridConfig => {
+const isLoomGridConfig = (v: unknown): v is LoomGridConfig => {
   if (typeof v !== 'object' || v === null) return false;
   const obj = v as Record<string, unknown>;
-  const { minSpacing, maxSpacing } = PEYOTE_THEME.constraints;
+  const { minSpacing, maxSpacing } = LOOM_THEME.constraints;
   return isIntInRange(obj.width, 1, APP_CONSTRAINTS.maxGridWidth) &&
     isIntInRange(obj.height, 1, APP_CONSTRAINTS.maxGridHeight) &&
     isIntInRange(obj.pitchX, minSpacing, maxSpacing);
 };
 
-// Состояние и обработчики Peyote — независимый MVP-проект, геометрически
-// ближе к crossWeave (одна физическая бисерина на позицию решётки, без
-// node/span), но без raw/logical различия размеров: у Peyote все ряды одной
-// ширины, поэтому gridSize.width/height — это сразу и то, что генерирует
-// generatePeyoteGrid, и то, что подписывает PeyoteRulers (см. spec.md).
-export const usePeyoteProject = (palette: readonly string[]) => {
-  const [gridSize, setGridSize] = usePersistedState<PeyoteGridConfig>('peyote:gridSize', {
-    width: PEYOTE_THEME.gridDefaults.initialWidth,
-    height: PEYOTE_THEME.gridDefaults.initialHeight,
-    pitchX: PEYOTE_THEME.gridDefaults.spacing,
-  }, isPeyoteGridConfig);
+// Состояние и обработчики Loom — независимый MVP-проект, геометрически
+// ближе всего к Peyote (одна физическая бисерина на позицию решётки, без
+// node/span), но без сдвига рядов вообще: у Loom все ряды одной ширины и в
+// одной фазе, поэтому gridSize.width/height — это сразу и то, что генерирует
+// generateLoomGrid, и то, что подписывает LoomRulers (см. spec.md).
+export const useLoomProject = (palette: readonly string[]) => {
+  const [gridSize, setGridSize] = usePersistedState<LoomGridConfig>('loom:gridSize', {
+    width: LOOM_THEME.gridDefaults.initialWidth,
+    height: LOOM_THEME.gridDefaults.initialHeight,
+    pitchX: LOOM_THEME.gridDefaults.spacing,
+  }, isLoomGridConfig);
 
   const [mirrorMode, setMirrorMode] = usePersistedState<boolean>(
-    'peyote:mirrorMode', false, (v): v is boolean => typeof v === 'boolean',
+    'loom:mirrorMode', false, (v): v is boolean => typeof v === 'boolean',
   );
 
-  // pitchY выводится из pitchX — см. pitchYFromX в config/peyoteTheme.ts,
+  // pitchY выводится из pitchX — см. pitchYFromX в config/loomTheme.ts,
   // единственный источник правды (не хранится отдельным полем состояния).
   const beads = useMemo(
-    () => generatePeyoteGrid(gridSize.width, gridSize.height, gridSize.pitchX, pitchYFromX(gridSize.pitchX)),
+    () => generateLoomGrid(gridSize.width, gridSize.height, gridSize.pitchX, pitchYFromX(gridSize.pitchX)),
     [gridSize.width, gridSize.height, gridSize.pitchX],
   );
 
@@ -73,28 +71,29 @@ export const usePeyoteProject = (palette: readonly string[]) => {
     palette[0], palette, EMPTY_PENDANT_PLACEMENTS, noopSetPendantPlacements,
     EMPTY_PENDANT_CHAINS, noopSetPendantChains,
     EMPTY_DECOR_TAIL_PLACEMENTS, noopSetDecorTailPlacements,
-    EMPTY_TEETH, noopSetTeeth, EMPTY_THREADS, noopSetThreads, 'peyote',
+    EMPTY_TEETH, noopSetTeeth, EMPTY_THREADS, noopSetThreads, 'loom',
   );
 
-  // Прогресс плетения — свой у каждой техники (см. useWeaveProgress). У
-  // Peyote сегмент — целая колонка (peyoteColumnSegment, utils/weaveSegment.ts),
-  // resolveStrokeIds определён прямо в PeyoteCanvasView.tsx.
-  const weave = useWeaveProgress('peyote');
+  // Прогресс плетения — свой у каждой техники (см. useWeaveProgress). У Loom
+  // сегмент — целый ряд (loomRowSegment, utils/weaveSegment.ts), resolveStrokeIds
+  // определён прямо в LoomCanvasView.tsx (по образцу CrossWeaveCanvasView.tsx).
+  const weave = useWeaveProgress('loom');
 
-  // Заливка: BFS по графу физической смежности бисерин (см.
-  // peyoteFloodFill.ts) — своя, отдельная от crossWeave/силяночной, т.к. тут
-  // другая геометрия соседства. В Mirror Mode заливка выполняется и для
-  // зеркальной бисерины, оба результата уходят в один снимок истории.
+  // Заливка: BFS по графу физической смежности бисерин (см. loomFloodFill.ts)
+  // — своя, отдельная от Peyote/crossWeave/силяночной, т.к. тут другая
+  // геометрия соседства (простая ортогональная). В Mirror Mode заливка
+  // выполняется и для зеркальной бисерины, оба результата уходят в один
+  // снимок истории.
   const handleFloodFill = useCallback((startId: string) => {
-    const ids = new Set(computePeyoteFloodFill(
-      startId, beads, drawingControls.designMap, drawingControls.activeColor, defaultColorForPeyote(),
+    const ids = new Set(computeLoomFloodFill(
+      startId, beads, drawingControls.designMap, drawingControls.activeColor, defaultColorForLoom(),
     ));
 
     if (mirrorMode) {
-      const mirrorStartId = mirrorPeyoteBeadId(startId, gridSize.width);
+      const mirrorStartId = mirrorLoomBeadId(startId, gridSize.width);
       if (mirrorStartId && mirrorStartId !== startId) {
-        for (const id of computePeyoteFloodFill(
-          mirrorStartId, beads, drawingControls.designMap, drawingControls.activeColor, defaultColorForPeyote(),
+        for (const id of computeLoomFloodFill(
+          mirrorStartId, beads, drawingControls.designMap, drawingControls.activeColor, defaultColorForLoom(),
         )) ids.add(id);
       }
     }
@@ -108,24 +107,23 @@ export const usePeyoteProject = (palette: readonly string[]) => {
     }, null);
   }, [beads, drawingControls, mirrorMode, gridSize.width]);
 
-  // Ретроактивная симметризация — тот же смысл, что и у силянки/crossWeave
-  // (см. useSilyankaProject.makeSymmetric), но по формуле mirrorPeyoteBeadId.
+  // Ретроактивная симметризация — тот же смысл, что и у силянки/crossWeave/
+  // Peyote (см. useSilyankaProject.makeSymmetric), но по формуле mirrorLoomBeadId.
   const makeSymmetric = useCallback(() => {
     drawingControls.remapDesignMap(map => fillMissingMirror(
       map,
-      id => mirrorPeyoteBeadId(id, gridSize.width),
+      id => mirrorLoomBeadId(id, gridSize.width),
     ));
   }, [drawingControls, gridSize.width]);
 
   // --- Штамп ------------------------------------------------------------
-  // Тот же блок состояния, что у силянки (useSilyankaProject.ts, стр.
-  // 242–395), но без stampAnchorEdge — у Peyote нет top/bottom-структуры
-  // узора, якорь штампа всегда левый верхний угол выделения (см.
-  // peyoteStamp.ts).
-  const [stampPattern, setStampPattern] = useState<PeyoteStampPattern | null>(null);
+  // Тот же блок состояния, что у Peyote (usePeyoteProject.ts), без
+  // stampAnchorEdge — у Loom нет top/bottom-структуры узора, якорь штампа
+  // всегда левый верхний угол выделения (см. loomStamp.ts).
+  const [stampPattern, setStampPattern] = useState<LoomStampPattern | null>(null);
   const [stampHoverNodeId, setStampHoverNodeId] = useState<string | null>(null);
 
-  const stampCtx = useMemo<PeyoteStampContext>(() => ({
+  const stampCtx = useMemo<LoomStampContext>(() => ({
     width: gridSize.width,
     height: gridSize.height,
   }), [gridSize.width, gridSize.height]);
@@ -134,7 +132,7 @@ export const usePeyoteProject = (palette: readonly string[]) => {
     if (!stampPattern || !stampHoverNodeId) return null;
     const targetBead = beads.find(b => b.id === stampHoverNodeId);
     if (!targetBead) return null;
-    return applyPeyoteStampPattern(stampPattern, {
+    return applyLoomStampPattern(stampPattern, {
       row: targetBead.logicalIndex.row,
       col: targetBead.logicalIndex.col,
     }, stampCtx);
@@ -142,7 +140,7 @@ export const usePeyoteProject = (palette: readonly string[]) => {
 
   const handleStampSelect = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
-    const pattern = capturePeyoteStampPattern(ids, drawingControls.designMap);
+    const pattern = captureLoomStampPattern(ids, drawingControls.designMap);
     if (pattern.entries.length === 0) return;
     setStampPattern(pattern);
     setStampHoverNodeId(null);
@@ -152,7 +150,7 @@ export const usePeyoteProject = (palette: readonly string[]) => {
     if (!stampPattern) return;
     const targetBead = beads.find(b => b.id === nodeId);
     if (!targetBead) return;
-    const patch = applyPeyoteStampPattern(stampPattern, {
+    const patch = applyLoomStampPattern(stampPattern, {
       row: targetBead.logicalIndex.row,
       col: targetBead.logicalIndex.col,
     }, stampCtx);
@@ -162,7 +160,7 @@ export const usePeyoteProject = (palette: readonly string[]) => {
       const next = { ...prev, ...patch };
       if (mirrorMode) {
         for (const [id, color] of Object.entries(patch)) {
-          const m = mirrorPeyoteBeadId(id, gridSize.width);
+          const m = mirrorLoomBeadId(id, gridSize.width);
           if (m !== null && m !== id) next[m] = color;
         }
       }
@@ -176,7 +174,7 @@ export const usePeyoteProject = (palette: readonly string[]) => {
     const { newWidth, mirrorDelta } = result;
     if (wasMirror) {
       drawingControls.remapDesignMap(map =>
-        shiftPeyoteDesignMapColumns(map, mirrorDelta, newWidth),
+        shiftLoomDesignMapColumns(map, mirrorDelta, newWidth),
       );
     }
     setGridSize(prev => ({ ...prev, width: newWidth }));
@@ -200,26 +198,26 @@ export const usePeyoteProject = (palette: readonly string[]) => {
   };
 
   const updateSpacing = (delta: number) => {
-    const { minSpacing, maxSpacing } = PEYOTE_THEME.constraints;
+    const { minSpacing, maxSpacing } = LOOM_THEME.constraints;
     setGridSize(prev => ({ ...prev, pitchX: clamp(prev.pitchX + delta, minSpacing, maxSpacing) }));
   };
 
   const setSpacingAbsolute = (v: number) => {
-    const { minSpacing, maxSpacing } = PEYOTE_THEME.constraints;
+    const { minSpacing, maxSpacing } = LOOM_THEME.constraints;
     setGridSize(prev => ({ ...prev, pitchX: clamp(Math.round(v), minSpacing, maxSpacing) }));
   };
 
   const gridIsDefault = (
-    gridSize.width === PEYOTE_THEME.gridDefaults.initialWidth &&
-    gridSize.height === PEYOTE_THEME.gridDefaults.initialHeight &&
-    gridSize.pitchX === PEYOTE_THEME.gridDefaults.spacing
+    gridSize.width === LOOM_THEME.gridDefaults.initialWidth &&
+    gridSize.height === LOOM_THEME.gridDefaults.initialHeight &&
+    gridSize.pitchX === LOOM_THEME.gridDefaults.spacing
   );
 
   const resetGridAll = () => {
     setGridSize({
-      width: PEYOTE_THEME.gridDefaults.initialWidth,
-      height: PEYOTE_THEME.gridDefaults.initialHeight,
-      pitchX: PEYOTE_THEME.gridDefaults.spacing,
+      width: LOOM_THEME.gridDefaults.initialWidth,
+      height: LOOM_THEME.gridDefaults.initialHeight,
+      pitchX: LOOM_THEME.gridDefaults.spacing,
     });
   };
 
@@ -234,4 +232,4 @@ export const usePeyoteProject = (palette: readonly string[]) => {
   };
 };
 
-export type PeyoteProject = ReturnType<typeof usePeyoteProject>;
+export type LoomProject = ReturnType<typeof useLoomProject>;

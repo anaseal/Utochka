@@ -1,10 +1,10 @@
 // Сохранение/загрузка проекта одним файлом. Всё состояние приложения уже
-// лежит в localStorage под префиксами app:/silyanka:/crossWeave:/peyote:
+// лежит в localStorage под префиксами app:/silyanka:/crossWeave:/peyote:/loom:
 // (см. usePersistedState) — файл проекта просто упаковывает и восстанавливает
 // эти ключи. Картинка референса (IndexedDB) сознательно не включается.
 
 const PROJECT_FILE_VERSION = 1;
-const KEY_PREFIXES = ['app:', 'silyanka:', 'crossWeave:', 'peyote:'];
+const KEY_PREFIXES = ['app:', 'silyanka:', 'crossWeave:', 'peyote:', 'loom:'];
 
 export interface ProjectFile {
   version: number;
@@ -67,7 +67,7 @@ export const isProjectFile = (v: unknown): v is ProjectFile => {
   return Object.values(obj.localStorage).every(entry => typeof entry === 'string');
 };
 
-// Удаляет все собственные ключи localStorage (app:/silyanka:/crossWeave:), не
+// Удаляет все собственные ключи localStorage (см. KEY_PREFIXES выше), не
 // трогая ничего постороннего. Используется и как первый шаг applyProjectData,
 // и напрямую в ErrorBoundary для сброса испорченных данных.
 export const clearOwnStorage = (): void => {

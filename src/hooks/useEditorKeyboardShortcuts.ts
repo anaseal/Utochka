@@ -3,6 +3,7 @@ import { DrawingTool } from './useDrawing';
 import { SilyankaProject } from './useSilyankaProject';
 import { CrossWeaveProject } from './useCrossWeaveProject';
 import { PeyoteProject } from './usePeyoteProject';
+import { LoomProject } from './useLoomProject';
 import { Technique } from '../components/Editor/Header/Header.types';
 
 interface Params {
@@ -10,15 +11,17 @@ interface Params {
   silyanka: SilyankaProject;
   crossWeave: CrossWeaveProject;
   peyote: PeyoteProject;
+  loom: LoomProject;
   setSilyankaTool: (tool: DrawingTool) => void;
   cancelStampPattern: () => void;
   setPeyoteTool: (tool: DrawingTool) => void;
   cancelPeyoteStampPattern: () => void;
+  setLoomTool: (tool: DrawingTool) => void;
+  cancelLoomStampPattern: () => void;
   // Режим плетения подменяет собой Undo/Redo рисунка: своя история отметок
   // (см. useWeaveProgress) и своя кнопка Undo в WeaveControls, но без
-  // клавиатурного шортката отметку можно было снять только мышью. Peyote
-  // режим плетения не поддерживает (см. spec.md, «Peyote») — сюда weaveMode
-  // с technique === 'peyote' не попадает (вход заблокирован в Header.tsx).
+  // клавиатурного шортката отметку можно было снять только мышью. Режим
+  // плетения поддерживают все четыре техники (сегмент у каждой свой).
   weaveMode: boolean;
   onWeaveUndo: () => void;
 }
@@ -26,16 +29,17 @@ interface Params {
 // Глобальные горячие клавиши редактора: undo/redo, однобуквенные шорткаты
 // инструментов (Photoshop-style) и Escape/Alt/Shift для штампа/цепочки.
 export const useEditorKeyboardShortcuts = ({
-  technique, silyanka, crossWeave, peyote,
+  technique, silyanka, crossWeave, peyote, loom,
   setSilyankaTool, cancelStampPattern, setPeyoteTool, cancelPeyoteStampPattern,
+  setLoomTool, cancelLoomStampPattern,
   weaveMode, onWeaveUndo,
 }: Params) => {
   // Обработчик пересобирается на каждый рендер (замыкается на technique/
-  // silyanka/crossWeave/peyote), но сам addEventListener — только один раз при
-  // монтировании: сравнение по ref избегает постоянного снятия/навешивания
-  // keydown-слушателя, которое было бы неизбежно при [technique, silyanka,
-  // crossWeave, peyote] в зависимостях эффекта (все три хука возвращают новый
-  // объект-литерал на каждый рендер).
+  // silyanka/crossWeave/peyote/loom), но сам addEventListener — только один
+  // раз при монтировании: сравнение по ref избегает постоянного снятия/
+  // навешивания keydown-слушателя, которое было бы неизбежно при [technique,
+  // silyanka, crossWeave, peyote, loom] в зависимостях эффекта (все четыре
+  // хука возвращают новый объект-литерал на каждый рендер).
   const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     handleKeyDownRef.current = (e: KeyboardEvent) => {
@@ -62,10 +66,15 @@ export const useEditorKeyboardShortcuts = ({
         setSilyankaTool('pencil');
         return;
       }
-      // Peyote: тот же сброс захваченного узора штампа, что и у силянки выше
-      // — chain/tooth/hole веток здесь нет (у Peyote этих инструментов нет).
+      // Peyote/Loom: тот же сброс захваченного узора штампа, что и у силянки
+      // выше — chain/tooth/hole веток здесь нет (у обеих этих техник этих
+      // инструментов нет).
       if (technique === 'peyote' && e.key === 'Escape' && peyote.stampPattern) {
         cancelPeyoteStampPattern();
+        return;
+      }
+      if (technique === 'loom' && e.key === 'Escape' && loom.stampPattern) {
+        cancelLoomStampPattern();
         return;
       }
       // Alt сбрасывает захваченный штамп так же, как Escape, — курсор
@@ -78,6 +87,11 @@ export const useEditorKeyboardShortcuts = ({
       if (technique === 'peyote' && e.key === 'Alt' && peyote.stampPattern) {
         e.preventDefault();
         cancelPeyoteStampPattern();
+        return;
+      }
+      if (technique === 'loom' && e.key === 'Alt' && loom.stampPattern) {
+        e.preventDefault();
+        cancelLoomStampPattern();
         return;
       }
       // Shift — клавиатурный шорткат для того же тоггла, что и бейдж у кнопки
@@ -99,9 +113,10 @@ export const useEditorKeyboardShortcuts = ({
           if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); onWeaveUndo(); }
           return;
         }
-        const active = technique === 'silyanka'
-          ? silyanka.drawingControls
-          : technique === 'crossWeave' ? crossWeave.drawingControls : peyote.drawingControls;
+        const active = technique === 'silyanka' ? silyanka.drawingControls
+          : technique === 'crossWeave' ? crossWeave.drawingControls
+          : technique === 'loom' ? loom.drawingControls
+          : peyote.drawingControls;
         if (e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); active.undo(); }
         if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) { e.preventDefault(); active.redo(); }
         return;
@@ -119,6 +134,7 @@ export const useEditorKeyboardShortcuts = ({
           e.preventDefault();
           if (technique === 'silyanka') setSilyankaTool('pencil');
           else if (technique === 'peyote') setPeyoteTool('pencil');
+          else if (technique === 'loom') setLoomTool('pencil');
           else crossWeave.drawingControls.setActiveTool('pencil');
           break;
         case 'e':
@@ -127,6 +143,8 @@ export const useEditorKeyboardShortcuts = ({
             setSilyankaTool(silyanka.drawingControls.activeTool === 'eraser' ? 'pencil' : 'eraser');
           } else if (technique === 'peyote') {
             setPeyoteTool(peyote.drawingControls.activeTool === 'eraser' ? 'pencil' : 'eraser');
+          } else if (technique === 'loom') {
+            setLoomTool(loom.drawingControls.activeTool === 'eraser' ? 'pencil' : 'eraser');
           } else {
             crossWeave.drawingControls.setActiveTool(crossWeave.drawingControls.activeTool === 'eraser' ? 'pencil' : 'eraser');
           }
@@ -137,6 +155,8 @@ export const useEditorKeyboardShortcuts = ({
             setSilyankaTool(silyanka.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill');
           } else if (technique === 'peyote') {
             setPeyoteTool(peyote.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill');
+          } else if (technique === 'loom') {
+            setLoomTool(loom.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill');
           } else {
             crossWeave.drawingControls.setActiveTool(
               crossWeave.drawingControls.activeTool === 'flood-fill' ? 'pencil' : 'flood-fill',
@@ -144,11 +164,13 @@ export const useEditorKeyboardShortcuts = ({
           }
           break;
         case 's':
-          // Штамп есть у силянки и Peyote, у crossWeave — нет (см. spec.md).
+          // Штамп есть у силянки, Peyote и Loom, у crossWeave — нет (см. spec.md).
           if (technique === 'crossWeave') break;
           e.preventDefault();
           if (technique === 'silyanka') {
             setSilyankaTool(silyanka.drawingControls.activeTool === 'stamp' ? 'pencil' : 'stamp');
+          } else if (technique === 'loom') {
+            setLoomTool(loom.drawingControls.activeTool === 'stamp' ? 'pencil' : 'stamp');
           } else {
             setPeyoteTool(peyote.drawingControls.activeTool === 'stamp' ? 'pencil' : 'stamp');
           }
@@ -157,11 +179,13 @@ export const useEditorKeyboardShortcuts = ({
           e.preventDefault();
           if (technique === 'silyanka') silyanka.setMirrorMode(!silyanka.mirrorMode);
           else if (technique === 'peyote') peyote.setMirrorMode(!peyote.mirrorMode);
+          else if (technique === 'loom') loom.setMirrorMode(!loom.mirrorMode);
           else crossWeave.setMirrorMode(!crossWeave.mirrorMode);
           break;
         case 't':
-          // Нитка есть у силянки и crossWeave, у Peyote — нет вовсе (см. spec.md).
-          if (technique === 'peyote') break;
+          // Нитка есть у силянки и crossWeave, у Peyote и Loom — нет вовсе
+          // (см. spec.md).
+          if (technique === 'peyote' || technique === 'loom') break;
           e.preventDefault();
           if (technique === 'silyanka') {
             setSilyankaTool(silyanka.drawingControls.activeTool === 'thread' ? 'pencil' : 'thread');

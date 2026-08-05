@@ -52,6 +52,7 @@ export const CrossWeaveEditor = ({
       weaveMode={weavePanel.weaveMode}
       onToggleWeaveMode={weavePanel.toggleWeaveMode}
       weaveControls={weavePanel.weaveControls}
+      canvasView={weavePanel.canvasView}
       crossWeaveProps={{
         activeThreadStrand: crossWeave.activeThreadStrand,
         onSelectThreadStrand: crossWeave.setActiveThreadStrand,
@@ -112,10 +113,10 @@ export const CrossWeaveEditor = ({
       activeThreadColor={crossWeave.activeThreadColor}
       activeThreadOpacity={crossWeave.activeThreadOpacity}
       applyPatch={crossWeave.drawingControls.applyPatch}
+      orientation={weavePanel.canvasOrientation}
+      flipped={weavePanel.canvasFlipped}
       weaveMode={weavePanel.weaveMode}
       weaveTool={weavePanel.weaveTool}
-      weaveOrientation={weavePanel.weaveOrientation}
-      weaveFlipped={weavePanel.weaveFlipped}
       weave={crossWeave.weave}
       weaveShowLast={weavePanel.weaveShowLast}
     />

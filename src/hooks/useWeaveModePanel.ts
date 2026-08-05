@@ -3,21 +3,33 @@ import { usePersistedState } from './usePersistedState';
 import { useFullscreen } from './useFullscreen';
 import { SilyankaProject } from './useSilyankaProject';
 import { CrossWeaveProject } from './useCrossWeaveProject';
-import { Technique } from '../components/Editor/Header/Header.types';
-import { WeaveTool, WeaveOrientation } from '../components/Editor/Header/WeaveControls';
+import { PeyoteProject } from './usePeyoteProject';
+import { LoomProject } from './useLoomProject';
+import { CanvasOrientation, Technique } from '../components/Editor/Header/Header.types';
+import { WeaveTool } from '../components/Editor/Header/WeaveControls';
 
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 
 const isWeaveTool = (v: unknown): v is WeaveTool =>
   v === 'segment' || v === 'bead' || v === 'erase';
 
-const isWeaveOrientation = (v: unknown): v is WeaveOrientation =>
+const isCanvasOrientation = (v: unknown): v is CanvasOrientation =>
   v === 'vertical' || v === 'horizontal';
+
+const isOrientationByTechnique = (v: unknown): v is Partial<Record<Technique, CanvasOrientation>> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+  && Object.values(v).every(isCanvasOrientation);
+
+const isBooleanByTechnique = (v: unknown): v is Partial<Record<Technique, boolean>> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+  && Object.values(v).every(isBoolean);
 
 interface Params {
   technique: Technique;
   silyanka: SilyankaProject;
   crossWeave: CrossWeaveProject;
+  peyote: PeyoteProject;
+  loom: LoomProject;
   // Закрывает боковую панель и Reference Window при входе в режим плетения —
   // их кнопки в самом режиме скрыты (см. Header, .header__end-icons), так что
   // открытую панель иначе было бы нечем закрыть.
@@ -25,21 +37,41 @@ interface Params {
 }
 
 // Режим плетения — отдельный мод: инструментов рисования в нём нет, холст
-// только отмечает прогресс (см. spec.md, «Режим плетения»). Сам режим и вид
-// полотна общие для обеих техник, а прогресс у каждой свой (useWeaveProgress).
-export const useWeaveModePanel = ({ technique, silyanka, crossWeave, onEnterWeaveMode }: Params) => {
+// только отмечает прогресс (см. spec.md, «Режим плетения»). Сам режим
+// (weaveMode/weaveTool) общий для всех четырёх техник — это состояние
+// UI-модалки, а не содержимого сетки; вид полотна и прогресс — свои у каждой
+// (useWeaveProgress).
+export const useWeaveModePanel = ({ technique, silyanka, crossWeave, peyote, loom, onEnterWeaveMode }: Params) => {
   const [weaveMode, setWeaveMode] = usePersistedState<boolean>('app:weaveMode', false, isBoolean);
   const [weaveTool, setWeaveTool] = usePersistedState<WeaveTool>(
     'app:weaveTool', 'segment', isWeaveTool,
   );
-  const [weaveOrientation, setWeaveOrientation] = usePersistedState<WeaveOrientation>(
-    'app:weaveOrientation', 'vertical', isWeaveOrientation,
-  );
-  const [weaveFlipped, setWeaveFlipped] = usePersistedState<boolean>(
-    'app:weaveFlip', false, isBoolean,
-  );
-  const toggleWeaveOrientation = () => {
-    setWeaveOrientation((o) => (o === 'vertical' ? 'horizontal' : 'vertical'));
+  // Вид полотна (поворот/отражение) — общий для рисования и режима плетения
+  // (см. useCanvasView.ts), но свой для каждой техники: это свойство формы
+  // конкретной сетки (как gridSize), а не UI-настройка вроде zoom, поэтому
+  // переключение техники не должно "протаскивать" поворот в другую сетку.
+  // Персист — объект по ключу техники, ключи в localStorage оставлены
+  // старыми (app:weaveOrientation/app:weaveFlip); формат значения сменился
+  // со скаляра на объект, так что старое сохранённое значение один раз не
+  // пройдёт валидацию и сбросится в дефолт — осознанная разовая потеря.
+  const [orientationByTechnique, setOrientationByTechnique] = usePersistedState<
+    Partial<Record<Technique, CanvasOrientation>>
+  >('app:weaveOrientation', {}, isOrientationByTechnique);
+  const [flippedByTechnique, setFlippedByTechnique] = usePersistedState<
+    Partial<Record<Technique, boolean>>
+  >('app:weaveFlip', {}, isBooleanByTechnique);
+
+  const canvasOrientation = orientationByTechnique[technique] ?? 'vertical';
+  const canvasFlipped = flippedByTechnique[technique] ?? false;
+
+  const toggleCanvasOrientation = () => {
+    setOrientationByTechnique((m) => ({
+      ...m,
+      [technique]: (m[technique] ?? 'vertical') === 'vertical' ? 'horizontal' : 'vertical',
+    }));
+  };
+  const toggleCanvasFlipped = () => {
+    setFlippedByTechnique((m) => ({ ...m, [technique]: !(m[technique] ?? false) }));
   };
 
   // Полноэкранный режим (Fullscreen API) — независимый тумблер внутри режима
@@ -71,12 +103,18 @@ export const useWeaveModePanel = ({ technique, silyanka, crossWeave, onEnterWeav
   // Пакет контролов режима плетения для хедера — из активной техники.
   // Locate скроллит к первой бисерине последнего сегмента: getElementById +
   // scrollIntoView, браузер сам учитывает zoom/поворот/отражение полотна.
-  const activeWeave = technique === 'silyanka' ? silyanka.weave : crossWeave.weave;
+  const activeWeave = technique === 'silyanka' ? silyanka.weave
+    : technique === 'crossWeave' ? crossWeave.weave
+    : technique === 'peyote' ? peyote.weave
+    : loom.weave;
   const weaveControls = {
     tool: weaveTool,
     onToolChange: setWeaveTool,
     markedCount: activeWeave.markedCount,
-    totalCount: technique === 'silyanka' ? silyanka.beads.length : crossWeave.beads.length,
+    totalCount: technique === 'silyanka' ? silyanka.beads.length
+      : technique === 'crossWeave' ? crossWeave.beads.length
+      : technique === 'peyote' ? peyote.beads.length
+      : loom.beads.length,
     canUndo: activeWeave.canUndo,
     onUndo: activeWeave.undo,
     onReset: activeWeave.resetAll,
@@ -87,15 +125,24 @@ export const useWeaveModePanel = ({ technique, silyanka, crossWeave, onEnterWeav
       setWeaveShowLast(true);
     },
     canLocate: activeWeave.lastSegment.length > 0,
-    orientation: weaveOrientation,
-    onToggleOrientation: toggleWeaveOrientation,
-    flipped: weaveFlipped,
-    onToggleFlip: () => setWeaveFlipped((f) => !f),
     isFullscreen,
     onToggleFullscreen: toggleFullscreen,
   };
 
-  return { weaveMode, toggleWeaveMode, weaveTool, weaveOrientation, weaveFlipped, weaveShowLast, weaveControls };
+  // Вид полотна для хедера (CanvasViewMenu) — значения и тумблеры вместе;
+  // canvasOrientation/canvasFlipped ниже — те же значения плоско, для
+  // *CanvasView.tsx (useCanvasView).
+  const canvasView = {
+    orientation: canvasOrientation,
+    onToggleOrientation: toggleCanvasOrientation,
+    flipped: canvasFlipped,
+    onToggleFlip: toggleCanvasFlipped,
+  };
+
+  return {
+    weaveMode, toggleWeaveMode, weaveTool, canvasOrientation, canvasFlipped, weaveShowLast,
+    weaveControls, canvasView,
+  };
 };
 
 export type WeaveModePanel = ReturnType<typeof useWeaveModePanel>;

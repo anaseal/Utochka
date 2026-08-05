@@ -1,0 +1,127 @@
+/* src/components/Editor/LoomEditor.tsx */
+import { Header } from './Header/Header';
+import { GridSidebar } from '../Sidebar/GridSidebar';
+import { LoomCanvasView } from './CanvasView/LoomCanvasView';
+import { AppSettings } from '../../hooks/useAppSettings';
+import { ProjectIO } from '../../hooks/useProjectIO';
+import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
+import { LoomProject } from '../../hooks/useLoomProject';
+import { DrawingTool } from '../../hooks/useDrawing';
+import { exportProject } from '../../utils/projectFile';
+
+interface LoomEditorProps {
+  settings: AppSettings;
+  projectIO: ProjectIO;
+  loom: LoomProject;
+  setLoomTool: (tool: DrawingTool) => void;
+  cancelLoomStampPattern: () => void;
+  activeSidebar: 'pendants' | 'grid' | null;
+  onToggleGridSidebar: () => void;
+  weavePanel: WeaveModePanel;
+}
+
+// Loom — четвёртая техника: без панели «Pendants & Decor» и без нитки (как
+// Peyote, см. spec.md, «Loom»). Режим плетения подключён так же, как у
+// Peyote/SilyankaEditor/CrossWeaveEditor — сегмент здесь целый ряд (Peyote,
+// в отличие от Loom, отмечает колонку, см. usePeyoteProject.ts), поэтому
+// weavePanel пробрасывается тем же способом.
+export const LoomEditor = ({
+  settings, projectIO, loom, setLoomTool, cancelLoomStampPattern,
+  activeSidebar, onToggleGridSidebar, weavePanel,
+}: LoomEditorProps) => (
+  <>
+    <Header
+      technique="loom"
+      onTechniqueChange={settings.setTechnique}
+      palette={settings.palette}
+      onPaletteChange={settings.setPalette}
+      activeColor={loom.drawingControls.activeColor}
+      setActiveColor={loom.drawingControls.setActiveColor}
+      activeTool={loom.drawingControls.activeTool}
+      setActiveTool={setLoomTool}
+      recentColors={loom.drawingControls.recentColors}
+      commitRecentColor={loom.drawingControls.commitRecentColor}
+      onClearAll={loom.drawingControls.clearAll}
+      onSaveProject={exportProject}
+      onLoadProject={projectIO.handleLoadProject}
+      onShareProject={projectIO.handleShareProject}
+      zoom={settings.zoom}
+      onZoomChange={settings.updateZoom}
+      onSetZoom={settings.setZoomAbsolute}
+      onUndo={loom.drawingControls.undo}
+      onRedo={loom.drawingControls.redo}
+      canUndo={loom.drawingControls.canUndo}
+      canRedo={loom.drawingControls.canRedo}
+      referenceWindowOpen={settings.referenceOpen}
+      onToggleReferenceWindow={() => settings.setReferenceOpen(o => !o)}
+      threads={[]}
+      onClearAllThreads={() => {}}
+      gridSidebarOpen={activeSidebar === 'grid'}
+      onToggleGridSidebar={onToggleGridSidebar}
+      weaveMode={weavePanel.weaveMode}
+      onToggleWeaveMode={weavePanel.toggleWeaveMode}
+      weaveControls={weavePanel.weaveControls}
+      canvasView={weavePanel.canvasView}
+      loomProps={{
+        mirrorMode: loom.mirrorMode,
+        setMirrorMode: loom.setMirrorMode,
+        onMakeSymmetric: loom.makeSymmetric,
+        canMakeSymmetric: Object.keys(loom.drawingControls.designMap).length > 0,
+        hasStampPattern: loom.stampPattern !== null,
+        onCancelStampPattern: cancelLoomStampPattern,
+      }}
+    />
+
+    <GridSidebar
+      technique="loom"
+      open={activeSidebar === 'grid'}
+      loomProps={{
+        gridWidth: loom.gridSize.width,
+        gridHeight: loom.gridSize.height,
+        spacing: loom.gridSize.pitchX,
+        onWidthChange: (delta) => loom.updateDimension('width', delta),
+        onHeightChange: (delta) => loom.updateDimension('height', delta),
+        onSpacingChange: loom.updateSpacing,
+        onSetWidth: loom.setWidthAbsolute,
+        onSetHeight: loom.setHeightAbsolute,
+        onSetSpacing: loom.setSpacingAbsolute,
+        onResetAll: loom.resetGridAll,
+        resetAllDisabled: loom.gridIsDefault,
+      }}
+    />
+
+    <LoomCanvasView
+      beads={loom.beads}
+      width={loom.gridSize.width}
+      height={loom.gridSize.height}
+      pitchX={loom.gridSize.pitchX}
+      canvasTheme={settings.canvasTheme}
+      onToggleCanvasTheme={settings.toggleCanvasTheme}
+      zoom={settings.zoom}
+      onZoomChange={settings.updateZoom}
+      onSetZoom={settings.setZoomAbsolute}
+      designMap={loom.drawingControls.designMap}
+      activeTool={loom.drawingControls.activeTool}
+      activeColor={loom.drawingControls.activeColor}
+      isDrawing={loom.drawingControls.isDrawing}
+      paintBead={loom.drawingControls.paintBead}
+      paintBeadFast={loom.drawingControls.paintBeadFast}
+      startDrawing={loom.drawingControls.startDrawing}
+      stopDrawing={loom.drawingControls.stopDrawing}
+      mirrorMode={loom.mirrorMode}
+      onFloodFill={loom.handleFloodFill}
+      stampPattern={loom.stampPattern}
+      stampPreviewPatch={loom.stampPreviewPatch}
+      onStampSelect={loom.handleStampSelect}
+      onStampHover={loom.setStampHoverNodeId}
+      onStampPlace={loom.handleStampPlace}
+      applyPatch={loom.drawingControls.applyPatch}
+      orientation={weavePanel.canvasOrientation}
+      flipped={weavePanel.canvasFlipped}
+      weaveMode={weavePanel.weaveMode}
+      weaveTool={weavePanel.weaveTool}
+      weave={loom.weave}
+      weaveShowLast={weavePanel.weaveShowLast}
+    />
+  </>
+);

@@ -5,6 +5,7 @@ import { TechniqueMenu } from './TechniqueMenu';
 import { Stepper } from '../../common/Stepper';
 import { APP_CONSTRAINTS } from '../../../config/theme';
 import { WeaveControls } from './WeaveControls';
+import { CanvasViewMenu } from './CanvasViewMenu';
 import { PaletteWidget } from './PaletteWidget';
 import { HeaderToolGroup } from './HeaderToolGroup';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
@@ -21,7 +22,7 @@ export const Header = (props: HeaderProps) => {
     referenceWindowOpen, onToggleReferenceWindow,
     threads, onClearAllThreads,
     gridSidebarOpen, onToggleGridSidebar,
-    weaveMode, onToggleWeaveMode, weaveControls,
+    weaveMode, onToggleWeaveMode, weaveControls, canvasView,
   } = props;
 
   const loadInputRef = useRef<HTMLInputElement>(null);
@@ -34,11 +35,12 @@ export const Header = (props: HeaderProps) => {
   const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
   const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
   const peyoteProps = props.technique === 'peyote' ? props.peyoteProps : undefined;
+  const loomProps = props.technique === 'loom' ? props.loomProps : undefined;
 
   return (
     <header className={`header${weaveMode ? ' header--weave' : ''}`}>
       <nav className="header__nav">
-        <TechniqueMenu technique={technique} onTechniqueChange={onTechniqueChange} weaveMode={weaveMode} />
+        <TechniqueMenu technique={technique} onTechniqueChange={onTechniqueChange} />
 
         {/* Вход в режим плетения — рядом с выбором техники, а не среди иконок
             панелей справа. Причины: это не панель, а мод (техника отвечает
@@ -48,23 +50,18 @@ export const Header = (props: HeaderProps) => {
             выходе — искать «выход» приходилось на новом месте. Левый край
             хедера одинаков в обоих режимах. Отдельной кнопкой, а не пунктом
             TechniqueMenu: тот попап — выбор одной из техник, тумблер внутри
-            него читался бы как ещё одна техника. Скрыта для Peyote целиком —
-            эта техника не поддерживает режим плетения (см. spec.md,
-            «Peyote»): нет естественного понятия «сегмент», как у крестика/
-            силянки. */}
-        {technique !== 'peyote' && (
-          <>
-            <div className="header__divider" />
-            <button
-              onClick={onToggleWeaveMode}
-              className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
-              title={weaveMode ? 'Exit weave mode' : 'Weave mode: mark your progress as you go'}
-              aria-pressed={weaveMode}
-            >
-              <ListChecks size={20} />
-            </button>
-          </>
-        )}
+            него читался бы как ещё одна техника. Показана для всех четырёх
+            техник — режим плетения поддерживают все (см. spec.md, «Режим
+            плетения»). */}
+        <div className="header__divider" />
+        <button
+          onClick={onToggleWeaveMode}
+          className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
+          title={weaveMode ? 'Exit weave mode' : 'Weave mode: mark your progress as you go'}
+          aria-pressed={weaveMode}
+        >
+          <ListChecks size={20} />
+        </button>
 
         <div className="header__divider" />
 
@@ -96,8 +93,20 @@ export const Header = (props: HeaderProps) => {
             silyankaProps={silyankaProps}
             crossWeaveProps={crossWeaveProps}
             peyoteProps={peyoteProps}
+            loomProps={loomProps}
           />
         )}
+
+        {/* Вид полотна (поворот/отражение) — общая настройка для рисования и
+            режима плетения (см. spec.md, «Поворот и отражение полотна»),
+            поэтому кнопка стоит здесь безусловно, а не внутри WeaveControls
+            (там её больше нет — копий не заводим). */}
+        <CanvasViewMenu
+          orientation={canvasView.orientation}
+          onToggleOrientation={canvasView.onToggleOrientation}
+          flipped={canvasView.flipped}
+          onToggleFlip={canvasView.onToggleFlip}
+        />
 
         <div className="header__divider header__divider--zoom-adjacent" />
 

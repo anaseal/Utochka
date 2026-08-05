@@ -8,11 +8,13 @@ import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
 import { CanvasScrollbars } from './CanvasScrollbars';
 import { CanvasSurface } from './CanvasSurface';
-import { WeaveTool, WeaveOrientation } from '../Header/WeaveControls';
+import { WeaveTool } from '../Header/WeaveControls';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
+import { CanvasOrientation } from '../Header/Header.types';
 import { crossWeaveCellOf } from '../../../utils/weaveSegment';
 import { WeaveProgressControls } from '../../../hooks/useWeaveProgress';
 import { useWeaveCanvas } from '../../../hooks/useWeaveCanvas';
+import { useCanvasView } from '../../../hooks/useCanvasView';
 import { ThreadTraceControls } from './ThreadTraceControls';
 import { ThreadLayer } from '../ThreadLayer/ThreadLayer';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../../../config/crossWeaveTheme';
@@ -59,12 +61,14 @@ interface CrossWeaveCanvasViewProps {
   // помечается текущим выбором (см. Header → ThreadMenu). У силянки такого
   // выбора нет (одна нитка), поэтому проп только здесь.
   activeThreadStrand: 1 | 2;
+  // Вид полотна (поворот/отражение) — общий для рисования и режима плетения
+  // (см. useCanvasView.ts, spec.md «Поворот и отражение полотна»).
+  orientation: CanvasOrientation;
+  flipped: boolean;
   // Режим плетения — тот же, что у силянки (см. spec.md, «Режим плетения»).
   // Сегмент здесь — ячейка-крестик из четырёх бисерин.
   weaveMode: boolean;
   weaveTool: WeaveTool;
-  weaveOrientation: WeaveOrientation;
-  weaveFlipped: boolean;
   weave: WeaveProgressControls;
   weaveShowLast: boolean;
   // «Кисть» ТЕКУЩЕЙ выбранной нити (activeThreadStrand) — своя пара на
@@ -113,10 +117,10 @@ export const CrossWeaveCanvasView = ({
   activeThreadColor,
   activeThreadOpacity,
   applyPatch,
+  orientation,
+  flipped,
   weaveMode,
   weaveTool,
-  weaveOrientation,
-  weaveFlipped,
   weave,
   weaveShowLast,
 }: CrossWeaveCanvasViewProps) => {
@@ -136,15 +140,13 @@ export const CrossWeaveCanvasView = ({
   // isMultiTouch отсюда — без ref эти два хука ссылались бы друг на друга.
   const cancelActiveStrokeRef = useRef<() => void>(() => {});
   const cancelActiveStroke = useCallback(() => cancelActiveStrokeRef.current(), []);
-  // См. тот же комментарий в CanvasView.tsx: в режиме плетения с
-  // горизонтальной ориентацией <svg> получает width/height от
-  // weaveCanvas.viewW/viewH (rotated меняет местами w/h), а не от dim
-  // напрямую — без этой поправки тач-жест и wheel-zoom писали бы в DOM не ту
-  // пару осей, и холст на время пинча/панорамы/зума схлопывался бы и
-  // визуально «пропадал».
-  const touchDim = weaveMode && weaveOrientation === 'horizontal'
-    ? { w: dim.h, h: dim.w }
-    : dim;
+  // См. тот же комментарий в CanvasView.tsx: при горизонтальной ориентации
+  // <svg> получает width/height от canvasView.viewW/viewH (rotated меняет
+  // местами w/h), а не от dim напрямую — без этой поправки тач-жест и
+  // wheel-zoom писали бы в DOM не ту пару осей, и холст на время
+  // пинча/панорамы/зума схлопывался бы и визуально «пропадал».
+  const canvasView = useCanvasView({ orientation, flipped, dim });
+  const touchDim = { w: canvasView.viewW, h: canvasView.viewH };
   useWheelZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onZoomChange);
   const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
@@ -214,9 +216,6 @@ export const CrossWeaveCanvasView = ({
     weave,
     active: weaveMode,
     tool: weaveTool,
-    orientation: weaveOrientation,
-    flipped: weaveFlipped,
-    dim,
     radiusOf,
     resolveStrokeIds,
   });
@@ -356,14 +355,14 @@ export const CrossWeaveCanvasView = ({
           >
             <svg
               ref={canvasSvgRef}
-              width={weaveCanvas.viewW * zoom}
-              height={weaveCanvas.viewH * zoom}
-              viewBox={`0 0 ${weaveCanvas.viewW} ${weaveCanvas.viewH}`}
+              width={canvasView.viewW * zoom}
+              height={canvasView.viewH * zoom}
+              viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
-              <g transform={weaveCanvas.transform}>
+              <g transform={canvasView.transform}>
               <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
-                <CrossWeaveRulers beads={beads} width={width} height={height} labelTransform={weaveCanvas.labelTransform} />
+                <CrossWeaveRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />
 
                 {mirrorAxis && (
                   <line

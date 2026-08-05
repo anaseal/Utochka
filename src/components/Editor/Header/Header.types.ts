@@ -1,9 +1,14 @@
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { Thread } from '../../../types/thread';
 import { StampAnchorEdge } from '../../../utils/stamp';
-import { WeaveTool, WeaveOrientation } from './WeaveControls';
+import { WeaveTool } from './WeaveControls';
 
-export type Technique = 'silyanka' | 'crossWeave' | 'peyote';
+export type Technique = 'silyanka' | 'crossWeave' | 'peyote' | 'loom';
+
+// Вид полотна (поворот/отражение) — общий для рисования и режима плетения
+// (см. useCanvasView.ts), поэтому тип живёт в нейтральном файле, а не в
+// WeaveControls.tsx.
+export type CanvasOrientation = 'vertical' | 'horizontal';
 
 export interface SharedHeaderProps {
   palette: string[];
@@ -52,12 +57,16 @@ export interface SharedHeaderProps {
     onReset: () => void;
     onLocate: () => void;
     canLocate: boolean;
-    orientation: WeaveOrientation;
+    isFullscreen: boolean;
+    onToggleFullscreen: () => void;
+  };
+  // Вид полотна (поворот/отражение) — не относится к режиму плетения, живёт
+  // всегда в хедере (см. CanvasViewMenu), и в рисовании, и в плетении.
+  canvasView: {
+    orientation: CanvasOrientation;
     onToggleOrientation: () => void;
     flipped: boolean;
     onToggleFlip: () => void;
-    isFullscreen: boolean;
-    onToggleFullscreen: () => void;
   };
 }
 
@@ -98,9 +107,10 @@ export interface CrossWeaveHeaderProps {
 }
 
 // Peyote — штамп есть (в отличие от crossWeave), нитки нет (в отличие от
-// обеих других техник, см. spec.md, «Peyote»). Без stampAnchorEdge — у
+// silyanka/crossWeave, см. spec.md, «Peyote»). Без stampAnchorEdge — у
 // Peyote нет структурного различия «низа»/«верха» узора, якорь штампа
-// всегда левый верхний угол выделения (см. peyoteStamp.ts).
+// всегда левый верхний угол выделения (см. peyoteStamp.ts). Режим плетения
+// — через общий SharedHeaderProps.weaveControls, как и у остальных техник.
 export interface PeyoteHeaderProps {
   mirrorMode: boolean;
   setMirrorMode: (v: boolean) => void;
@@ -110,8 +120,14 @@ export interface PeyoteHeaderProps {
   onCancelStampPattern: () => void;
 }
 
+// Loom — тот же набор, что у Peyote (штамп есть, нитки нет, см. spec.md,
+// «Loom»): mirror/stamp-контролы идентичны, различие только в том, что
+// технику ведёт отдельный проект (useLoomProject).
+export type LoomHeaderProps = PeyoteHeaderProps;
+
 export type HeaderProps = SharedHeaderProps & (
-  | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; crossWeaveProps?: undefined; peyoteProps?: undefined }
-  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveHeaderProps; silyankaProps?: undefined; peyoteProps?: undefined }
-  | { technique: 'peyote'; peyoteProps: PeyoteHeaderProps; silyankaProps?: undefined; crossWeaveProps?: undefined }
+  | { technique: 'silyanka'; silyankaProps: SilyankaHeaderProps; crossWeaveProps?: undefined; peyoteProps?: undefined; loomProps?: undefined }
+  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveHeaderProps; silyankaProps?: undefined; peyoteProps?: undefined; loomProps?: undefined }
+  | { technique: 'peyote'; peyoteProps: PeyoteHeaderProps; silyankaProps?: undefined; crossWeaveProps?: undefined; loomProps?: undefined }
+  | { technique: 'loom'; loomProps: LoomHeaderProps; silyankaProps?: undefined; crossWeaveProps?: undefined; peyoteProps?: undefined }
 );

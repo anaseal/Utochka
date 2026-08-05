@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  HelpCircle, Diamond, MousePointerClick, Eraser, Crosshair, Undo2, RotateCcw, FlipHorizontal,
-  Percent, MoveHorizontal, Maximize2,
+  HelpCircle, Diamond, MousePointerClick, Eraser, Crosshair, Undo2, RotateCcw, Percent, Maximize2,
 } from 'lucide-react';
 import { Technique } from './Header.types';
 import './WeaveHelp.css';
@@ -10,9 +9,8 @@ import './WeaveHelp.css';
 // а не модалка: режим и так занимает весь экран, а подсказку читают одним
 // глазом, не прерывая работу. Открытие/закрытие — как у MirrorMenu
 // (клик снаружи + Escape), текст английский, как и весь UI.
-// technique типизирован как весь Technique — чисто расширение типа (Peyote
-// не поддерживает режим плетения и сюда не попадёт в рантайме, см.
-// WeaveControls.tsx), но проп приходит из Header.tsx уже типа Technique.
+// Четыре ветки текста ниже — по одной на каждую технику (silyanka/loom/
+// peyote/crossWeave), т.к. правило сегмента у каждой своё.
 export const WeaveHelp = ({ technique, className }: { technique: Technique; className?: string }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -67,6 +65,12 @@ export const WeaveHelp = ({ technique, className }: { technique: Technique; clas
                 {technique === 'silyanka' ? (
                   <> A step is one pass of the thread: a node, the two edges going down from it
                     and the nodes they reach. Click any bead of it — the node or a bead in an edge.</>
+                ) : technique === 'loom' ? (
+                  <> A step is one whole row — one pass of the weft thread. Click any bead in
+                    the row to mark it all at once.</>
+                ) : technique === 'peyote' ? (
+                  <> A step is one whole column — one pass of the thread. Click any bead in
+                    the column to mark it all at once.</>
                 ) : (
                   <> A step is one cross of four beads. Click the bead that <b>finishes</b> the
                     cross: the right one while you weave sideways, the bottom one once you turn
@@ -109,22 +113,6 @@ export const WeaveHelp = ({ technique, className }: { technique: Technique; clas
               <RotateCcw size={12} className="weave-help__icon" />
               <span><b>Reset</b> — clears all marks and starts the piece over.</span>
             </li>
-          </ul>
-
-          <h4 className="weave-help__title">Turning the piece</h4>
-          <ul className="weave-help__list">
-            <li>
-              <MoveHorizontal size={12} className="weave-help__icon" />
-              <span>Lay the piece across the screen or stand it upright — whichever way it lies
-                in front of you.</span>
-            </li>
-            <li>
-              <FlipHorizontal size={12} className="weave-help__icon" />
-              <span>
-                <b>Mirror</b> — flips it left to right, for weaving the other way round.
-                {technique === 'silyanka' && ' It also switches the side each step takes, so the marks follow your hand.'}
-              </span>
-            </li>
             <li>
               <Maximize2 size={12} className="weave-help__icon" />
               <span><b>Fullscreen</b> — hides the browser's own bars for more room, handy on a
@@ -132,13 +120,16 @@ export const WeaveHelp = ({ technique, className }: { technique: Technique; clas
             </li>
           </ul>
           <p className="weave-help__note">
-            Both only change how the piece lies in front of you — the design and the marks stay
-            untouched. Drawing tools are hidden here, so nothing gets recoloured by accident.
+            The rotate/flip button next to Zoom turns the piece the same way it lies in front of
+            you — lay it flat, stand it up, mirror it left to right. It works here and while
+            drawing, and only changes how the piece lies on screen: the design and the marks stay
+            untouched.
+            {technique === 'silyanka' && ' Mirroring also switches the side each step takes, so the marks follow your hand.'}
           </p>
 
           <p className="weave-help__note">
-            Progress saves itself and is still there when you come back. Silyanka and cross-weave
-            each keep their own.
+            Progress saves itself and is still there when you come back. Each technique that
+            supports this mode keeps its own.
           </p>
         </div>
       )}

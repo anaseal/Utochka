@@ -21,8 +21,8 @@ export const PEYOTE_THEME = {
   },
 
   gridDefaults: {
-    initialWidth: 20,
-    initialHeight: 30,
+    initialWidth: 10,
+    initialHeight: 5,
     // spacing = pitchX; pitchY выводится через pitchYFromX(spacing) —
     // единственный источник правды, см. комментарий там же.
     spacing: 20,

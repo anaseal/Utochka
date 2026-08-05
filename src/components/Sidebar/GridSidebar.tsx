@@ -4,6 +4,7 @@ import { SectionHelp } from '../common/SectionHelp';
 import { APP_CONSTRAINTS, BEAD_THEME } from '../../config/theme';
 import { CROSS_WEAVE_THEME } from '../../config/crossWeaveTheme';
 import { PEYOTE_THEME } from '../../config/peyoteTheme';
+import { LOOM_THEME } from '../../config/loomTheme';
 import { Taper } from '../../types/bead';
 import './Sidebar.css';
 import './GridSidebar.css';
@@ -55,10 +56,11 @@ interface SilyankaGridSidebarProps {
   resetAllDisabled: boolean;
 }
 
-// Общий костяк панели «Grid» у crossWeave и Peyote — обе техники не знают
-// про span/edges/taper/decor силянки, только размер сетки. Единый интерфейс,
-// а не два дословно одинаковых (CrossWeaveGridSidebarProps/
-// PeyoteGridSidebarProps), чтобы третья техника не дублировала его снова.
+// Общий костяк панели «Grid» у crossWeave, Peyote и Loom — ни одна из них не
+// знает про span/edges/taper/decor силянки, только размер сетки. Единый
+// интерфейс, а не три дословно одинаковых (CrossWeaveGridSidebarProps/
+// PeyoteGridSidebarProps/LoomGridSidebarProps), чтобы каждая новая техника
+// не дублировала его снова.
 interface BasicGridSidebarProps {
   gridWidth: number;
   gridHeight: number;
@@ -75,11 +77,13 @@ interface BasicGridSidebarProps {
 
 type CrossWeaveGridSidebarProps = BasicGridSidebarProps;
 type PeyoteGridSidebarProps = BasicGridSidebarProps;
+type LoomGridSidebarProps = BasicGridSidebarProps;
 
 type GridSidebarProps = SharedGridSidebarProps & (
-  | { technique: 'silyanka'; silyankaProps: SilyankaGridSidebarProps; crossWeaveProps?: undefined; peyoteProps?: undefined }
-  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveGridSidebarProps; silyankaProps?: undefined; peyoteProps?: undefined }
-  | { technique: 'peyote'; peyoteProps: PeyoteGridSidebarProps; silyankaProps?: undefined; crossWeaveProps?: undefined }
+  | { technique: 'silyanka'; silyankaProps: SilyankaGridSidebarProps; crossWeaveProps?: undefined; peyoteProps?: undefined; loomProps?: undefined }
+  | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveGridSidebarProps; silyankaProps?: undefined; peyoteProps?: undefined; loomProps?: undefined }
+  | { technique: 'peyote'; peyoteProps: PeyoteGridSidebarProps; silyankaProps?: undefined; crossWeaveProps?: undefined; loomProps?: undefined }
+  | { technique: 'loom'; loomProps: LoomGridSidebarProps; silyankaProps?: undefined; crossWeaveProps?: undefined; peyoteProps?: undefined }
 );
 
 export const GridSidebar = (props: GridSidebarProps) => {
@@ -87,17 +91,19 @@ export const GridSidebar = (props: GridSidebarProps) => {
   const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
   const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
   const peyoteProps = props.technique === 'peyote' ? props.peyoteProps : undefined;
-  // crossWeave и Peyote делят один интерфейс (BasicGridSidebarProps) — вместо
-  // тройного `? :` на каждом поле ниже, один merge и дальше двойной `? :`
-  // (силянка / остальное), как было раньше.
-  const basicProps = crossWeaveProps ?? peyoteProps;
+  const loomProps = props.technique === 'loom' ? props.loomProps : undefined;
+  // crossWeave, Peyote и Loom делят один интерфейс (BasicGridSidebarProps) —
+  // вместо N-арного `? :` на каждом поле ниже, один merge и дальше двойной
+  // `? :` (силянка / остальное), как было раньше.
+  const basicProps = crossWeaveProps ?? peyoteProps ?? loomProps;
 
   const width = silyankaProps ? silyankaProps.gridWidth : basicProps!.gridWidth;
   const height = silyankaProps ? silyankaProps.gridHeight : basicProps!.gridHeight;
   const spacing = silyankaProps ? silyankaProps.spacing : basicProps!.spacing;
-  const spacingConstraints = silyankaProps
-    ? BEAD_THEME.constraints
-    : crossWeaveProps ? CROSS_WEAVE_THEME.constraints : PEYOTE_THEME.constraints;
+  const spacingConstraints = silyankaProps ? BEAD_THEME.constraints
+    : crossWeaveProps ? CROSS_WEAVE_THEME.constraints
+    : peyoteProps ? PEYOTE_THEME.constraints
+    : LOOM_THEME.constraints;
 
   // Depth — общий пол ширины для активных сторон: пока обе стороны выключены
   // (rows=0), он не срезает ничего (см. taper.ts), поэтому степпер гасим, а не

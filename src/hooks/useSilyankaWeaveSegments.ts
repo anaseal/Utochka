@@ -9,14 +9,17 @@ import {
 interface UseSilyankaWeaveSegmentsOptions {
   beads: Bead[];
   weaveTool: WeaveTool;
-  weaveFlipped: boolean;
+  // Отражение полотна (см. useCanvasView.ts) — общее для рисования и режима
+  // плетения, но значение здесь используется только пока активен режим
+  // плетения (resolveStrokeIds вызывается только оттуда).
+  flipped: boolean;
 }
 
 // Режим плетения: холст ничего не рисует, клик/протяжка только отмечают, что
 // уже сплетено. Резолвер сегмента у силянки и у крестика разный (см. spec.md,
 // раздел 4.2 «Общие механики двух холстов») — каждый живёт в своём хуке рядом
 // с доменной геометрией своей техники, не унифицируется через useWeaveCanvas.
-export const useSilyankaWeaveSegments = ({ beads, weaveTool, weaveFlipped }: UseSilyankaWeaveSegmentsOptions) => {
+export const useSilyankaWeaveSegments = ({ beads, weaveTool, flipped }: UseSilyankaWeaveSegmentsOptions) => {
   const segmentIndex = useMemo(() => buildSegmentIndex(beads), [beads]);
   const beadById = useMemo(() => new Map(beads.map((b) => [b.id, b])), [beads]);
   // Нижний ряд узлов: у его узлов сегмент — разворот из обеих верхних граней
@@ -35,14 +38,14 @@ export const useSilyankaWeaveSegments = ({ beads, weaveTool, weaveFlipped }: Use
     // грань → узел». Сторона не зависит от жеста и места клика: плетение идёт
     // слева направо по экрану, а на отражённом полотне это другая сторона
     // сетки (см. silyankaNodeClickSegment и разметку шагов в spec.md).
-    const pass = { mirrored: weaveFlipped, bottomRow: bottomNodeRow };
+    const pass = { mirrored: flipped, bottomRow: bottomNodeRow };
     const bead = beadById.get(id);
     if (bead?.type === 'NODE') {
       return silyankaNodeClickSegment(bead.logicalIndex.row, bead.logicalIndex.col, segmentIndex, pass);
     }
     // Клик по спану отмечает тот же сегмент: раз сторона фиксирована, пролёт
     // входит ровно в один проход, и центр однозначен.
-    const center = silyankaPassCenter(id, weaveFlipped);
+    const center = silyankaPassCenter(id, flipped);
     if (center && segmentIndex.has(`node:${center.r}:${center.c}`)) {
       const ids = silyankaNodeClickSegment(center.r, center.c, segmentIndex, pass);
       // Страховка от края и среза Taper: если проход почему-то не содержит
@@ -50,7 +53,7 @@ export const useSilyankaWeaveSegments = ({ beads, weaveTool, weaveFlipped }: Use
       if (ids.includes(id)) return ids;
     }
     return silyankaSegment(id, segmentIndex);
-  }, [weaveTool, beadById, segmentIndex, bottomNodeRow, weaveFlipped]);
+  }, [weaveTool, beadById, segmentIndex, bottomNodeRow, flipped]);
 
   return weaveBeadsFor;
 };

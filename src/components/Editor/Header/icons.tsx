@@ -1,5 +1,7 @@
 import { generatePeyoteGrid } from '../../../utils/peyoteGenerator';
 import { pitchYFromX } from '../../../config/peyoteTheme';
+import { generateLoomGrid } from '../../../utils/loomGenerator';
+import { pitchYFromX as loomPitchYFromX } from '../../../config/loomTheme';
 
 // Inline-иконки инструментов, наследующие цвет через `currentColor`,
 // чтобы вести себя одинаково с lucide-иконками (.tool-btn: серый → белый).
@@ -120,7 +122,7 @@ export const SilyankaIcon = ({ size = 14, strokeWidth = 0.5 }: RingIconProps) =>
   </svg>
 );
 
-export const CrossWeaveIcon = ({ size = 14, strokeWidth = 1.2}: RingIconProps) => (
+export const CrossWeaveIcon = ({ size = 14, strokeWidth = 0.6 }: RingIconProps) => (
   <svg width={size} height={size} viewBox="0 0 253 156" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g className="cross-weave-icon__rings" fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
       {CROSS_WEAVE_RINGS.map(([cx, cy, rx, ry], i) => (
@@ -142,7 +144,7 @@ const PEYOTE_ICON_GRID = generatePeyoteGrid(4, 5, PEYOTE_ICON_PITCH_X, pitchYFro
 // иначе даже иконка показывала бы зазор, которого на холсте нет.
 const PEYOTE_ICON_BEAD = { width: PEYOTE_ICON_PITCH_X, height: pitchYFromX(PEYOTE_ICON_PITCH_X) };
 
-export const PeyoteIcon = ({ size = 14, strokeWidth = 1.2 }: RingIconProps) => (
+export const PeyoteIcon = ({ size = 14, strokeWidth = 0.6 }: RingIconProps) => (
   <svg width={size} height={size} viewBox="-12 -14 73 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g className="peyote-icon__beads" fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
       {PEYOTE_ICON_GRID.map((b) => (
@@ -156,6 +158,53 @@ export const PeyoteIcon = ({ size = 14, strokeWidth = 1.2 }: RingIconProps) => (
           vectorEffect="non-scaling-stroke"
         />
       ))}
+    </g>
+  </svg>
+);
+
+// Иконка Loom: тот же приём, что у Peyote выше — та же геометрия, что рисует
+// сами бисерины (generateLoomGrid), маленькая сетка 4×5, но БЕЗ сдвига рядов
+// (см. loomGenerator.ts) — визуально это прямая матрица прямоугольников, а не
+// кирпичная кладка, что и отличает станочное плетение от Peyote на глаз.
+const LOOM_ICON_PITCH_X = 14;
+const LOOM_ICON_GRID = generateLoomGrid(4, 5, LOOM_ICON_PITCH_X, loomPitchYFromX(LOOM_ICON_PITCH_X));
+const LOOM_ICON_BEAD = { width: LOOM_ICON_PITCH_X, height: loomPitchYFromX(LOOM_ICON_PITCH_X) };
+
+export const LoomIcon = ({ size = 14, strokeWidth = 0.6 }: RingIconProps) => (
+  <svg width={size} height={size} viewBox="-12 -14 66 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g className="loom-icon__beads" fill="none" stroke="currentColor" strokeWidth={strokeWidth}>
+      {LOOM_ICON_GRID.map((b) => (
+        <rect
+          key={b.id}
+          x={b.x - LOOM_ICON_BEAD.width / 2}
+          y={b.y - LOOM_ICON_BEAD.height / 2}
+          width={LOOM_ICON_BEAD.width}
+          height={LOOM_ICON_BEAD.height}
+          rx={1.5}
+          vectorEffect="non-scaling-stroke"
+        />
+      ))}
+    </g>
+  </svg>
+);
+
+// Иконка триггера TechniqueMenu: не иконка какой-то одной техники (та
+// менялась бы при переключении, и кнопка визуально "прыгала" бы), а
+// нейтральный символ самого плетения — простейшая решётка "через одну"
+// (plain weave: на каждом пересечении то вертикальная нить сверху, то
+// горизонтальная, в шахматном порядке), в отличие от LayoutGrid/стрелок
+// прямо про переплетение нитей, а не абстрактную сетку/UI-переключение.
+// Толщина линий здесь заметно больше, чем у тонких RingIcon выше (те рисуют
+// множество мелких бисерин-колец, где тонкая обводка не даёт им слиться в
+// пятно) — здесь всего 4 отрезка, и лента должна читаться как лента, а не
+// как волосяная линия.
+export const WeaveSwitchIcon = ({ size = 18 }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+      <path d="M8 3V13.5M8 18.5V21" />
+      <path d="M16 3V5.5M16 10.5V21" />
+      <path d="M3 8H5.5M10.5 8H21" />
+      <path d="M3 16H13.5M18.5 16H21" />
     </g>
   </svg>
 );

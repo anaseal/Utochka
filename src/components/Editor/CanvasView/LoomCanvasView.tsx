@@ -1,9 +1,9 @@
-/* FILE: src\components\Editor\CanvasView\PeyoteCanvasView.tsx */
+/* FILE: src\components\Editor\CanvasView\LoomCanvasView.tsx */
 import { useMemo, useCallback, useRef } from 'react';
-import { PeyoteBead } from '../../../types/peyoteBead';
-import { PeyoteStampPattern } from '../../../utils/peyoteStamp';
-import { PeyoteBeadView } from '../BeadView/PeyoteBeadView';
-import { PeyoteRulers } from '../CanvasRulers/PeyoteRulers';
+import { LoomBead } from '../../../types/loomBead';
+import { LoomStampPattern } from '../../../utils/loomStamp';
+import { LoomBeadView } from '../BeadView/LoomBeadView';
+import { LoomRulers } from '../CanvasRulers/LoomRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
 import { CanvasScrollbars } from './CanvasScrollbars';
@@ -11,14 +11,14 @@ import { CanvasSurface } from './CanvasSurface';
 import { WeaveTool } from '../Header/WeaveControls';
 import { CanvasOrientation } from '../Header/Header.types';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
-import { peyoteColumnSegment } from '../../../utils/weaveSegment';
+import { loomRowSegment } from '../../../utils/weaveSegment';
 import { WeaveProgressControls } from '../../../hooks/useWeaveProgress';
 import { useWeaveCanvas } from '../../../hooks/useWeaveCanvas';
 import { useCanvasView } from '../../../hooks/useCanvasView';
-import { defaultColorForPeyote, pitchYFromX } from '../../../config/peyoteTheme';
+import { defaultColorForLoom, pitchYFromX } from '../../../config/loomTheme';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportScheme';
-import { mirrorPeyoteBeadId } from '../../../utils/peyoteMirror';
+import { mirrorLoomBeadId } from '../../../utils/loomMirror';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
 import { useStatsReserve } from '../../../hooks/useStatsReserve';
@@ -31,12 +31,12 @@ import { computeCanvasDim } from '../../../utils/canvasDim';
 import { swapColorInMap } from '../../../utils/colorSwap';
 import './CanvasView.css';
 
-interface PeyoteCanvasViewProps {
-  beads: PeyoteBead[];
+interface LoomCanvasViewProps {
+  beads: LoomBead[];
   width: number;
   height: number;
   // Реальный шаг сетки по X — вместе с pitchYFromX(pitchX) задаёт РОВНЫЙ
-  // размер прямоугольной бисерины (см. PeyoteBeadView.tsx): без зазора и без
+  // размер прямоугольной бисерины (см. LoomBeadView.tsx): без зазора и без
   // наезда друг на друга при любом Spacing, не только при дефолтном.
   pitchX: number;
   canvasTheme: 'dark' | 'light';
@@ -54,7 +54,7 @@ interface PeyoteCanvasViewProps {
   onSetZoom: (v: number) => void;
   mirrorMode: boolean;
   onFloodFill: (id: string) => void;
-  stampPattern: PeyoteStampPattern | null;
+  stampPattern: LoomStampPattern | null;
   stampPreviewPatch: Record<string, string> | null;
   onStampSelect: (ids: string[]) => void;
   onStampHover: (nodeId: string | null) => void;
@@ -63,9 +63,8 @@ interface PeyoteCanvasViewProps {
   // (см. useCanvasView.ts, spec.md «Поворот и отражение полотна»).
   orientation: CanvasOrientation;
   flipped: boolean;
-  // Режим плетения — тот же, что у силянки/crossWeave/Loom (см. spec.md,
-  // «Режим плетения»). Сегмент здесь — целая колонка, не ряд (см.
-  // peyoteColumnSegment ниже).
+  // Режим плетения — тот же, что у силянки/crossWeave (см. spec.md, «Режим
+  // плетения»). Сегмент здесь — целый ряд (один проход утка).
   weaveMode: boolean;
   weaveTool: WeaveTool;
   weave: WeaveProgressControls;
@@ -79,15 +78,13 @@ interface PeyoteCanvasViewProps {
 const OFFSET_X = 60;
 const OFFSET_Y = 60;
 
-// Peyote — MVP-канвас: карандаш/ластик/заливка/штамп + Mirror Mode + режим
-// плетения (сегмент — целая колонка, см. spec.md, «Peyote»). Без
-// подвесок/ниток — не ветка CanvasView/CrossWeaveCanvasView, а отдельный
-// компонент: своя геометрия (прямоугольная бисерина, зубчатая кирпичная
-// кладка) и свой набор инструментов (штамп есть, в отличие от crossWeave;
-// нитки нет ни у одной из технико-нейтральных техник). Общие механики
-// холста (режим плетения, подсветка цвета, штамп, оболочка) — те же хуки,
-// что у остальных техник (см. LoomCanvasView.tsx).
-export const PeyoteCanvasView = ({
+// Loom — MVP-канвас: карандаш/ластик/заливка/штамп + Mirror Mode + режим
+// плетения (сегмент — ряд, см. spec.md, «Loom»). Не ветка CanvasView/
+// PeyoteCanvasView/CrossWeaveCanvasView, а отдельный компонент — своя
+// геометрия (прямоугольная бисерина, прямая сетка без сдвига рядов), но общие
+// механики холста (режим плетения, подсветка цвета, штамп, оболочка) те же
+// хуки, что у остальных техник.
+export const LoomCanvasView = ({
   beads,
   width,
   height,
@@ -119,12 +116,12 @@ export const PeyoteCanvasView = ({
   weave,
   weaveShowLast,
   applyPatch,
-}: PeyoteCanvasViewProps) => {
+}: LoomCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
   const canvasGroupRef = useRef<SVGGElement>(null);
   // Размер прямоугольника бисерины — ровно шаг сетки (см. комментарий у
-  // pitchX в пропах выше и в config/peyoteTheme.ts).
+  // pitchX в пропах выше и в config/loomTheme.ts).
   const beadWidth = pitchX;
   const beadHeight = pitchYFromX(pitchX);
   const beadMargin = Math.max(beadWidth, beadHeight) / 2;
@@ -136,13 +133,12 @@ export const PeyoteCanvasView = ({
 
   // Второй палец отменяет начатый одним пальцем жест (мазок/драг штампа/мазок
   // отметок) — переключение на панораму/zoom. Поздняя привязка через ref —
-  // та же причина, что в CanvasView.tsx/CrossWeaveCanvasView.tsx: useStampTool
-  // объявляется ниже и сам зависит от isMultiTouch из touchGesture.
+  // та же причина, что в PeyoteCanvasView.tsx/CrossWeaveCanvasView.tsx.
   const cancelActiveStrokeRef = useRef<() => void>(() => {});
   const cancelActiveStroke = useCallback(() => cancelActiveStrokeRef.current(), []);
   // При горизонтальной ориентации <svg> получает width/height от
   // canvasView.viewW/viewH (rotated меняет местами w/h), а не от dim
-  // напрямую — см. тот же комментарий в CrossWeaveCanvasView.tsx/LoomCanvasView.tsx.
+  // напрямую — см. тот же комментарий в CrossWeaveCanvasView.tsx.
   const canvasView = useCanvasView({ orientation, flipped, dim });
   const touchDim = { w: canvasView.viewW, h: canvasView.viewH };
   useWheelZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onZoomChange);
@@ -163,15 +159,15 @@ export const PeyoteCanvasView = ({
   });
 
   // --- Режим плетения -------------------------------------------------------
-  // Сегмент Peyote — целая КОЛОНКА, не ряд (см. utils/weaveSegment.ts,
-  // peyoteColumnSegment): типовая раскладка схемы пейота кладёт длину изделия
-  // по горизонтали, а узкую ширину — по вертикали, и один физический проход
-  // нити идёт поперёк этой ширины, то есть визуально сверху вниз одной
-  // колонкой (см. spec.md, «Peyote» → «Режим плетения»).
+  // Сегмент Loom — целый ряд: один проход утка набирает и протягивает ряд
+  // бисерин целиком (см. utils/weaveSegment.ts, loomRowSegment). В отличие от
+  // crossWeaveCellOf, ряды физически не пересекаются — фильтровать уже
+  // отмеченные не нужно, повторный клик по ряду — это честный повторный
+  // проход (см. комментарий в useWeaveCanvas.ts про накопление проходов).
   const resolveStrokeIds = useCallback((beadId: string) => {
     if (weaveTool !== 'segment') return [beadId];
-    return peyoteColumnSegment(beadId, height) ?? [beadId];
-  }, [weaveTool, height]);
+    return loomRowSegment(beadId, width) ?? [beadId];
+  }, [weaveTool, width]);
 
   // Больший из двух полуразмеров — бисерина прямоугольная (уже, чем выше), и
   // рамка последнего сегмента (WeaveLayer) должна охватывать её целиком, а не
@@ -207,14 +203,14 @@ export const PeyoteCanvasView = ({
     beads,
     designMap,
     isDrawing,
-    defaultColorOf: defaultColorForPeyote,
+    defaultColorOf: defaultColorForLoom,
     onReplaceColor: replaceColor,
   });
 
   const totalCount = beads.length;
 
   // Границы для обрезки PNG по узору при экспорте — тот же приём, что и в
-  // CrossWeaveCanvasView.tsx.
+  // PeyoteCanvasView.tsx/CrossWeaveCanvasView.tsx.
   const paintedBounds = useMemo<ContentBounds | null>(() => {
     const painted = beads.filter((b) => !!designMap[b.id]);
     if (painted.length === 0) return null;
@@ -245,12 +241,12 @@ export const PeyoteCanvasView = ({
   }, [mirrorMode, beads]);
 
   const mirrorFn = useCallback(
-    (id: string) => mirrorPeyoteBeadId(id, width),
+    (id: string) => mirrorLoomBeadId(id, width),
     [width],
   );
   const applyPaint = useMirrorPaint(paintBead, mirrorMode, mirrorFn);
   const applyPaintFast = useFastPaint({
-    canvasSvgRef, paintBeadFast, mirrorMode, mirrorFn, defaultColorOf: defaultColorForPeyote,
+    canvasSvgRef, paintBeadFast, mirrorMode, mirrorFn, defaultColorOf: defaultColorForLoom,
   });
 
   const handlePointerEnter = useCallback((id: string) => {
@@ -321,7 +317,7 @@ export const PeyoteCanvasView = ({
             >
               <g transform={canvasView.transform}>
               <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
-                <PeyoteRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />
+                <LoomRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />
 
                 {mirrorAxis && (
                   <line
@@ -335,7 +331,7 @@ export const PeyoteCanvasView = ({
                 )}
 
                 {beads.map((bead) => (
-                  <PeyoteBeadView
+                  <LoomBeadView
                     key={bead.id}
                     id={bead.id}
                     x={bead.x}
@@ -343,7 +339,7 @@ export const PeyoteCanvasView = ({
                     beadWidth={beadWidth}
                     beadHeight={beadHeight}
                     color={designMap[bead.id]}
-                    defaultColor={defaultColorForPeyote()}
+                    defaultColor={defaultColorForLoom()}
                     highlighted={highlightedBeadIds?.has(bead.id) ?? false}
                     previewColor={stampPreviewPatch?.[bead.id]}
                     onPointerEnter={handlePointerEnter}

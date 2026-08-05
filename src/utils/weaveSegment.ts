@@ -383,3 +383,35 @@ export const crossWeaveCellOf = (
 
   return complete.find((cell) => cell.some((id) => !isMarked(id))) ?? complete[0];
 };
+
+/**
+ * Сегмент Loom: весь ряд, которому принадлежит `beadId`. В станочном
+ * плетении один проход утка набирает и протягивает ровно один ряд бисерин
+ * целиком — в отличие от силянки/крестика, где нить идёт зигзагом или
+ * крестами, здесь сегмент однозначен без всякой геометрии соседства.
+ *
+ * `null` — только если id не распознан (не бисерина Loom).
+ */
+export const loomRowSegment = (beadId: string, width: number): string[] | null => {
+  const match = /^loom-(\d+)-\d+$/.exec(beadId);
+  if (!match) return null;
+  const r = Number(match[1]);
+  return Array.from({ length: width }, (_, c) => `loom-${r}-${c}`);
+};
+
+/**
+ * Сегмент Peyote: вся колонка, которой принадлежит `beadId` — не ряд, как у
+ * Loom. Типовая раскладка схемы пейота (особенно для узких длинных изделий
+ * вроде браслета) кладёт длину изделия по горизонтали, а её узкую ширину —
+ * по вертикали (см. spec.md, «Peyote» → «Режим плетения»); один физический
+ * проход нити идёт поперёк этой узкой ширины, то есть визуально сверху вниз
+ * одной колонкой, а не слева направо рядом, как проход утка на станке.
+ *
+ * `null` — только если id не распознан (не бисерина Peyote).
+ */
+export const peyoteColumnSegment = (beadId: string, height: number): string[] | null => {
+  const match = /^peyote-\d+-(\d+)$/.exec(beadId);
+  if (!match) return null;
+  const c = Number(match[1]);
+  return Array.from({ length: height }, (_, r) => `peyote-${r}-${c}`);
+};

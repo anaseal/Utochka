@@ -9,7 +9,8 @@ import {
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { BeadGrid } from './BeadGrid';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
-import { WeaveTool, WeaveOrientation } from '../Header/WeaveControls';
+import { WeaveTool } from '../Header/WeaveControls';
+import { CanvasOrientation } from '../Header/Header.types';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { PendantLayer } from '../PendantLayer/PendantLayer';
 import { PendantChainLayer } from '../PendantChainLayer/PendantChainLayer';
@@ -29,6 +30,7 @@ import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
 import { WeaveProgressControls } from '../../../hooks/useWeaveProgress';
 import { useWeaveCanvas } from '../../../hooks/useWeaveCanvas';
+import { useCanvasView } from '../../../hooks/useCanvasView';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
 import { useStatsReserve } from '../../../hooks/useStatsReserve';
@@ -144,13 +146,15 @@ interface CanvasViewProps {
     decorTailsFn?: ((d: DecorTailPlacement[]) => DecorTailPlacement[]) | null,
     teethFn?: ((t: ToothPlacement[]) => ToothPlacement[]) | null,
   ) => void;
+  // Вид полотна (поворот/отражение) — общий для рисования и режима плетения
+  // (см. useCanvasView.ts, spec.md «Поворот и отражение полотна»).
+  orientation: CanvasOrientation;
+  flipped: boolean;
   // Режим плетения: холст перестаёт рисовать и только отмечает прогресс.
   // Контролы режима живут в хедере (WeaveControls) — сюда приходят лишь
   // состояние и хранилище отметок (см. spec.md, «Режим плетения»).
   weaveMode: boolean;
   weaveTool: WeaveTool;
-  weaveOrientation: WeaveOrientation;
-  weaveFlipped: boolean;
   weave: WeaveProgressControls;
   // Показ рамки «здесь я остановилась»: включается кнопкой Locate в хедере
   // на пару секунд (App), а не горит постоянно.
@@ -229,10 +233,10 @@ export const CanvasView = ({
   onStampHover,
   onStampPlace,
   applyPatch,
+  orientation,
+  flipped,
   weaveMode,
   weaveTool,
-  weaveOrientation,
-  weaveFlipped,
   weave,
   weaveShowLast,
 }: CanvasViewProps) => {
@@ -289,17 +293,17 @@ export const CanvasView = ({
       teeth, toothMeshes,
     ],
   );
-  // В режиме плетения с горизонтальной ориентацией полотно физически
-  // повёрнуто на 90° (см. useWeaveCanvas: rotated меняет местами viewW/viewH
-  // относительно dim.w/dim.h) — реальный <svg> ниже получает width/height
-  // именно от weaveCanvas.viewW/viewH, а не от dim. Без этой же поправки
-  // здесь тач-жест и wheel-zoom писали бы в DOM во время пинча/панорамы/зума
-  // пару размеров по ДРУГОЙ оси, чем стоит в неизменном во время жеста
-  // viewBox — холст на время жеста схлопывался в исковерканный размер и
-  // визуально «пропадал», пока React не перерисовывал верные width/height.
-  const touchDim = weaveMode && weaveOrientation === 'horizontal'
-    ? { w: dim.h, h: dim.w }
-    : dim;
+  // Вид полотна (поворот/отражение) — общий для рисования и режима плетения
+  // (см. useCanvasView.ts). При горизонтальной ориентации полотно физически
+  // повёрнуто на 90° (canvasView.viewW/viewH меняют местами dim.w/dim.h) —
+  // реальный <svg> ниже получает width/height именно от canvasView.viewW/
+  // viewH, а не от dim. Без этой же поправки здесь тач-жест и wheel-zoom
+  // писали бы в DOM во время пинча/панорамы/зума пару размеров по ДРУГОЙ
+  // оси, чем стоит в неизменном во время жеста viewBox — холст на время
+  // жеста схлопывался бы в исковерканный размер и визуально «пропадал»,
+  // пока React не перерисовывал верные width/height.
+  const canvasView = useCanvasView({ orientation, flipped, dim });
+  const touchDim = { w: canvasView.viewW, h: canvasView.viewH };
   useWheelZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onZoomChange);
   const touchGesture = useTouchPanZoom(canvasContainerRef, canvasSvgRef, zoom, touchDim, onSetZoom, cancelActiveStroke);
   const { statsRef, reserve: statsReserve } = useStatsReserve(140);
@@ -418,7 +422,7 @@ export const CanvasView = ({
   // --- Режим плетения -------------------------------------------------------
   // Холст здесь ничего не рисует: клик и протяжка только отмечают, что уже
   // сплетено. Порядок плетения режим не знает и не навязывает (см. spec.md).
-  const weaveBeadsFor = useSilyankaWeaveSegments({ beads, weaveTool, weaveFlipped });
+  const weaveBeadsFor = useSilyankaWeaveSegments({ beads, weaveTool, flipped });
 
   const radiusOf = useCallback(
     (bead: Bead) => (bead.type === 'NODE' ? BEAD_THEME.sizes.nodeRadius : BEAD_THEME.sizes.spanRadius),
@@ -431,9 +435,6 @@ export const CanvasView = ({
     weave,
     active: weaveMode,
     tool: weaveTool,
-    orientation: weaveOrientation,
-    flipped: weaveFlipped,
-    dim,
     radiusOf,
     resolveStrokeIds: weaveBeadsFor,
   });
@@ -595,9 +596,9 @@ export const CanvasView = ({
           >
             <svg
               ref={canvasSvgRef}
-              width={weaveCanvas.viewW * zoom}
-              height={weaveCanvas.viewH * zoom}
-              viewBox={`0 0 ${weaveCanvas.viewW} ${weaveCanvas.viewH}`}
+              width={canvasView.viewW * zoom}
+              height={canvasView.viewH * zoom}
+              viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
               {/* Группа трансформации: отделяем визуальный отступ от логики координат.
@@ -609,7 +610,7 @@ export const CanvasView = ({
                   тот же сдвиг в обратную сторону внутри себя (gutterShiftX на
                   BeadGrid/CanvasRulers), чтобы визуально остаться на месте, а
                   не наехать на новые крайние бисерины. */}
-              <g transform={weaveCanvas.transform}>
+              <g transform={canvasView.transform}>
               <g ref={stampGroupRef} transform={`translate(${effectiveOffsetX + dim.shiftX}, ${offsetY})`}>
                 <BeadGrid
                   beads={beads}
@@ -632,7 +633,7 @@ export const CanvasView = ({
                   bottomEdgeEnabled={bottomEdgeEnabled}
                   spanControlsExpanded={spanControlsExpanded}
                   gutterShiftX={dim.shiftX}
-                  labelTransform={weaveCanvas.labelTransform}
+                  labelTransform={canvasView.labelTransform}
                 />
 
                 {stamp.selectionRect && (

@@ -3,7 +3,7 @@ import { Bead } from '../types/bead';
 import {
   silyankaSegmentKey, buildSegmentIndex, silyankaSegment, silyankaNodeSegment,
   silyankaNodeClickSegment, silyankaNodeSpans, silyankaPassCenter, vertEdgeEndNodes,
-  upperEdgeOf, crossWeaveCellOf,
+  upperEdgeOf, crossWeaveCellOf, loomRowSegment, peyoteColumnSegment,
 } from './weaveSegment';
 
 const bead = (id: string): Bead => ({
@@ -466,5 +466,37 @@ describe('crossWeaveCellOf', () => {
   it('полной ячейки нет ни с одной стороны — null', () => {
     expect(crossWeaveCellOf('bead-1-99', ids)).toBeNull();
     expect(crossWeaveCellOf('node-1-0', ids)).toBeNull();
+  });
+});
+
+describe('loomRowSegment', () => {
+  it('возвращает весь ряд, которому принадлежит бисерина', () => {
+    expect(loomRowSegment('loom-2-3', 5)).toEqual([
+      'loom-2-0', 'loom-2-1', 'loom-2-2', 'loom-2-3', 'loom-2-4',
+    ]);
+  });
+
+  it('не зависит от того, по какой колонке ряда кликнули', () => {
+    expect(loomRowSegment('loom-0-0', 3)).toEqual(loomRowSegment('loom-0-2', 3));
+  });
+
+  it('нераспознанный id — null', () => {
+    expect(loomRowSegment('bead-2-3', 5)).toBeNull();
+  });
+});
+
+describe('peyoteColumnSegment', () => {
+  it('возвращает всю колонку, которой принадлежит бисерина', () => {
+    expect(peyoteColumnSegment('peyote-2-3', 5)).toEqual([
+      'peyote-0-3', 'peyote-1-3', 'peyote-2-3', 'peyote-3-3', 'peyote-4-3',
+    ]);
+  });
+
+  it('не зависит от того, по какому ряду колонки кликнули', () => {
+    expect(peyoteColumnSegment('peyote-0-0', 3)).toEqual(peyoteColumnSegment('peyote-2-0', 3));
+  });
+
+  it('нераспознанный id — null', () => {
+    expect(peyoteColumnSegment('bead-2-3', 5)).toBeNull();
   });
 });
