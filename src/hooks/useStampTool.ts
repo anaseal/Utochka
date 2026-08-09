@@ -26,7 +26,17 @@ interface UseStampToolOptions<TPattern> {
   // !weaveMode && activeTool === 'stamp' — считается в компоненте, тому же
   // условию подчинена и маршрутизация к 'thread' на уровне контейнера.
   active: boolean;
+  // Места привязки курсора: находим ближайшую отсюда для hover/постановки
+  // штампа и для anchor тач-превью. Силянка передаёт сюда только NODE (ставить
+  // штамп можно только на узел, см. CanvasView.tsx) — Peyote/Loom весь список.
   beads: StampPlaceable[];
+  // Полный список бисерин для рамки выделения при захвате узора (drag без
+  // stampPattern). Если не задан, используется beads. Силянке нужен отдельный
+  // от beads список: рамка должна забирать и SPAN (ножки/плечи между узлами),
+  // иначе штамп копирует только узлы, а связывающие их бисерины пропадают
+  // (id для рамки просто не появляются, хотя captureStampPattern/stamp.ts
+  // сами SPAN поддерживают).
+  selectableBeads?: StampPlaceable[];
   toBeadCoords: ToBeadCoords;
   // Тип узора (StampPattern силянки / PeyoteStampPattern) хуку не важен — он
   // используется только как признак «узор загружен», без обращения к полям.
@@ -44,6 +54,7 @@ interface UseStampToolOptions<TPattern> {
 export const useStampTool = <TPattern,>({
   active,
   beads,
+  selectableBeads,
   toBeadCoords,
   stampPattern,
   onStampHover,
@@ -51,6 +62,7 @@ export const useStampTool = <TPattern,>({
   onStampPlace,
   isMultiTouch,
 }: UseStampToolOptions<TPattern>) => {
+  const beadsForSelection = selectableBeads ?? beads;
   const stampDragRef = useRef<{
     startClient: { x: number; y: number };
     startBead: { x: number; y: number };
@@ -163,7 +175,7 @@ export const useStampTool = <TPattern,>({
       const maxX = Math.max(drag.startBead.x, beadPoint.x);
       const minY = Math.min(drag.startBead.y, beadPoint.y);
       const maxY = Math.max(drag.startBead.y, beadPoint.y);
-      const ids = beads
+      const ids = beadsForSelection
         .filter(b => b.x >= minX && b.x <= maxX && b.y >= minY && b.y <= maxY)
         .map(b => b.id);
       setSelectionRect(null);
@@ -175,7 +187,10 @@ export const useStampTool = <TPattern,>({
       const nearest = findNearestNode(drag.startBead);
       if (nearest) onStampPlace(nearest.id);
     }
-  }, [active, toBeadCoords, beads, onStampSelect, stampPattern, findNearestNode, onStampPlace, isMultiTouch]);
+  }, [
+    active, toBeadCoords, beadsForSelection, onStampSelect, stampPattern, findNearestNode, onStampPlace,
+    isMultiTouch,
+  ]);
 
   // Сбрасывает начатый драг/выделение без трогания превью штампа — нужно
   // отдельно от handlePointerLeave для отмены вторым пальцем (см.

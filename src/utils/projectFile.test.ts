@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { installLocalStorageMock, seedLocalStorage, snapshotLocalStorage } from '../test/localStorageMock';
 import {
   buildProjectData, isProjectFile, applyProjectData, importProject, type ProjectFile,
+  collectKeysWithPrefix, applyKeysWithPrefix,
 } from './projectFile';
 
 const projectFileOf = (data: Record<string, unknown>): ProjectFile => ({
@@ -82,6 +83,50 @@ describe('buildProjectData({ forShare: true })', () => {
   it('в файл проекта прогресс, наоборот, входит — это своя же работа', () => {
     seedLocalStorage({ 'silyanka:weavePasses': { 'node-0-0': 2 } });
     expect(buildProjectData().localStorage).toHaveProperty('silyanka:weavePasses');
+  });
+});
+
+describe('collectKeysWithPrefix', () => {
+  it('берёт только ключи с данным префиксом, остальные свои и чужие не трогает', () => {
+    seedLocalStorage({
+      'silyanka:designMap': { 'node-0-0': '#ff0000' },
+      'silyanka:gridSize': { width: 8, height: 20 },
+      'crossWeave:designMap': { 'cell-0-0': '#00ff00' },
+      'app:zoom': 1,
+    });
+
+    expect(collectKeysWithPrefix('silyanka:')).toEqual({
+      'silyanka:designMap': JSON.stringify({ 'node-0-0': '#ff0000' }),
+      'silyanka:gridSize': JSON.stringify({ width: 8, height: 20 }),
+    });
+  });
+
+  it('пустой префикс без совпадений — пустой результат', () => {
+    seedLocalStorage({ 'app:zoom': 1 });
+    expect(collectKeysWithPrefix('loom:')).toEqual({});
+  });
+});
+
+describe('applyKeysWithPrefix', () => {
+  it('стирает старые ключи с этим префиксом и пишет новые', () => {
+    seedLocalStorage({
+      'silyanka:designMap': { 'node-0-0': '#ff0000' },
+      'silyanka:gridSize': { width: 8, height: 20 },
+    });
+
+    applyKeysWithPrefix('silyanka:', { 'silyanka:designMap': JSON.stringify({ 'node-1-1': '#00ff00' }) });
+
+    expect(localStorage.getItem('silyanka:gridSize')).toBeNull();
+    expect(localStorage.getItem('silyanka:designMap')).toBe(JSON.stringify({ 'node-1-1': '#00ff00' }));
+  });
+
+  it('другие префиксы (в т.ч. app:) не трогает', () => {
+    seedLocalStorage({ 'silyanka:designMap': { a: 1 }, 'crossWeave:designMap': { b: 2 }, 'app:zoom': 1 });
+
+    applyKeysWithPrefix('silyanka:', {});
+
+    expect(localStorage.getItem('crossWeave:designMap')).toBe(JSON.stringify({ b: 2 }));
+    expect(localStorage.getItem('app:zoom')).toBe('1');
   });
 });
 

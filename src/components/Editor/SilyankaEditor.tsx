@@ -3,6 +3,7 @@ import { Header } from './Header/Header';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { CanvasView } from './CanvasView/CanvasView';
 import { PendantsSidebar } from '../Sidebar/PendantsSidebar';
+import { ProjectGallery } from './ProjectGallery/ProjectGallery';
 import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from '../../data/pendantTemplates';
 import { DrawingTool } from '../../hooks/useDrawing';
 import { AppSettings } from '../../hooks/useAppSettings';
@@ -21,11 +22,15 @@ interface SilyankaEditorProps {
   onTogglePendantsSidebar: () => void;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  projectGalleryOpen: boolean;
+  onOpenProjectGallery: () => void;
+  onCloseProjectGallery: () => void;
 }
 
 export const SilyankaEditor = ({
   settings, projectIO, silyanka, setSilyankaTool, cancelStampPattern,
   activeSidebar, onTogglePendantsSidebar, onToggleGridSidebar, weavePanel,
+  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: SilyankaEditorProps) => (
   <>
     <Header
@@ -43,6 +48,7 @@ export const SilyankaEditor = ({
       onSaveProject={exportProject}
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
+      onOpenProjectGallery={onOpenProjectGallery}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -253,6 +259,13 @@ export const SilyankaEditor = ({
       onClearDeletedBeads={silyanka.clearDeletedBeads}
       pendingDeleteCount={silyanka.pendingDeleteCount}
       onConfirmPendingDelete={silyanka.confirmPendingDelete}
+    />
+
+    <ProjectGallery
+      open={projectGalleryOpen}
+      onClose={onCloseProjectGallery}
+      technique="silyanka"
+      canvasTheme={settings.canvasTheme}
     />
   </>
 );

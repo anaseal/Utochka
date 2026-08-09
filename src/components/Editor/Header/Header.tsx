@@ -15,7 +15,7 @@ import { HeaderProps } from './Header.types';
 export const Header = (props: HeaderProps) => {
   const {
     palette, onPaletteChange, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
-    onSaveProject, onLoadProject, onShareProject,
+    onSaveProject, onLoadProject, onShareProject, onOpenProjectGallery,
     zoom, onZoomChange, onSetZoom,
     onUndo, onRedo, canUndo, canRedo,
     technique, onTechniqueChange,
@@ -135,6 +135,7 @@ export const Header = (props: HeaderProps) => {
           onSetZoom={onSetZoom}
           onSaveProject={onSaveProject}
           onShareProject={onShareProject}
+          onOpenProjectGallery={onOpenProjectGallery}
           loadInputRef={loadInputRef}
           weaveMode={weaveMode}
           technique={technique}
@@ -156,6 +157,7 @@ export const Header = (props: HeaderProps) => {
           onClearAll={onClearAll}
           onSaveProject={onSaveProject}
           onShareProject={onShareProject}
+          onOpenProjectGallery={onOpenProjectGallery}
           loadInputRef={loadInputRef}
           onLoadInputChange={handleLoadInputChange}
           referenceWindowOpen={referenceWindowOpen}

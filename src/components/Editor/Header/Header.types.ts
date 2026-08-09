@@ -23,6 +23,11 @@ export interface SharedHeaderProps {
   onSaveProject: () => void;
   onLoadProject: (file: File) => void;
   onShareProject: () => void;
+  // Открывает галерею сохранённых проектов текущей техники (см.
+  // src/components/Editor/ProjectGallery/ProjectGallery.tsx) — сама галерея
+  // рендерится в XxxEditor.tsx рядом с GridSidebar/PendantsSidebar, здесь
+  // только триггер в хедере.
+  onOpenProjectGallery: () => void;
   zoom: number;
   onZoomChange: (delta: number) => void;
   onSetZoom?: (v: number) => void;

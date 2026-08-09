@@ -2,6 +2,7 @@
 import { Header } from './Header/Header';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { LoomCanvasView } from './CanvasView/LoomCanvasView';
+import { ProjectGallery } from './ProjectGallery/ProjectGallery';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
 import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
@@ -18,6 +19,9 @@ interface LoomEditorProps {
   activeSidebar: 'pendants' | 'grid' | null;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  projectGalleryOpen: boolean;
+  onOpenProjectGallery: () => void;
+  onCloseProjectGallery: () => void;
 }
 
 // Loom — четвёртая техника: без панели «Pendants & Decor» и без нитки (как
@@ -28,6 +32,7 @@ interface LoomEditorProps {
 export const LoomEditor = ({
   settings, projectIO, loom, setLoomTool, cancelLoomStampPattern,
   activeSidebar, onToggleGridSidebar, weavePanel,
+  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: LoomEditorProps) => (
   <>
     <Header
@@ -45,6 +50,7 @@ export const LoomEditor = ({
       onSaveProject={exportProject}
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
+      onOpenProjectGallery={onOpenProjectGallery}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -122,6 +128,13 @@ export const LoomEditor = ({
       weaveTool={weavePanel.weaveTool}
       weave={loom.weave}
       weaveShowLast={weavePanel.weaveShowLast}
+    />
+
+    <ProjectGallery
+      open={projectGalleryOpen}
+      onClose={onCloseProjectGallery}
+      technique="loom"
+      canvasTheme={settings.canvasTheme}
     />
   </>
 );

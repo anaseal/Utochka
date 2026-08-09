@@ -1,6 +1,6 @@
 import { RefObject } from 'react';
 import {
-  MoreHorizontal, Download, Upload, Share2, RotateCcw, Maximize2, Minimize2,
+  MoreHorizontal, Download, Upload, Share2, FolderOpen, RotateCcw, Maximize2, Minimize2,
 } from 'lucide-react';
 import { Stepper } from '../../common/Stepper';
 import { WeaveHelp } from './WeaveHelp';
@@ -14,6 +14,7 @@ interface HeaderOverflowMenuProps {
   onSetZoom?: (v: number) => void;
   onSaveProject: () => void;
   onShareProject: () => void;
+  onOpenProjectGallery: () => void;
   loadInputRef: RefObject<HTMLInputElement | null>;
   weaveMode: boolean;
   technique: Technique;
@@ -24,7 +25,7 @@ interface HeaderOverflowMenuProps {
 // в режиме плетения, Fullscreen/Reset/«?») из основной строки хедера — там
 // им не хватает места (см. Header.css).
 export const HeaderOverflowMenu = ({
-  zoom, onZoomChange, onSetZoom, onSaveProject, onShareProject, loadInputRef,
+  zoom, onZoomChange, onSetZoom, onSaveProject, onShareProject, onOpenProjectGallery, loadInputRef,
   weaveMode, technique, weaveControls,
 }: HeaderOverflowMenuProps) => {
   const { open, setOpen, ref, triggerRef } = useDismissablePopup();
@@ -59,7 +60,7 @@ export const HeaderOverflowMenu = ({
               max={APP_CONSTRAINTS.maxZoom * 100}
             />
             <div className="header__overflow-row">
-              <span className="header__overflow-label">Save / Load / Share</span>
+              <span className="header__overflow-label">Save / Load / Share / Projects</span>
               <div className="grid-controls__actions">
                 <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
                   <Download size={14} />
@@ -69,6 +70,9 @@ export const HeaderOverflowMenu = ({
                 </button>
                 <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
                   <Share2 size={14} />
+                </button>
+                <button onClick={onOpenProjectGallery} className="grid-controls__btn" title="Saved projects">
+                  <FolderOpen size={14} />
                 </button>
               </div>
             </div>

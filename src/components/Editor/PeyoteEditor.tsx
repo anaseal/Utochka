@@ -2,6 +2,7 @@
 import { Header } from './Header/Header';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { PeyoteCanvasView } from './CanvasView/PeyoteCanvasView';
+import { ProjectGallery } from './ProjectGallery/ProjectGallery';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
 import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
@@ -18,6 +19,9 @@ interface PeyoteEditorProps {
   activeSidebar: 'pendants' | 'grid' | null;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  projectGalleryOpen: boolean;
+  onOpenProjectGallery: () => void;
+  onCloseProjectGallery: () => void;
 }
 
 // Peyote — третья техника: без панели «Pendants & Decor» (см. spec.md,
@@ -27,6 +31,7 @@ interface PeyoteEditorProps {
 export const PeyoteEditor = ({
   settings, projectIO, peyote, setPeyoteTool, cancelPeyoteStampPattern,
   activeSidebar, onToggleGridSidebar, weavePanel,
+  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: PeyoteEditorProps) => (
   <>
     <Header
@@ -44,6 +49,7 @@ export const PeyoteEditor = ({
       onSaveProject={exportProject}
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
+      onOpenProjectGallery={onOpenProjectGallery}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -121,6 +127,13 @@ export const PeyoteEditor = ({
       weaveTool={weavePanel.weaveTool}
       weave={peyote.weave}
       weaveShowLast={weavePanel.weaveShowLast}
+    />
+
+    <ProjectGallery
+      open={projectGalleryOpen}
+      onClose={onCloseProjectGallery}
+      technique="peyote"
+      canvasTheme={settings.canvasTheme}
     />
   </>
 );

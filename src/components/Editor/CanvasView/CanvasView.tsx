@@ -525,11 +525,15 @@ export const CanvasView = ({
 
   const stamp = useStampTool({
     active: !weaveMode && activeTool === 'stamp',
-    // Штамп силянки годится только на узлы — фильтр раньше жил внутри
-    // useStampTool.ts, вынесен сюда, чтобы хук принимал уже готовый список
-    // мест для штампа и годился для Peyote (там валидны все бисерины, см.
-    // PeyoteCanvasView.tsx).
+    // Штамп силянки ставится только на узел — привязка курсора работает
+    // только по NODE (фильтр раньше жил внутри useStampTool.ts, вынесен
+    // сюда, чтобы хук принимал уже готовый список мест для штампа и годился
+    // для Peyote, там валидны все бисерины, см. PeyoteCanvasView.tsx).
     beads: useMemo(() => beads.filter(b => b.type === 'NODE'), [beads]),
+    // А вот рамка выделения при захвате узора должна видеть все бисерины,
+    // не только узлы — иначе SPAN (ножки/плечи между узлами) не попадают в
+    // ids и штамп копирует только узлы без связывающего их цвета.
+    selectableBeads: beads,
     toBeadCoords,
     stampPattern,
     onStampHover,

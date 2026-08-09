@@ -43,6 +43,16 @@ function App() {
   const togglePendantsSidebar = () => setActiveSidebar(s => (s === 'pendants' ? null : 'pendants'));
   const toggleGridSidebar = () => setActiveSidebar(s => (s === 'grid' ? null : 'grid'));
 
+  // Галерея проектов — модалка (ProjectGallery.tsx), а не панель в правом
+  // слоте, поэтому не часть activeSidebar выше; закрывает соседние панели
+  // при открытии тем же приёмом, что и onEnterWeaveMode ниже.
+  const [projectGalleryOpen, setProjectGalleryOpen] = useState(false);
+  const openProjectGallery = () => {
+    setProjectGalleryOpen(true);
+    setActiveSidebar(null);
+    settings.setReferenceOpen(false);
+  };
+
   const weavePanel = useWeaveModePanel({
     technique: settings.technique,
     silyanka,
@@ -75,6 +85,9 @@ function App() {
           onTogglePendantsSidebar={togglePendantsSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectGalleryOpen={projectGalleryOpen}
+          onOpenProjectGallery={openProjectGallery}
+          onCloseProjectGallery={() => setProjectGalleryOpen(false)}
         />
       ) : settings.technique === 'crossWeave' ? (
         <CrossWeaveEditor
@@ -84,6 +97,9 @@ function App() {
           activeSidebar={activeSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectGalleryOpen={projectGalleryOpen}
+          onOpenProjectGallery={openProjectGallery}
+          onCloseProjectGallery={() => setProjectGalleryOpen(false)}
         />
       ) : settings.technique === 'peyote' ? (
         <PeyoteEditor
@@ -95,6 +111,9 @@ function App() {
           activeSidebar={activeSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectGalleryOpen={projectGalleryOpen}
+          onOpenProjectGallery={openProjectGallery}
+          onCloseProjectGallery={() => setProjectGalleryOpen(false)}
         />
       ) : (
         <LoomEditor
@@ -106,6 +125,9 @@ function App() {
           activeSidebar={activeSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectGalleryOpen={projectGalleryOpen}
+          onOpenProjectGallery={openProjectGallery}
+          onCloseProjectGallery={() => setProjectGalleryOpen(false)}
         />
       )}
 

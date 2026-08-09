@@ -84,6 +84,9 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
 /** Множитель разрешения PNG — ×2 для резкости при печати. */
 const QUALITY_SCALE = 2;
 
+/** Длинная сторона превью в галерее проектов (см. captureSchemeThumbnail ниже). */
+const THUMBNAIL_MAX_SIZE = 320;
+
 /** Поля вокруг содержимого в координатах viewBox (чтобы линейки не липли к краю). */
 const CONTENT_PADDING = 24;
 
@@ -274,6 +277,95 @@ export interface ExportSchemeOptions {
 }
 
 /**
+ * Клонирует живой `<svg>`, вычищает интерактивные элементы и вшивает CSS —
+ * общий первый шаг для PNG-экспорта и превью-миниатюры ниже. Разница между
+ * ними начинается после этого шага (легенда только у полного экспорта, свой
+ * масштаб растеризации у каждого — см. rasterizeClone).
+ */
+const prepareClone = (svg: SVGSVGElement, pal: ExportPalette, extraStripSelector?: string): SVGSVGElement => {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+
+  const stripSelectors = extraStripSelector
+    ? `${STRIP_SELECTORS}, ${extraStripSelector}`
+    : STRIP_SELECTORS;
+  clone.querySelectorAll(stripSelectors).forEach((el) => el.remove());
+
+  const style = document.createElementNS(SVG_NS, 'style');
+  style.textContent = buildExportStyle(pal);
+  clone.appendChild(style);
+
+  clone.setAttribute('xmlns', SVG_NS);
+  // Зум и экранный viewBox убираем: они обрезали бы линейки, уходящие в
+  // отрицательные координаты относительно группы трансформации.
+  clone.removeAttribute('width');
+  clone.removeAttribute('height');
+
+  return clone;
+};
+
+/**
+ * Дорисовывает фон и границы (x, y, w, h — координаты viewBox), сериализует
+ * клон и растеризует его в PNG через offscreen `<canvas>` заданного масштаба.
+ * Общий последний шаг для PNG-экспорта и превью-миниатюры.
+ */
+const rasterizeClone = (
+  clone: SVGSVGElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  pal: ExportPalette,
+  scale: number,
+): Promise<Blob | null> => {
+  const background = document.createElementNS(SVG_NS, 'rect');
+  background.setAttribute('x', String(x));
+  background.setAttribute('y', String(y));
+  background.setAttribute('width', String(w));
+  background.setAttribute('height', String(h));
+  background.setAttribute('fill', pal.bg);
+  clone.insertBefore(background, clone.firstChild);
+
+  clone.setAttribute('width', String(w));
+  clone.setAttribute('height', String(h));
+  clone.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+
+  const svgString = new XMLSerializer().serializeToString(clone);
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  return new Promise<Blob | null>((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(svgUrl);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas 2D context unavailable'));
+        return;
+      }
+
+      ctx.fillStyle = pal.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(resolve, 'image/png');
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      reject(new Error('Failed to load SVG for rasterization'));
+    };
+
+    img.src = svgUrl;
+  });
+};
+
+/**
  * Экспортирует текущую схему в PNG-файл и запускает его скачивание.
  *
  * @param svg        Живой корневой `<svg>` холста (`canvasSvgRef.current`).
@@ -291,22 +383,7 @@ export const exportSchemeToPng = (
 ): Promise<void> => {
   const { contentBounds, extraStripSelector, hideLegend } = options;
   const pal = PALETTES[theme];
-  const clone = svg.cloneNode(true) as SVGSVGElement;
-
-  const stripSelectors = extraStripSelector
-    ? `${STRIP_SELECTORS}, ${extraStripSelector}`
-    : STRIP_SELECTORS;
-  clone.querySelectorAll(stripSelectors).forEach((el) => el.remove());
-
-  const style = document.createElementNS(SVG_NS, 'style');
-  style.textContent = buildExportStyle(pal);
-  clone.appendChild(style);
-
-  clone.setAttribute('xmlns', SVG_NS);
-  // Зум и экранный viewBox убираем: они обрезали бы линейки, уходящие в
-  // отрицательные координаты относительно группы трансформации.
-  clone.removeAttribute('width');
-  clone.removeAttribute('height');
+  const clone = prepareClone(svg, pal, extraStripSelector);
 
   // Реальные границы содержимого — сетка, линейки и подвески целиком, либо
   // явные границы вызывающей стороны (например, кроп по закрашенным бусинам).
@@ -326,62 +403,40 @@ export const exportSchemeToPng = (
   const fullW = contentW;
   const fullH = contentH + legendHeight;
 
-  const background = document.createElementNS(SVG_NS, 'rect');
-  background.setAttribute('x', String(contentX));
-  background.setAttribute('y', String(contentY));
-  background.setAttribute('width', String(fullW));
-  background.setAttribute('height', String(fullH));
-  background.setAttribute('fill', pal.bg);
-  clone.insertBefore(background, clone.firstChild);
-
-  clone.setAttribute('width', String(fullW));
-  clone.setAttribute('height', String(fullH));
-  clone.setAttribute('viewBox', `${contentX} ${contentY} ${fullW} ${fullH}`);
-
-  const svgString = new XMLSerializer().serializeToString(clone);
-  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-  const svgUrl = URL.createObjectURL(svgBlob);
-
-  return new Promise<void>((resolve, reject) => {
-    const img = new Image();
-
-    img.onload = () => {
-      URL.revokeObjectURL(svgUrl);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(fullW * QUALITY_SCALE);
-      canvas.height = Math.round(fullH * QUALITY_SCALE);
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Canvas 2D context unavailable'));
-        return;
-      }
-
-      ctx.fillStyle = pal.bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      canvas.toBlob((pngBlob) => {
-        if (!pngBlob) {
-          reject(new Error('Failed to generate PNG'));
-          return;
-        }
-        const pngUrl = URL.createObjectURL(pngBlob);
-        const link = document.createElement('a');
-        link.href = pngUrl;
-        link.download = 'silyanka-scheme.png';
-        link.click();
-        URL.revokeObjectURL(pngUrl);
-        resolve();
-      }, 'image/png');
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(svgUrl);
-      reject(new Error('Failed to load SVG for rasterization'));
-    };
-
-    img.src = svgUrl;
+  return rasterizeClone(clone, contentX, contentY, fullW, fullH, pal, QUALITY_SCALE).then((pngBlob) => {
+    if (!pngBlob) throw new Error('Failed to generate PNG');
+    const pngUrl = URL.createObjectURL(pngBlob);
+    const link = document.createElement('a');
+    link.href = pngUrl;
+    link.download = 'silyanka-scheme.png';
+    link.click();
+    URL.revokeObjectURL(pngUrl);
   });
+};
+
+/**
+ * Растеризует живой `<svg>` холста в маленькое PNG-превью (без легенды, без
+ * скачивания) — для карточки в галерее проектов (см. src/utils/projectLibrary.ts).
+ * Масштаб подбирается так, чтобы длинная сторона не превышала THUMBNAIL_MAX_SIZE;
+ * если контента нет (пустой холст, contentW/H ⩽ 0) — отдаёт null, а не пустой PNG.
+ *
+ * @param svg   Живой корневой `<svg>` холста.
+ * @param theme Тема холста — тот же фон, что видит пользователь на экране.
+ */
+export const captureSchemeThumbnail = (
+  svg: SVGSVGElement,
+  theme: CanvasTheme = 'dark',
+): Promise<Blob | null> => {
+  const pal = PALETTES[theme];
+  const clone = prepareClone(svg, pal);
+
+  const bbox = measureContent(clone);
+  const contentX = bbox.x - CONTENT_PADDING;
+  const contentY = bbox.y - CONTENT_PADDING;
+  const contentW = bbox.width + CONTENT_PADDING * 2;
+  const contentH = bbox.height + CONTENT_PADDING * 2;
+  if (contentW <= 0 || contentH <= 0) return Promise.resolve(null);
+
+  const scale = Math.min(1, THUMBNAIL_MAX_SIZE / Math.max(contentW, contentH));
+  return rasterizeClone(clone, contentX, contentY, contentW, contentH, pal, scale);
 };

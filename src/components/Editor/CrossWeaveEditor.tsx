@@ -2,6 +2,7 @@
 import { Header } from './Header/Header';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { CrossWeaveCanvasView } from './CanvasView/CrossWeaveCanvasView';
+import { ProjectGallery } from './ProjectGallery/ProjectGallery';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
 import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
@@ -15,10 +16,14 @@ interface CrossWeaveEditorProps {
   activeSidebar: 'pendants' | 'grid' | null;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  projectGalleryOpen: boolean;
+  onOpenProjectGallery: () => void;
+  onCloseProjectGallery: () => void;
 }
 
 export const CrossWeaveEditor = ({
   settings, projectIO, crossWeave, activeSidebar, onToggleGridSidebar, weavePanel,
+  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: CrossWeaveEditorProps) => (
   <>
     <Header
@@ -36,6 +41,7 @@ export const CrossWeaveEditor = ({
       onSaveProject={exportProject}
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
+      onOpenProjectGallery={onOpenProjectGallery}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -119,6 +125,13 @@ export const CrossWeaveEditor = ({
       weaveTool={weavePanel.weaveTool}
       weave={crossWeave.weave}
       weaveShowLast={weavePanel.weaveShowLast}
+    />
+
+    <ProjectGallery
+      open={projectGalleryOpen}
+      onClose={onCloseProjectGallery}
+      technique="crossWeave"
+      canvasTheme={settings.canvasTheme}
     />
   </>
 );

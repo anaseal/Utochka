@@ -1,6 +1,6 @@
 import { ChangeEvent, RefObject } from 'react';
 import {
-  Trash2, Download, Upload, Share2, Image, SlidersHorizontal,
+  Trash2, Download, Upload, Share2, FolderOpen, Image, SlidersHorizontal,
 } from 'lucide-react';
 import { PendantIcon } from './icons';
 import { SilyankaHeaderProps } from './Header.types';
@@ -14,6 +14,7 @@ interface HeaderEndGroupProps {
   onClearAll: () => void;
   onSaveProject: () => void;
   onShareProject: () => void;
+  onOpenProjectGallery: () => void;
   loadInputRef: RefObject<HTMLInputElement | null>;
   onLoadInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   referenceWindowOpen: boolean;
@@ -37,7 +38,7 @@ interface HeaderEndGroupProps {
 // (уже дублируются туда на этой ширине независимо от режима).
 export const HeaderEndGroup = ({
   weaveMode, onUndo, onRedo, canUndo, canRedo, onClearAll,
-  onSaveProject, onShareProject, loadInputRef, onLoadInputChange,
+  onSaveProject, onShareProject, onOpenProjectGallery, loadInputRef, onLoadInputChange,
   referenceWindowOpen, onToggleReferenceWindow, silyankaProps,
   gridSidebarOpen, onToggleGridSidebar,
 }: HeaderEndGroupProps) => {
@@ -76,6 +77,9 @@ export const HeaderEndGroup = ({
             </button>
             <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
               <Share2 size={14} />
+            </button>
+            <button onClick={onOpenProjectGallery} className="grid-controls__btn" title="Saved projects">
+              <FolderOpen size={14} />
             </button>
           </div>
           <input

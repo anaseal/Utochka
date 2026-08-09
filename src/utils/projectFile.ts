@@ -12,18 +12,39 @@ export interface ProjectFile {
   localStorage: Record<string, string>;
 }
 
-const isOwnKey = (key: string) => KEY_PREFIXES.some(p => key.startsWith(p));
-
-const collectKeys = (): Record<string, string> => {
+// Версии collectKeys/clearOwnStorage, параметризованные ОДНИМ префиксом —
+// используются библиотекой нескольких проектов (src/utils/projectLibrary.ts):
+// та сохраняет/восстанавливает срез по одной технике (`silyanka:` и т.п.), а
+// не весь набор KEY_PREFIXES разом, как файл проекта/Share-ссылка ниже.
+export const collectKeysWithPrefix = (prefix: string): Record<string, string> => {
   const data: Record<string, string> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (!key || !isOwnKey(key)) continue;
+    if (!key || !key.startsWith(prefix)) continue;
     const value = localStorage.getItem(key);
     if (value !== null) data[key] = value;
   }
   return data;
 };
+
+// Заменяет все ключи с данным префиксом на data — стирает старые (даже те,
+// которых нет в data), затем записывает новые. Тот же приём "собрать индексы,
+// потом удалить", что и в clearOwnStorage ниже (удаление сдвигает индексы
+// localStorage.key(i), поэтому нельзя удалять в процессе обхода).
+export const applyKeysWithPrefix = (prefix: string, data: Record<string, string>): void => {
+  const ownKeys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) ownKeys.push(key);
+  }
+  ownKeys.forEach(key => localStorage.removeItem(key));
+  for (const [key, value] of Object.entries(data)) {
+    localStorage.setItem(key, value);
+  }
+};
+
+const collectKeys = (): Record<string, string> =>
+  KEY_PREFIXES.reduce((acc, prefix) => ({ ...acc, ...collectKeysWithPrefix(prefix) }), {});
 
 // Собирает текущее состояние приложения в тот же формат, что уходит в файл
 // проекта. Переиспользуется файловым экспортом и Share-ссылкой (см.
@@ -71,12 +92,7 @@ export const isProjectFile = (v: unknown): v is ProjectFile => {
 // трогая ничего постороннего. Используется и как первый шаг applyProjectData,
 // и напрямую в ErrorBoundary для сброса испорченных данных.
 export const clearOwnStorage = (): void => {
-  const ownKeys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && isOwnKey(key)) ownKeys.push(key);
-  }
-  ownKeys.forEach(key => localStorage.removeItem(key));
+  KEY_PREFIXES.forEach(prefix => applyKeysWithPrefix(prefix, {}));
 };
 
 // Полностью заменяет собственные ключи localStorage данными из файла/ссылки.
