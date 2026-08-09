@@ -7,7 +7,12 @@
  * легенду материалов, затем растеризовать через `<canvas>`. См. spec.md.
  */
 
+import { CLEAR_BEAD_COLOR } from '../config/theme';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Реальный цвет бисера: 6 знаков — обычный, 8 — прозрачный (CLEAR_BEAD_COLOR). */
+const HEX_RE = /^#([0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 export type CanvasTheme = 'dark' | 'light';
 
@@ -39,6 +44,9 @@ interface ExportPalette {
   beadNodeEmptyFill: string;
   beadNodeEmptyStroke: string;
   beadNodeEmptyGlow: string;
+  /** Прозрачный бисер (bead--clear) — те же токены, что в BeadView.css. */
+  beadClearFill: string;
+  beadClearStroke: string;
   /** --thread-color / --thread-color-2 из CanvasView.css для текущей темы холста. */
   threadColor: string;
   threadColor2: string;
@@ -59,6 +67,8 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     beadNodeEmptyFill: 'rgba(140, 185, 220, 0.07)',
     beadNodeEmptyStroke: 'rgba(140, 185, 220, 0.85)',
     beadNodeEmptyGlow: 'rgba(140, 185, 220, 1)',
+    beadClearFill: 'url(#bead-clear-glass)',
+    beadClearStroke: 'rgba(226, 243, 255, 0.9)',
     threadColor: 'rgba(226, 214, 187, 0.85)',
     threadColor2: 'rgba(34, 211, 238, 0.85)',
   },
@@ -76,6 +86,8 @@ const PALETTES: Record<CanvasTheme, ExportPalette> = {
     beadNodeEmptyFill: 'transparent',
     beadNodeEmptyStroke: 'rgba(71, 85, 105, 0.75)',
     beadNodeEmptyGlow: 'transparent',
+    beadClearFill: 'url(#bead-clear-glass-light)',
+    beadClearStroke: 'rgba(71, 85, 105, 0.9)',
     threadColor: 'rgba(92, 71, 33, 0.75)',
     threadColor2: 'rgba(8, 145, 178, 0.8)',
   },
@@ -162,6 +174,11 @@ svg {
   stroke: ${pal.beadNodeEmptyStroke};
   filter: drop-shadow(0 0 8px ${pal.beadNodeEmptyGlow});
 }
+.bead--clear .bead__body, .bead--clear .pendant-bead__body {
+  fill: ${pal.beadClearFill};
+  stroke: ${pal.beadClearStroke};
+  stroke-width: 1px;
+}
 .canvas__axis-text {
   fill: ${pal.axisText};
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -218,6 +235,11 @@ const buildLegend = (
 
   colorStats.forEach(([color, count], i) => {
     const rowY = pad + titleHeight + i * itemHeight;
+    const isClear = color === CLEAR_BEAD_COLOR;
+    // Всё, что не hex — 'transparent' из defaultColorFor, т.е. незакрашенные
+    // бусины (см. labelFor в CanvasStats.tsx: та же пара «прозрачный бисер»
+    // против «не закрашено», только тут ещё и в печатной спецификации).
+    const isUnfilled = !HEX_RE.test(color);
 
     const rect = document.createElementNS(SVG_NS, 'rect');
     rect.setAttribute('x', String(pad));
@@ -225,8 +247,11 @@ const buildLegend = (
     rect.setAttribute('width', String(swatch));
     rect.setAttribute('height', String(swatch));
     rect.setAttribute('rx', '4');
-    rect.setAttribute('fill', color);
-    rect.setAttribute('stroke', pal.swatchStroke);
+    // Свотч прозрачного — тот же градиент-блик, что у бусин на самой схеме:
+    // <defs> приезжает в клоне холста, поэтому url(#…) здесь резолвится.
+    rect.setAttribute('fill', isClear ? pal.beadClearFill : color);
+    rect.setAttribute('stroke', isClear ? pal.beadClearStroke : pal.swatchStroke);
+    if (isUnfilled) rect.setAttribute('stroke-dasharray', '3 2');
     group.appendChild(rect);
 
     const label = document.createElementNS(SVG_NS, 'text');
@@ -236,7 +261,8 @@ const buildLegend = (
     label.setAttribute('font-family', 'monospace');
     label.setAttribute('font-size', '15');
     label.setAttribute('fill', pal.legendLabel);
-    label.textContent = `${color}  ×  ${count}`;
+    const name = isClear ? 'transparent' : isUnfilled ? 'not filled' : color;
+    label.textContent = `${name}  ×  ${count}`;
     group.appendChild(label);
   });
 

@@ -3,6 +3,7 @@ import { useMemo, useCallback, useRef } from 'react';
 import { PeyoteBead } from '../../../types/peyoteBead';
 import { PeyoteStampPattern } from '../../../utils/peyoteStamp';
 import { PeyoteBeadView } from '../BeadView/PeyoteBeadView';
+import { BeadDefs } from '../BeadView/BeadDefs';
 import { PeyoteRulers } from '../CanvasRulers/PeyoteRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
@@ -319,6 +320,7 @@ export const PeyoteCanvasView = ({
               viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
+              <BeadDefs />
               <g transform={canvasView.transform}>
               <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
                 <PeyoteRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />

@@ -3,6 +3,7 @@ import { useMemo, useCallback, useRef } from 'react';
 import { CrossWeaveBead } from '../../../types/crossWeaveBead';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { CrossWeaveBeadView } from '../BeadView/CrossWeaveBeadView';
+import { BeadDefs } from '../BeadView/BeadDefs';
 import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
@@ -360,6 +361,7 @@ export const CrossWeaveCanvasView = ({
               viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
+              <BeadDefs />
               <g transform={canvasView.transform}>
               <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
                 <CrossWeaveRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />

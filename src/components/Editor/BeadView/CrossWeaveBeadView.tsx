@@ -2,6 +2,7 @@
 import { memo } from 'react';
 import { BeadOrientation } from '../../../types/crossWeaveBead';
 import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
+import { beadStateClass } from '../../../config/theme';
 import './BeadView.css';
 
 interface CrossWeaveBeadViewProps {
@@ -27,7 +28,6 @@ export const CrossWeaveBeadView = memo(({
   onPointerDown,
   onPointerEnter,
 }: CrossWeaveBeadViewProps) => {
-  const isEmpty = !color;
   const finalColor = color || defaultColor;
 
   const { beadMinorRadius, beadMajorRadius, hitboxRadius } = CROSS_WEAVE_THEME.sizes;
@@ -39,7 +39,7 @@ export const CrossWeaveBeadView = memo(({
       // id нужен режиму плетения: отметки ставятся классом прямо в DOM через
       // document.getElementById (useWeaveMarks.ts), минуя React.
       id={id}
-      className={`bead bead--type-span${isEmpty ? ' bead--empty' : ''}`}
+      className={`bead bead--type-span${beadStateClass(color)}`}
       onPointerEnter={() => onPointerEnter(id)}
       onPointerDown={(e) => {
         // См. BeadView.tsx: снимаем implicit pointer capture с e.target

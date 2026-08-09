@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Palette } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { EyedropperIcon } from './icons';
-import { BEAD_THEME } from '../../../config/theme';
+import { BEAD_THEME, CLEAR_BEAD_COLOR } from '../../../config/theme';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
 
@@ -30,6 +30,7 @@ export const PaletteWidget = ({
   const { open: paletteOpen, setOpen: setPaletteOpen, ref: paletteWidgetRef, triggerRef: paletteTriggerRef } = useDismissablePopup();
 
   const isCustomColor = !palette.includes(activeColor);
+  const isClearActive = activeTool !== 'eraser' && activeColor === CLEAR_BEAD_COLOR;
 
   // Ластик не работает с цветом, поэтому выбор цвета выводит из него;
   // остальные инструменты (заливка, штамп) цвет используют — их выбор не сбрасывает.
@@ -85,6 +86,19 @@ export const PaletteWidget = ({
                 style={{ '--color-value': color } as React.CSSProperties}
               />
             ))}
+
+            {/* Прозрачный (стеклянный) бисер. Стоит В РЯДУ палитры, но НЕ в
+                самом массиве palette: ряд целиком заменяет генератор Colormind
+                (ColorPicker → onReplacePalette), и прозрачный оттуда пропадал
+                бы при каждой генерации; вдобавок палитра в localStorage
+                валидируется как список ровно 6-значных hex. */}
+            <button
+              type="button"
+              onClick={() => selectColor(CLEAR_BEAD_COLOR)}
+              className={`palette__color palette__color--clear ${isClearActive ? 'palette__color--active' : ''}`}
+              title="Transparent bead"
+              aria-pressed={isClearActive}
+            />
           </div>
 
           <div className="palette__row" role="group" aria-label="Recent colors">

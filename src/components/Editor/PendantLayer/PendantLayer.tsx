@@ -4,7 +4,7 @@ import {
   PendantAnchor, PendantPlacement, PendantTemplate, PendantTemplateBead, ToothPlacement,
 } from '../../../types/pendant';
 import { PENDANT_SCALE } from '../../../data/pendantTemplates';
-import { BEAD_THEME, defaultColorFor } from '../../../config/theme';
+import { BEAD_THEME, beadStateClass, defaultColorFor } from '../../../config/theme';
 import { pendantBeadId } from '../../../utils/floodFill';
 import { ToothMesh } from '../../../utils/tooth';
 import { resolvePendantAnchor, pendantAnchorsEqual, mirrorPendantAnchor } from '../../../utils/pendantAnchor';
@@ -156,10 +156,10 @@ export const PendantLayer = memo(({
               const id = `${placement.placementId}${ID_SEP}${index}`;
               const cx = anchor.x + bead.dx * PENDANT_SCALE;
               const cy = anchor.y + bead.dy * PENDANT_SCALE;
-              const hasColor = placement.colorMap[index] !== undefined;
               const color = placement.colorMap[index] ?? defaultColorFor(bead.type);
               const beadTypeClass = bead.type === 'NODE' ? 'bead--type-node' : 'bead--type-span';
-              const groupClassName = `pendant-bead bead ${beadTypeClass}${!hasColor ? ' bead--empty' : ''}`;
+              const groupClassName =
+                `pendant-bead bead ${beadTypeClass}${beadStateClass(placement.colorMap[index])}`;
               const bodyStyle = { '--bead-color': color } as React.CSSProperties;
               const isHighlighted = highlightedColor === color;
               // Радиус подсветки — как для тела бисерины (circle: r, rect: половина

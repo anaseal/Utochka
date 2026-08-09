@@ -3,6 +3,7 @@ import { useMemo, useCallback, useRef } from 'react';
 import { LoomBead } from '../../../types/loomBead';
 import { LoomStampPattern } from '../../../utils/loomStamp';
 import { LoomBeadView } from '../BeadView/LoomBeadView';
+import { BeadDefs } from '../BeadView/BeadDefs';
 import { LoomRulers } from '../CanvasRulers/LoomRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
@@ -315,6 +316,7 @@ export const LoomCanvasView = ({
               viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
+              <BeadDefs />
               <g transform={canvasView.transform}>
               <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
                 <LoomRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />

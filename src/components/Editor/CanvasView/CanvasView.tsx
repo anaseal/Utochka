@@ -8,6 +8,7 @@ import {
 } from '../../../types/pendant';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { BeadGrid } from './BeadGrid';
+import { BeadDefs } from '../BeadView/BeadDefs';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
 import { WeaveTool } from '../Header/WeaveControls';
 import { CanvasOrientation } from '../Header/Header.types';
@@ -605,6 +606,7 @@ export const CanvasView = ({
               viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
+              <BeadDefs />
               {/* Группа трансформации: отделяем визуальный отступ от логики координат.
                   effectiveOffsetX уже (offsetXCollapsed) при свёрнутых
                   span-контролах, шире (offsetX) при развёрнутых — освобождает

@@ -94,6 +94,28 @@ export const useSilyankaProject = (palette: readonly string[]) => {
 
   const rawBeads = useGrid(gridSize, rowSpanOverrides, decorBands, bottomEdgeDecor, edgeExtension, topEdgeEnabled, taper);
 
+  // Число внутренних бисерин верхней/нижней кромки — чистая производная от
+  // геометрии сетки (ни от beads, ни от рисунка не зависит), поэтому стоит
+  // сразу за gridConfig: ниже на них опирается mirrorIdOf, а он нужен уже
+  // инструменту «Дыра» (см. mirrorPendingId).
+  const internalTop = topEdgeEnabled
+    ? Math.max(0, resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2)
+    : 0;
+
+  const internalBottom = Math.max(
+    0, resolveSpanCount(-2, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2,
+  );
+
+  // Зеркальная пара бисерины по текущей геометрии — единственное место, где
+  // связывается весь набор аргументов mirrorBeadId. Ниже им пользуются штамп,
+  // заливка, «Сделать симметричным» и «Дыра».
+  const mirrorIdOf = useCallback(
+    (id: string) => mirrorBeadId(
+      id, gridSize.width, internalTop, internalBottom, edgeExtension.left, edgeExtension.right,
+    ),
+    [gridSize.width, internalTop, internalBottom, edgeExtension],
+  );
+
   // Дыра (инструмент GridSidebar): id -> true для бисерин, удалённых кликом.
   // Структурная правка уровня генератора (как taper/rowSpanOverrides) — не
   // часть Undo/Redo рисования и не сбрасывается Clear All, переживает их так
@@ -138,13 +160,29 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     return [nodeId, ...spans];
   }, [beadById, holeSegmentIndex, gridSize.height]);
 
+  // Зеркальная пара для «Дыры»: в Mirror Mode клик выкусывает бисерину (или
+  // сегмент) сразу с обеих сторон оси — так же, как зеркалятся карандаш,
+  // заливка и штамп. Пара проверяется по beadById, а не берётся у mirrorIdOf
+  // на веру: скос (Taper) или уже удалённая бисерина могли срезать её, а
+  // пометка несуществующего id накрутила бы счётчик «Delete N beads» и молча
+  // осела бы в deletedBeads.
+  const mirrorPendingId = useCallback((id: string): string | null => {
+    if (!mirrorMode) return null;
+    const m = mirrorIdOf(id);
+    return m !== null && m !== id && beadById.has(m) ? m : null;
+  }, [mirrorMode, mirrorIdOf, beadById]);
+
   const [holeSegmentHoverNodeId, setHoleSegmentHoverNodeId] = useState<string | null>(null);
 
   const holeSegmentPreviewIds = useMemo<Set<string> | null>(() => {
     if (!holeSegmentHoverNodeId) return null;
     const ids = getHoleSegmentIds(holeSegmentHoverNodeId);
+    // Предпросмотр показывает ровно то, что уйдёт по клику, — включая
+    // зеркальный сегмент.
+    const mirrorNodeId = mirrorPendingId(holeSegmentHoverNodeId);
+    if (mirrorNodeId !== null) ids.push(...getHoleSegmentIds(mirrorNodeId));
     return ids.length > 0 ? new Set(ids) : null;
-  }, [holeSegmentHoverNodeId, getHoleSegmentIds]);
+  }, [holeSegmentHoverNodeId, getHoleSegmentIds, mirrorPendingId]);
 
   const deleteBeadIds = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
@@ -187,13 +225,20 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     });
   }, []);
 
+  // Кликнутая бисерина/нода идёт первой — она и остаётся «якорем» переключения
+  // (см. togglePendingDelete выше), зеркальная пара просто едет следом: повторный
+  // клик по той же бисерине снимает пометку с обеих сторон разом.
   const toggleBeadPending = useCallback((id: string) => {
-    togglePendingDelete([id]);
-  }, [togglePendingDelete]);
+    const mirrorId = mirrorPendingId(id);
+    togglePendingDelete(mirrorId === null ? [id] : [id, mirrorId]);
+  }, [togglePendingDelete, mirrorPendingId]);
 
   const toggleHoleSegmentPending = useCallback((nodeId: string) => {
-    togglePendingDelete(getHoleSegmentIds(nodeId));
-  }, [togglePendingDelete, getHoleSegmentIds]);
+    const ids = getHoleSegmentIds(nodeId);
+    const mirrorNodeId = mirrorPendingId(nodeId);
+    if (mirrorNodeId !== null) ids.push(...getHoleSegmentIds(mirrorNodeId));
+    togglePendingDelete(ids);
+  }, [togglePendingDelete, getHoleSegmentIds, mirrorPendingId]);
 
   const pendingDeleteCount = pendingDeleteIds.size;
 
@@ -330,14 +375,6 @@ export const useSilyankaProject = (palette: readonly string[]) => {
     };
   }), [bottomNodes, decorTailPlacements, decorRowStep]);
 
-  const internalTop = topEdgeEnabled
-    ? Math.max(0, resolveSpanCount(-1, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2)
-    : 0;
-
-  const internalBottom = Math.max(
-    0, resolveSpanCount(-2, gridSize.topSpan, gridSize.bottomSpan, rowSpanOverrides) - 2,
-  );
-
   // Контекст трансляции id для штампа — та же геометрия, что видит generator.ts.
   const stampCtx = useMemo<StampContext>(() => ({
     topSpan: gridSize.topSpan,
@@ -386,13 +423,13 @@ export const useSilyankaProject = (palette: readonly string[]) => {
       const next = { ...prev, ...patch };
       if (mirrorMode) {
         for (const [id, color] of Object.entries(patch)) {
-          const m = mirrorBeadId(id, gridSize.width, internalTop, internalBottom, edgeExtension.left, edgeExtension.right);
+          const m = mirrorIdOf(id);
           if (m !== null && m !== id && stampCtx.beadIds.has(m)) next[m] = color;
         }
       }
       return next;
     });
-  }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, gridSize.width, internalTop, internalBottom, stampAnchorEdge, edgeExtension]);
+  }, [stampPattern, beads, stampCtx, drawingControls, mirrorMode, mirrorIdOf, stampAnchorEdge]);
 
   // Заливка — единый граф сетки, подвесок, цепочек, декор-хвостов и зубцов:
   // подвеска соединена со своей якорной нодой (или кончиком хвоста той же
@@ -474,22 +511,17 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   ]);
 
   const handleFloodFill = useCallback((startId: string) => {
-    const mirrorId = mirrorMode
-      ? mirrorBeadId(startId, gridSize.width, internalTop, internalBottom, edgeExtension.left, edgeExtension.right)
-      : null;
+    const mirrorId = mirrorMode ? mirrorIdOf(startId) : null;
     applyUnifiedFloodFill(startId, mirrorId !== startId ? mirrorId : null);
-  }, [applyUnifiedFloodFill, mirrorMode, gridSize.width, internalTop, internalBottom, edgeExtension]);
+  }, [applyUnifiedFloodFill, mirrorMode, mirrorIdOf]);
 
   // Ретроактивная симметризация: дозаполняет отсутствующую зеркальную половину
   // Design Map по текущей геометрии — полезно, если узор начали без Mirror
   // Mode или включили его на середине работы. Уже закрашенные (в т.ч.
   // конфликтующие) зеркальные пары не трогает, см. symmetrize.ts.
   const makeSymmetric = useCallback(() => {
-    drawingControls.remapDesignMap(map => fillMissingMirror(
-      map,
-      id => mirrorBeadId(id, gridSize.width, internalTop, internalBottom, edgeExtension.left, edgeExtension.right),
-    ));
-  }, [drawingControls, gridSize.width, internalTop, internalBottom, edgeExtension]);
+    drawingControls.remapDesignMap(map => fillMissingMirror(map, mirrorIdOf));
+  }, [drawingControls, mirrorIdOf]);
 
   const handlePendantPaint = useCallback((placementId: string, beadIndex: number) => {
     if (drawingControls.activeTool !== 'flood-fill') {

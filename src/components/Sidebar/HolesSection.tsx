@@ -31,7 +31,7 @@ export const HolesSection = ({
       <div className="sidebar__section-heading-row">
         <span className="sidebar__section-heading-label">
           <h3 className="sidebar__section-title">Holes</h3>
-          <SectionHelp text="Removes beads from the weave. Bead marks one clicked bead; Segment marks a node and every span attached to it — hover a node to preview what will go. Marked beads are dashed until you confirm with Delete below. Click a ghost outline to bring an already-deleted bead back." />
+          <SectionHelp text="Removes beads from the weave. Bead marks one clicked bead; Segment marks a node and every span attached to it — hover a node to preview what will go. With Mirror Mode on, the mirrored bead or segment is marked too. Marked beads are dashed until you confirm with Delete below. Deleted beads are not covered by Undo — use Restore all (↺ above) to bring them all back." />
         </span>
         <button
           type="button"

@@ -1,6 +1,7 @@
 /* FILE: src\components\Editor\BeadView\LoomBeadView.tsx */
 import { memo } from 'react';
 import { LOOM_THEME } from '../../../config/loomTheme';
+import { beadStateClass, isClearBead } from '../../../config/theme';
 import './BeadView.css';
 
 interface LoomBeadViewProps {
@@ -40,7 +41,6 @@ export const LoomBeadView = memo(({
   onPointerDown,
   onPointerEnter,
 }: LoomBeadViewProps) => {
-  const isEmpty = !color;
   const finalColor = color || defaultColor;
 
   const { cornerRadius, hitboxRadius } = LOOM_THEME.sizes;
@@ -50,7 +50,7 @@ export const LoomBeadView = memo(({
       // id нужен для превью штампа (getBoundingClientRect и т.п.) и общей
       // конвенции с остальными видами бисерин — см. CrossWeaveBeadView.tsx.
       id={id}
-      className={`bead bead--type-span${isEmpty ? ' bead--empty' : ''}`}
+      className={`bead bead--type-span${beadStateClass(color)}`}
       onPointerEnter={() => onPointerEnter(id)}
       onPointerDown={(e) => {
         // См. BeadView.tsx: снимаем implicit pointer capture с e.target
@@ -91,7 +91,7 @@ export const LoomBeadView = memo(({
       />
       {previewColor && (
         <rect
-          className="bead__preview"
+          className={`bead__preview${isClearBead(previewColor) ? ' bead__preview--clear' : ''}`}
           x={x - beadWidth / 2}
           y={y - beadHeight / 2}
           width={beadWidth}
