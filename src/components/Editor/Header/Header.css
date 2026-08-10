@@ -778,12 +778,6 @@
     display: block;
   }
 
-  /* Вторая строка статуса уходит в title/aria-label: на этой ширине место
-     дороже неё, а на вопрос «где я» отвечает само имя, которое остаётся.
-     Состояние при этом не теряется — его продолжает нести цвет точки. */
-  .project-status__state { display: none; }
-  .project-status__open { max-width: 6.5rem; }
-
   .header__overflow { display: block; }
 
   .header__overflow-mobile-extra {
@@ -868,18 +862,8 @@
     padding: 0.3rem 0.35rem;
   }
 
-  /* От блока проекта остаётся одна точка-индикатор: цвет продолжает нести
-     состояние, имя доступно по тапу (title/aria-label) и в самой галерее,
-     которую этот тап и открывает. Кнопка держит 22px, как .grid-controls__btn
-     на этой ширине, — по 7px-точке пальцем не попасть. */
-  .project-status__text { display: none; }
-  .project-status__open {
-    max-width: none;
-    width: 22px;
-    height: 22px;
-    justify-content: center;
-    padding: 0;
-  }
+  /* Блок проекта здесь уже свёрнут в одну точку (см. ≤1024px выше) — дожимаем
+     только кнопку «Save», она единственное, что от него ещё занимает ширину. */
   .project-status__save { padding: 3px 5px; }
 
   /* Палитра сворачивается в иконку; сама палитра становится попапом,
