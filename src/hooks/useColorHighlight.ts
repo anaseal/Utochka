@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { computeColorStats } from '../utils/colorStats';
+import { effectiveBeadColor } from '../config/theme';
 
 // Подсветка цвета из панели материалов (CanvasStats) и сама сводка по цветам —
 // общее для обеих техник. Клик по строке легенды подсвечивает все бисерины
@@ -66,7 +67,7 @@ export const useColorHighlight = <B extends { id: string }>({
     if (isDrawing) return highlightedIdsRef.current;
     const ids = new Set<string>();
     beads.forEach((b) => {
-      const effective = designMap[b.id] || defaultColorOf(b);
+      const effective = effectiveBeadColor(designMap[b.id], defaultColorOf(b));
       if (effective === highlightedColor) ids.add(b.id);
     });
     highlightedIdsRef.current = ids;

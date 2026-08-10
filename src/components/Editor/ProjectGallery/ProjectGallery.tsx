@@ -1,44 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X, Plus, Pencil, Copy, Trash2 } from 'lucide-react';
 import './ProjectGallery.css';
-import { Technique } from '../Header/Header.types';
-import { CanvasTheme } from '../../../utils/exportScheme';
 import { ProjectRecord, isAutosaveEnabled } from '../../../utils/projectLibrary';
-import { useProjectLibrary } from '../../../hooks/useProjectLibrary';
+import { ProjectLibrary } from '../../../hooks/useProjectLibrary';
+import { useConfirm } from '../../../hooks/useConfirm';
+import { formatDate, formatRelativeTime, RELATIVE_TIME_TICK_MS } from '../../../utils/relativeTime';
 
 interface ProjectGalleryProps {
   open: boolean;
   onClose: () => void;
-  technique: Technique;
-  canvasTheme: CanvasTheme;
+  // Хук библиотеки создаётся один раз в App.tsx и делится с хедером
+  // (ProjectStatus.tsx) — второй его вызов здесь означал бы вторую петлю
+  // автосейва, см. комментарий в useProjectLibrary.ts.
+  library: ProjectLibrary;
 }
-
-const formatDate = (iso: string): string => {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-};
-
-// "Saved 2m ago" вместо голой даты — точная дата остаётся в title (hover).
-// Не мемоизировано и не завязано на React Query/таймер библиотеки: компонент
-// сам перерисовывается раз в TICK_INTERVAL_MS, пока модалка открыта (см. ниже),
-// этого достаточно, чтобы подпись не протухала на глазах у открытой галереи.
-const formatRelativeTime = (iso: string): string => {
-  const diffSec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
-  if (diffSec < 5) return 'Saved just now';
-  if (diffSec < 60) return `Saved ${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `Saved ${diffMin}m ago`;
-  const diffHour = Math.round(diffMin / 60);
-  if (diffHour < 24) return `Saved ${diffHour}h ago`;
-  const diffDay = Math.round(diffHour / 24);
-  if (diffDay < 7) return `Saved ${diffDay}d ago`;
-  return `Saved ${formatDate(iso)}`;
-};
-
-const TICK_INTERVAL_MS = 15000;
 
 // Имя проекта: 1–30 символов. Верхняя граница — через maxLength на инпуте
 // переименования (браузер сам режет и вставленный текст), нижняя — через
@@ -72,18 +47,18 @@ const ProjectThumbnail = ({ blob }: { blob: Blob | null }) => {
 // autosave-эффект в useProjectLibrary.ts) — по той же модели, что у файла в
 // Figma: явный клик нужен только чтобы завести новый проект, дальше он живёт
 // сам. Переименование — инлайн, прямо в карточке (см. editingId ниже), без
-// window.prompt: тот смотрелся чужеродно рядом с остальным UI. Дубль сразу
-// получает имя по умолчанию (без prompt на ввод текста), но само действие
-// подтверждается window.confirm — как и Delete, оно создаёт новую запись в
-// IndexedDB. Оба подтверждения — тем же приёмом, что и Save/Load/Share в
+// диалога на ввод текста. Дубль сразу получает имя по умолчанию, но само
+// действие подтверждается — как и Delete, оно создаёт новую запись в
+// IndexedDB. Все три подтверждения (открыть, дублировать, удалить) идут через
+// свой экземпляр useConfirm — тем же приёмом, что и Load/Share в
 // useProjectIO.ts.
-export const ProjectGallery = ({ open, onClose, technique, canvasTheme }: ProjectGalleryProps) => {
+export const ProjectGallery = ({ open, onClose, library }: ProjectGalleryProps) => {
   const {
     projects, isLoading, activeId, error,
     saveAsNew, rename, remove, duplicate, switchTo, toggleAutosave,
-  } = useProjectLibrary(technique, canvasTheme);
+  } = library;
 
-  // Перерисовка раз в TICK_INTERVAL_MS, пока модалка открыта — без неё
+  // Перерисовка раз в RELATIVE_TIME_TICK_MS, пока модалка открыта — без неё
   // "Saved 2m ago" на карточках держал бы значение с момента открытия
   // галереи, не отражая реально прошедшее время. Тот же приём debounce/
   // re-arm через setTimeout, что и у автосейва в useProjectLibrary.ts —
@@ -96,9 +71,9 @@ export const ProjectGallery = ({ open, onClose, technique, canvasTheme }: Projec
     const tick = () => {
       if (cancelled) return;
       forceTick((n) => n + 1);
-      timer = setTimeout(tick, TICK_INTERVAL_MS);
+      timer = setTimeout(tick, RELATIVE_TIME_TICK_MS);
     };
-    timer = setTimeout(tick, TICK_INTERVAL_MS);
+    timer = setTimeout(tick, RELATIVE_TIME_TICK_MS);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [open]);
 
@@ -107,6 +82,8 @@ export const ProjectGallery = ({ open, onClose, technique, canvasTheme }: Projec
   // может редактироваться только одна карточка.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
+
+  const { confirm, confirmDialog } = useConfirm();
 
   if (!open) return null;
 
@@ -125,17 +102,38 @@ export const ProjectGallery = ({ open, onClose, technique, canvasTheme }: Projec
     setEditingId(null);
   };
 
-  // Тем же приёмом, что и с именем, — без prompt на ввод текста: копия сразу
-  // получает имя по умолчанию, переименовать при желании можно тем же
-  // инлайн-редактором. Но само действие подтверждается window.confirm, тем
-  // же паттерном, что и Delete ниже — дубль тоже создаёт запись в IndexedDB.
-  const handleDuplicate = (project: ProjectRecord) => {
-    if (!window.confirm(`Duplicate "${project.name}"?`)) return;
-    duplicate(project.id, `${project.name} copy`.slice(0, MAX_NAME_LENGTH));
+  // Открытие проекта затирает текущую работу и перезагружает страницу (см.
+  // switchTo в useProjectLibrary.ts), поэтому спрашивается так же, как
+  // загрузка файла и Share-ссылки в useProjectIO.ts.
+  const handleSwitch = async (project: ProjectRecord) => {
+    const confirmed = await confirm({
+      title: `Open "${project.name}"?`,
+      message: 'Current work will be replaced.',
+      confirmLabel: 'Open',
+    });
+    if (confirmed) switchTo(project.id);
   };
 
-  const handleDelete = (project: ProjectRecord) => {
-    if (window.confirm(`Delete "${project.name}"? This cannot be undone.`)) remove(project.id);
+  // Тем же приёмом, что и с именем, — без диалога на ввод текста: копия сразу
+  // получает имя по умолчанию, переименовать при желании можно тем же
+  // инлайн-редактором. Но само действие подтверждается, тем же паттерном, что
+  // и Delete ниже — дубль тоже создаёт запись в IndexedDB.
+  const handleDuplicate = async (project: ProjectRecord) => {
+    const confirmed = await confirm({
+      title: `Duplicate "${project.name}"?`,
+      confirmLabel: 'Duplicate',
+    });
+    if (confirmed) duplicate(project.id, `${project.name} copy`.slice(0, MAX_NAME_LENGTH));
+  };
+
+  const handleDelete = async (project: ProjectRecord) => {
+    const confirmed = await confirm({
+      title: `Delete "${project.name}"?`,
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (confirmed) remove(project.id);
   };
 
   return (
@@ -178,7 +176,7 @@ export const ProjectGallery = ({ open, onClose, technique, canvasTheme }: Projec
                 <button
                   type="button"
                   className="project-gallery__thumb"
-                  onClick={() => switchTo(project.id)}
+                  onClick={() => handleSwitch(project)}
                   title="Open this project"
                 >
                   <ProjectThumbnail blob={project.thumbnail} />
@@ -235,6 +233,11 @@ export const ProjectGallery = ({ open, onClose, technique, canvasTheme }: Projec
           </div>
         )}
       </div>
+
+      {/* Диалог подтверждения лежит поверх галереи (z-index 90 против 70) и
+          гасит клик по своему затемнению, чтобы не закрыть галерею под собой —
+          см. ConfirmDialog.tsx. */}
+      {confirmDialog}
     </div>
   );
 };

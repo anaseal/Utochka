@@ -21,6 +21,39 @@
   flex-shrink: 0;
 }
 
+/* Ошибка: красный акцент вместо бирюзового, живёт дольше (5с — совпадает с
+   TOAST_DURATION_MS в useToast.ts) и ловит мышь, чтобы её можно было закрыть
+   кнопкой, не дожидаясь конца анимации. */
+.toast--error {
+  animation-duration: 5s;
+  pointer-events: auto;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+.toast--error .toast__icon {
+  color: #f87171;
+}
+
+.toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color var(--transition-speed), background-color var(--transition-speed);
+}
+.toast__close:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #e3f3ff;
+}
+
 @keyframes toast-in-out {
   0% { opacity: 0; transform: translate(-50%, 8px); }
   10% { opacity: 1; transform: translate(-50%, 0); }

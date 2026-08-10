@@ -3,7 +3,7 @@ import { Bead } from '../../../types/bead';
 import { PendantChain } from '../../../types/pendant';
 import { computeChainBeadPositions, chainBeadId, resolveChainAnchor } from '../../../utils/pendantChain';
 import { ToothMesh } from '../../../utils/tooth';
-import { BEAD_THEME, beadStateClass, defaultColorFor } from '../../../config/theme';
+import { BEAD_THEME, beadStateClass, defaultColorFor, effectiveBeadColor } from '../../../config/theme';
 import './PendantChainLayer.css';
 
 interface PendantChainLayerProps {
@@ -89,7 +89,7 @@ export const PendantChainLayer = memo(({
           >
             {positions.map((pos, index) => {
               const id = `${chain.placementId}${ID_SEP}${index}`;
-              const color = chain.colorMap[index] ?? defaultColorFor('SPAN');
+              const color = effectiveBeadColor(chain.colorMap[index], defaultColorFor('SPAN'));
               const groupClassName =
                 `pendant-chain-bead bead bead--type-span${beadStateClass(chain.colorMap[index])}`;
               const bodyStyle = { '--bead-color': color } as React.CSSProperties;

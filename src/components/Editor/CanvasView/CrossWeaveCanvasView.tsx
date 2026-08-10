@@ -3,7 +3,6 @@ import { useMemo, useCallback, useRef } from 'react';
 import { CrossWeaveBead } from '../../../types/crossWeaveBead';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { CrossWeaveBeadView } from '../BeadView/CrossWeaveBeadView';
-import { BeadDefs } from '../BeadView/BeadDefs';
 import { CrossWeaveRulers } from '../CanvasRulers/CrossWeaveRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
@@ -21,6 +20,7 @@ import { ThreadLayer } from '../ThreadLayer/ThreadLayer';
 import { CROSS_WEAVE_THEME, defaultColorForCrossWeave } from '../../../config/crossWeaveTheme';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportScheme';
+import type { ShowToast } from '../../../hooks/useToast';
 import { mirrorCrossWeaveBeadId } from '../../../utils/crossWeaveMirror';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
@@ -81,6 +81,9 @@ interface CrossWeaveCanvasViewProps {
     designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
     pendantsFn: null,
   ) => void;
+  // Отказ экспорта PNG нечем показать на самом холсте — уходит тостом
+  // (варианта error), иначе кнопка «Download PNG» молчит и файла нет.
+  showToast: ShowToast;
 }
 
 const OFFSET_X = 60;
@@ -124,6 +127,7 @@ export const CrossWeaveCanvasView = ({
   weaveTool,
   weave,
   weaveShowLast,
+  showToast,
 }: CrossWeaveCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
@@ -325,8 +329,9 @@ export const CrossWeaveCanvasView = ({
       hideLegend: true,
     }).catch((err) => {
       console.error('Failed to export scheme:', err);
+      showToast('Export failed', 'error');
     });
-  }, [colorStats, totalCount, canvasTheme, paintedBounds]);
+  }, [colorStats, totalCount, canvasTheme, paintedBounds, showToast]);
 
   return (
     <CanvasSurface
@@ -361,7 +366,6 @@ export const CrossWeaveCanvasView = ({
               viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
-              <BeadDefs />
               <g transform={canvasView.transform}>
               <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
                 <CrossWeaveRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />

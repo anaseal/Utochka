@@ -3,7 +3,6 @@ import { useMemo, useCallback, useRef } from 'react';
 import { LoomBead } from '../../../types/loomBead';
 import { LoomStampPattern } from '../../../utils/loomStamp';
 import { LoomBeadView } from '../BeadView/LoomBeadView';
-import { BeadDefs } from '../BeadView/BeadDefs';
 import { LoomRulers } from '../CanvasRulers/LoomRulers';
 import { CanvasStats } from '../CanvasStats/CanvasStats';
 import { CanvasChrome } from './CanvasChrome';
@@ -19,6 +18,7 @@ import { useCanvasView } from '../../../hooks/useCanvasView';
 import { defaultColorForLoom, pitchYFromX } from '../../../config/loomTheme';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng, type ContentBounds } from '../../../utils/exportScheme';
+import type { ShowToast } from '../../../hooks/useToast';
 import { mirrorLoomBeadId } from '../../../utils/loomMirror';
 import { useWheelZoom } from '../../../hooks/useWheelZoom';
 import { useTouchPanZoom } from '../../../hooks/useTouchPanZoom';
@@ -74,6 +74,9 @@ interface LoomCanvasViewProps {
     designMapFn: ((m: Record<string, string>) => Record<string, string>) | null,
     pendantsFn: null,
   ) => void;
+  // Отказ экспорта PNG нечем показать на самом холсте — уходит тостом
+  // (варианта error), иначе кнопка «Download PNG» молчит и файла нет.
+  showToast: ShowToast;
 }
 
 const OFFSET_X = 60;
@@ -117,6 +120,7 @@ export const LoomCanvasView = ({
   weave,
   weaveShowLast,
   applyPatch,
+  showToast,
 }: LoomCanvasViewProps) => {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasSvgRef = useRef<SVGSVGElement>(null);
@@ -282,8 +286,9 @@ export const LoomCanvasView = ({
       hideLegend: true,
     }).catch((err) => {
       console.error('Failed to export scheme:', err);
+      showToast('Export failed', 'error');
     });
-  }, [colorStats, totalCount, canvasTheme, paintedBounds]);
+  }, [colorStats, totalCount, canvasTheme, paintedBounds, showToast]);
 
   return (
     <CanvasSurface
@@ -316,7 +321,6 @@ export const LoomCanvasView = ({
               viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
-              <BeadDefs />
               <g transform={canvasView.transform}>
               <g ref={canvasGroupRef} transform={`translate(${OFFSET_X}, ${OFFSET_Y})`}>
                 <LoomRulers beads={beads} width={width} height={height} labelTransform={canvasView.labelTransform} />

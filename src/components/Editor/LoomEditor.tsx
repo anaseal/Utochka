@@ -5,6 +5,8 @@ import { LoomCanvasView } from './CanvasView/LoomCanvasView';
 import { ProjectGallery } from './ProjectGallery/ProjectGallery';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
+import { ProjectLibrary } from '../../hooks/useProjectLibrary';
+import { ShowToast } from '../../hooks/useToast';
 import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
 import { LoomProject } from '../../hooks/useLoomProject';
 import { DrawingTool } from '../../hooks/useDrawing';
@@ -13,12 +15,18 @@ import { exportProject } from '../../utils/projectFile';
 interface LoomEditorProps {
   settings: AppSettings;
   projectIO: ProjectIO;
+  // Тост живёт в App — сюда проходит транзитом только ради отказа экспорта
+  // PNG на холсте (см. LoomCanvasView.handleExport).
+  showToast: ShowToast;
   loom: LoomProject;
   setLoomTool: (tool: DrawingTool) => void;
   cancelLoomStampPattern: () => void;
   activeSidebar: 'pendants' | 'grid' | null;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  // Один экземпляр на приложение (создаётся в App.tsx) — делится между
+  // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
+  projectLibrary: ProjectLibrary;
   projectGalleryOpen: boolean;
   onOpenProjectGallery: () => void;
   onCloseProjectGallery: () => void;
@@ -30,9 +38,9 @@ interface LoomEditorProps {
 // в отличие от Loom, отмечает колонку, см. usePeyoteProject.ts), поэтому
 // weavePanel пробрасывается тем же способом.
 export const LoomEditor = ({
-  settings, projectIO, loom, setLoomTool, cancelLoomStampPattern,
+  settings, projectIO, showToast, loom, setLoomTool, cancelLoomStampPattern,
   activeSidebar, onToggleGridSidebar, weavePanel,
-  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
+  projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: LoomEditorProps) => (
   <>
     <Header
@@ -40,6 +48,7 @@ export const LoomEditor = ({
       onTechniqueChange={settings.setTechnique}
       palette={settings.palette}
       onPaletteChange={settings.setPalette}
+      colorSources={[loom.drawingControls.designMap]}
       activeColor={loom.drawingControls.activeColor}
       setActiveColor={loom.drawingControls.setActiveColor}
       activeTool={loom.drawingControls.activeTool}
@@ -51,6 +60,7 @@ export const LoomEditor = ({
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
       onOpenProjectGallery={onOpenProjectGallery}
+      projectLibrary={projectLibrary}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -128,13 +138,13 @@ export const LoomEditor = ({
       weaveTool={weavePanel.weaveTool}
       weave={loom.weave}
       weaveShowLast={weavePanel.weaveShowLast}
+      showToast={showToast}
     />
 
     <ProjectGallery
       open={projectGalleryOpen}
       onClose={onCloseProjectGallery}
-      technique="loom"
-      canvasTheme={settings.canvasTheme}
+      library={projectLibrary}
     />
   </>
 );

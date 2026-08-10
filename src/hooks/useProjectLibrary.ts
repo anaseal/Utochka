@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Technique } from '../components/Editor/Header/Header.types';
 import { captureSchemeThumbnail, CanvasTheme } from '../utils/exportScheme';
 import {
@@ -15,12 +15,25 @@ import {
 // (captureSchemeThumbnail), гонять её на каждый чих нельзя.
 const AUTOSAVE_INTERVAL_MS = 8000;
 
-// Хук галереи проектов одной техники (см. src/utils/projectLibrary.ts) —
-// вызывается внутри конкретного XxxEditor.tsx (как GridSidebar/PendantsSidebar),
-// а не безусловно для всех четырёх техник в App.tsx: переключение проекта
-// всегда перезагружает страницу (см. switchTo), поэтому в отличие от
-// useSilyankaProject/useCrossWeaveProject/... сохранять состояние хука при
-// переключении техники не нужно.
+// Отдельный, более частый такт для индикатора «есть несохранённые правки» в
+// хедере (ProjectStatus.tsx). Он может быть чаще автосейва именно потому, что
+// делает только дешёвую половину его работы — сравнение ключей localStorage со
+// снимком (hasLiveDataChanged), без растеризации миниатюры, из-за которой у
+// автосейва и стоят 8с.
+const DIRTY_POLL_INTERVAL_MS = 4000;
+
+// Хук библиотеки проектов активной техники (см. src/utils/projectLibrary.ts).
+// Вызывается РОВНО ОДИН РАЗ, в App.tsx, и раздаётся пропом двум потребителям
+// (статус проекта в хедере и сама галерея) через XxxEditor — как settings и
+// projectIO. Раньше жил внутри ProjectGallery.tsx, но второй вызов ради
+// хедера означал бы вторую петлю автосейва: две растеризации миниатюры
+// каждые 8с и гонка записей в одну и ту же запись IndexedDB.
+//
+// Технику держит параметром, а не по хуку на каждую: неактивные техники
+// галереи не имеют, а переключение проекта всё равно перезагружает страницу
+// (см. switchTo), так что в отличие от useSilyankaProject/... сохранять
+// состояние хука при переключении техники не нужно — эффект ниже просто
+// перечитывает список.
 export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme) => {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,13 +95,58 @@ export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme
   const projectsRef = useRef(projects);
   projectsRef.current = projects;
 
+  // Запись активного проекта целиком (не только id) — нужна и статусу в
+  // хедере (имя, updatedAt, autosaveEnabled), и опросу «разошлась ли живая
+  // работа» ниже. null и когда активного проекта нет, и пока список ещё
+  // читается из IndexedDB после монтирования.
+  const activeProject = useMemo(
+    () => projects.find((p) => p.id === activeId) ?? null,
+    [projects, activeId],
+  );
+
+  // Ручная перезапись активного проекта текущей работой. Тот же код, что
+  // делает тик автосейва (см. ниже) — но вызывается кнопкой «Save» в хедере,
+  // когда автосейв у проекта выключен и иначе сохраниться было бы нечем.
+  const saveNow = useCallback((): Promise<void> => guarded(async () => {
+    const thumbnail = await captureThumbnail();
+    await updateActiveProject(technique, thumbnail);
+    await refresh();
+  }), [guarded, technique, captureThumbnail, refresh]);
+
+  // «Живая работа разошлась с последним снимком активного проекта» — источник
+  // статуса в хедере. Отдельный опрос, а не побочный результат автосейва:
+  // автосейв у проекта может быть выключен (и по умолчанию выключен), а знать
+  // про несохранённые правки надо именно тогда.
+  //
+  // Зависимость от activeProject, а не от activeId: после каждого сохранения
+  // refresh() приносит новую запись, эффект перезапускается и сразу же, не
+  // дожидаясь такта, гасит флаг — иначе кнопка «Save» ещё несколько секунд
+  // выглядела бы ненажатой. setIsDirty тем же значением React отсекает сам,
+  // так что холостые такты никого не перерисовывают.
+  const [isDirty, setIsDirty] = useState(false);
+  useEffect(() => {
+    if (!activeProject) {
+      setIsDirty(false);
+      return undefined;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      if (cancelled) return;
+      setIsDirty(hasLiveDataChanged(technique, activeProject));
+      timer = setTimeout(tick, DIRTY_POLL_INTERVAL_MS);
+    };
+    tick();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [activeProject, technique]);
+
   // Фоновый автосейв активного проекта — см. spec.md, «Библиотека
   // проектов»: пока activeId есть, раз в AUTOSAVE_INTERVAL_MS (и
   // дополнительно перед уходом со страницы) сверяем живую работу со
   // снимком активного проекта и, если разошлись, тихо перезаписываем его
-  // (hasLiveDataChanged/updateActiveProject) — без отдельной кнопки
-  // "Update", как файл в Figma. savingRef не даёт двум проверкам
-  // (таймер + visibilitychange/pagehide) наложиться друг на друга.
+  // (hasLiveDataChanged/saveNow) — без отдельной кнопки "Update", как файл
+  // в Figma. savingRef не даёт двум проверкам (таймер +
+  // visibilitychange/pagehide) наложиться друг на друга.
   useEffect(() => {
     if (!activeId) return undefined;
 
@@ -98,15 +156,11 @@ export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme
 
     const check = async () => {
       if (cancelled || savingRef.current) return;
-      const activeProject = projectsRef.current.find((p) => p.id === activeId);
-      if (!activeProject || !isAutosaveEnabled(activeProject)) return;
-      if (!hasLiveDataChanged(technique, activeProject)) return;
+      const project = projectsRef.current.find((p) => p.id === activeId);
+      if (!project || !isAutosaveEnabled(project)) return;
+      if (!hasLiveDataChanged(technique, project)) return;
       savingRef.current = true;
-      await guarded(async () => {
-        const thumbnail = await captureThumbnail();
-        await updateActiveProject(technique, thumbnail);
-        await refresh();
-      });
+      await saveNow();
       savingRef.current = false;
     };
 
@@ -129,7 +183,7 @@ export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', check);
     };
-  }, [activeId, technique, guarded, captureThumbnail, refresh]);
+  }, [activeId, technique, saveNow]);
 
   const rename = useCallback((id: string, name: string): Promise<void> => guarded(async () => {
     await renameProject(id, name);
@@ -156,18 +210,20 @@ export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme
   }), [guarded, refresh]);
 
   // Тот же паттерн, что у импорта файла/Share-ссылки (useProjectIO.ts):
-  // подтверждение → замена ключей техники → полная перезагрузка страницы.
-  // "Горячей" замены нет — хуки состояния (useSilyankaProject и т.д.) читают
-  // localStorage синхронно только при монтировании.
+  // замена ключей техники → полная перезагрузка страницы. "Горячей" замены
+  // нет — хуки состояния (useSilyankaProject и т.д.) читают localStorage
+  // синхронно только при монтировании.
+  //
+  // Подтверждение спрашивает ProjectGallery.tsx, а не этот хук: там же лежат
+  // подтверждения Duplicate и Delete, и хук данных не знает про UI.
   const switchTo = useCallback((id: string): Promise<void> => guarded(async () => {
-    if (!window.confirm('Current work will be replaced. Continue?')) return;
     await loadProject(id);
     window.location.reload();
   }), [guarded]);
 
   return {
-    projects, isLoading, activeId, error,
-    saveAsNew, rename, remove, duplicate, switchTo, toggleAutosave,
+    projects, isLoading, activeId, activeProject, isDirty, error,
+    saveAsNew, saveNow, rename, remove, duplicate, switchTo, toggleAutosave,
   };
 };
 

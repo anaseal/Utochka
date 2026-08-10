@@ -5,6 +5,8 @@ import { CrossWeaveCanvasView } from './CanvasView/CrossWeaveCanvasView';
 import { ProjectGallery } from './ProjectGallery/ProjectGallery';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
+import { ProjectLibrary } from '../../hooks/useProjectLibrary';
+import { ShowToast } from '../../hooks/useToast';
 import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
 import { CrossWeaveProject } from '../../hooks/useCrossWeaveProject';
 import { exportProject } from '../../utils/projectFile';
@@ -12,18 +14,24 @@ import { exportProject } from '../../utils/projectFile';
 interface CrossWeaveEditorProps {
   settings: AppSettings;
   projectIO: ProjectIO;
+  // Тост живёт в App — сюда проходит транзитом только ради отказа экспорта
+  // PNG на холсте (см. CrossWeaveCanvasView.handleExport).
+  showToast: ShowToast;
   crossWeave: CrossWeaveProject;
   activeSidebar: 'pendants' | 'grid' | null;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  // Один экземпляр на приложение (создаётся в App.tsx) — делится между
+  // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
+  projectLibrary: ProjectLibrary;
   projectGalleryOpen: boolean;
   onOpenProjectGallery: () => void;
   onCloseProjectGallery: () => void;
 }
 
 export const CrossWeaveEditor = ({
-  settings, projectIO, crossWeave, activeSidebar, onToggleGridSidebar, weavePanel,
-  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
+  settings, projectIO, showToast, crossWeave, activeSidebar, onToggleGridSidebar, weavePanel,
+  projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: CrossWeaveEditorProps) => (
   <>
     <Header
@@ -31,6 +39,7 @@ export const CrossWeaveEditor = ({
       onTechniqueChange={settings.setTechnique}
       palette={settings.palette}
       onPaletteChange={settings.setPalette}
+      colorSources={[crossWeave.drawingControls.designMap]}
       activeColor={crossWeave.drawingControls.activeColor}
       setActiveColor={crossWeave.drawingControls.setActiveColor}
       activeTool={crossWeave.drawingControls.activeTool}
@@ -42,6 +51,7 @@ export const CrossWeaveEditor = ({
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
       onOpenProjectGallery={onOpenProjectGallery}
+      projectLibrary={projectLibrary}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -125,13 +135,13 @@ export const CrossWeaveEditor = ({
       weaveTool={weavePanel.weaveTool}
       weave={crossWeave.weave}
       weaveShowLast={weavePanel.weaveShowLast}
+      showToast={showToast}
     />
 
     <ProjectGallery
       open={projectGalleryOpen}
       onClose={onCloseProjectGallery}
-      technique="crossWeave"
-      canvasTheme={settings.canvasTheme}
+      library={projectLibrary}
     />
   </>
 );

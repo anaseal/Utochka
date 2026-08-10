@@ -6,7 +6,9 @@ import { usePeyoteProject } from './hooks/usePeyoteProject';
 import { useLoomProject } from './hooks/useLoomProject';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useToast } from './hooks/useToast';
+import { useConfirm } from './hooks/useConfirm';
 import { useProjectIO } from './hooks/useProjectIO';
+import { useProjectLibrary } from './hooks/useProjectLibrary';
 import { useSilyankaToolSwitch } from './hooks/useSilyankaToolSwitch';
 import { usePeyoteToolSwitch } from './hooks/usePeyoteToolSwitch';
 import { useLoomToolSwitch } from './hooks/useLoomToolSwitch';
@@ -21,8 +23,17 @@ import { Toast } from './components/Toast/Toast';
 
 function App() {
   const settings = useAppSettings();
-  const { toast, showToast } = useToast();
-  const projectIO = useProjectIO(showToast);
+  const { toast, showToast, dismissToast } = useToast();
+  // Подтверждения загрузки файла и Share-ссылки: диалог рендерится здесь, а
+  // confirm уходит в useProjectIO. Галерея проектов держит свой экземпляр
+  // useConfirm у себя — прокидывать confirm через четыре XxxEditor не за чем.
+  const { confirm, confirmDialog } = useConfirm();
+  const projectIO = useProjectIO(showToast, confirm);
+
+  // Библиотека проектов — ровно один экземпляр на приложение: у неё два
+  // потребителя (статус проекта в хедере и сама галерея), а внутри живёт
+  // петля автосейва, которую нельзя заводить дважды (см. useProjectLibrary.ts).
+  const projectLibrary = useProjectLibrary(settings.technique, settings.canvasTheme);
 
   // Все четыре хука вызываются безусловно (Rules of Hooks) — неактивная
   // техника просто не монтируется в разметке, но её состояние живёт и не
@@ -78,6 +89,7 @@ function App() {
         <SilyankaEditor
           settings={settings}
           projectIO={projectIO}
+          showToast={showToast}
           silyanka={silyanka}
           setSilyankaTool={setSilyankaTool}
           cancelStampPattern={cancelStampPattern}
@@ -85,6 +97,7 @@ function App() {
           onTogglePendantsSidebar={togglePendantsSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}
           onOpenProjectGallery={openProjectGallery}
           onCloseProjectGallery={() => setProjectGalleryOpen(false)}
@@ -93,10 +106,12 @@ function App() {
         <CrossWeaveEditor
           settings={settings}
           projectIO={projectIO}
+          showToast={showToast}
           crossWeave={crossWeave}
           activeSidebar={activeSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}
           onOpenProjectGallery={openProjectGallery}
           onCloseProjectGallery={() => setProjectGalleryOpen(false)}
@@ -105,12 +120,14 @@ function App() {
         <PeyoteEditor
           settings={settings}
           projectIO={projectIO}
+          showToast={showToast}
           peyote={peyote}
           setPeyoteTool={setPeyoteTool}
           cancelPeyoteStampPattern={cancelPeyoteStampPattern}
           activeSidebar={activeSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}
           onOpenProjectGallery={openProjectGallery}
           onCloseProjectGallery={() => setProjectGalleryOpen(false)}
@@ -119,12 +136,14 @@ function App() {
         <LoomEditor
           settings={settings}
           projectIO={projectIO}
+          showToast={showToast}
           loom={loom}
           setLoomTool={setLoomTool}
           cancelLoomStampPattern={cancelLoomStampPattern}
           activeSidebar={activeSidebar}
           onToggleGridSidebar={toggleGridSidebar}
           weavePanel={weavePanel}
+          projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}
           onOpenProjectGallery={openProjectGallery}
           onCloseProjectGallery={() => setProjectGalleryOpen(false)}
@@ -133,7 +152,11 @@ function App() {
 
       <ReferenceWindow open={settings.referenceOpen} setOpen={settings.setReferenceOpen} />
 
-      {toast && <Toast key={toast.id} message={toast.message} />}
+      {toast && (
+        <Toast key={toast.id} message={toast.message} variant={toast.variant} onDismiss={dismissToast} />
+      )}
+
+      {confirmDialog}
     </main>
   );
 }

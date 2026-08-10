@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react';
 import { Bead } from '../../../types/bead';
 import { DecorTailPlacement } from '../../../types/pendant';
-import { BEAD_THEME, beadStateClass, defaultColorFor } from '../../../config/theme';
+import { BEAD_THEME, beadStateClass, defaultColorFor, effectiveBeadColor } from '../../../config/theme';
 import { computeDecorTailBeadPositions, decorTailBeadId, parseDecorTailBeadId } from '../../../utils/decorTail';
 import './DecorTailLayer.css';
 
@@ -121,7 +121,7 @@ export const DecorTailLayer = memo(({
 
             {positions.map((pos, index) => {
               const id = decorTailBeadId(tail.placementId, index);
-              const color = tail.colorMap[index] ?? defaultColorFor('SPAN');
+              const color = effectiveBeadColor(tail.colorMap[index], defaultColorFor('SPAN'));
               const groupClassName =
                 `decor-tail-bead bead bead--type-span${beadStateClass(tail.colorMap[index])}`;
               const bodyStyle = { '--bead-color': color } as React.CSSProperties;

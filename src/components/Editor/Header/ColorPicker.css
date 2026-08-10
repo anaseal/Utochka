@@ -15,32 +15,38 @@
   gap: 10px;
   user-select: none;
 }
-.color-picker--generate {
+/* Вкладки Generate и Project шире вкладки Pick по содержимому (ряд свотчей /
+   список цветов схемы с количествами) — 220px им тесно. */
+.color-picker--wide {
   width: 260px;
 }
 
 .color-picker__tabs {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   background: rgba(15, 23, 42, 0.6);
   border-radius: 8px;
   padding: 3px;
 }
+/* flex: 1 1 auto, а не flex: 1 — с тремя вкладками равные доли обрезали бы
+   «Generate»/«Project»; делим строку по содержимому. */
 .color-picker__tab {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   height: 26px;
+  padding: 0 4px;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: #64748b;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
@@ -168,6 +174,45 @@ border: 1px solid #64748b;
 .color-picker__confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Прозрачный бисер. Свотч — пунктирное кольцо, ровно тот же язык, что у
+   незакрашенной бисерины на холсте, у .stats__indicator--transparent в сводке
+   материалов и у пустых recent-слотов: прозрачная бусина и есть пустое место,
+   заливать свотч нечем. Кнопка тише Confirm (без заливки), т.к. это не
+   подтверждение подобранного цвета, а выбор в обход SV-квадрата. */
+.color-picker__clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, transform 0.15s;
+}
+.color-picker__clear:hover {
+  color: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.6);
+}
+.color-picker__clear:active {
+  transform: translateY(1px);
+}
+.color-picker__clear-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px dashed currentColor;
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 
 .color-picker__generate {
@@ -308,6 +353,89 @@ border: 1px solid #64748b;
 }
 .color-picker__hue--mini {
   height: 10px;
+}
+
+/* Вкладка Project: цвета уже нарисованной схемы (см. utils/projectPalette.ts).
+   Список — вертикальный, а не ряд свотчей как в Generate: у каждого цвета есть
+   количество бисерин, и читать его удобнее строкой. Высота ограничена, список
+   скроллится — цветов в схеме может быть и два, и двадцать, а попап не должен
+   вырастать во весь экран. */
+.color-picker__project {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.color-picker__project-hint,
+.color-picker__project-empty {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #94a3b8;
+}
+.color-picker__project-empty {
+  text-align: center;
+  padding: 12px 4px;
+}
+
+.color-picker__project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.color-picker__project-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.6);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.color-picker__project-row:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+/* Выбранная строка — циановая рамка, тот же акцент, что у активной вкладки и
+   у --locked свотча в Generate. Галочку не рисуем: рамка + подсветка фона
+   читаются на 30px строке лучше, чем ещё одна иконка. */
+.color-picker__project-row--selected {
+  border-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.12);
+}
+.color-picker__project-row:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.color-picker__project-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--color-value);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.color-picker__project-hex {
+  flex: 1;
+  text-align: left;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #e3f3ff;
+}
+.color-picker__project-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Скрыта на десктопе/планшете — там ColorPicker анкерится к своей кнопке

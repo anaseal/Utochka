@@ -2,7 +2,7 @@
 import { memo } from 'react';
 import { BeadOrientation } from '../../../types/crossWeaveBead';
 import { CROSS_WEAVE_THEME } from '../../../config/crossWeaveTheme';
-import { beadStateClass } from '../../../config/theme';
+import { beadStateClass, effectiveBeadColor } from '../../../config/theme';
 import './BeadView.css';
 
 interface CrossWeaveBeadViewProps {
@@ -28,7 +28,7 @@ export const CrossWeaveBeadView = memo(({
   onPointerDown,
   onPointerEnter,
 }: CrossWeaveBeadViewProps) => {
-  const finalColor = color || defaultColor;
+  const finalColor = effectiveBeadColor(color, defaultColor);
 
   const { beadMinorRadius, beadMajorRadius, hitboxRadius } = CROSS_WEAVE_THEME.sizes;
   const rx = orientation === 'vertical' ? beadMinorRadius : beadMajorRadius;

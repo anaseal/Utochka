@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { ListChecks } from 'lucide-react';
 import './Header.css';
 import { TechniqueMenu } from './TechniqueMenu';
+import { ProjectStatus } from './ProjectStatus';
 import { Stepper } from '../../common/Stepper';
 import { APP_CONSTRAINTS } from '../../../config/theme';
 import { WeaveControls } from './WeaveControls';
@@ -14,8 +15,8 @@ import { HeaderProps } from './Header.types';
 
 export const Header = (props: HeaderProps) => {
   const {
-    palette, onPaletteChange, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
-    onSaveProject, onLoadProject, onShareProject, onOpenProjectGallery,
+    palette, onPaletteChange, colorSources, activeColor, setActiveColor, activeTool, setActiveTool, recentColors, commitRecentColor, onClearAll,
+    onSaveProject, onLoadProject, onShareProject, onOpenProjectGallery, projectLibrary,
     zoom, onZoomChange, onSetZoom,
     onUndo, onRedo, canUndo, canRedo,
     technique, onTechniqueChange,
@@ -40,6 +41,14 @@ export const Header = (props: HeaderProps) => {
   return (
     <header className={`header${weaveMode ? ' header--weave' : ''}`}>
       <nav className="header__nav">
+        {/* Имя активного проекта и статус сохранения — самое левое, что есть
+            в хедере, и в обоих режимах на одном месте (см. ProjectStatus.tsx).
+            Клик открывает ту же галерею, что и кнопка FolderOpen справа: до
+            этого имя проекта нигде, кроме самой галереи, не показывалось. */}
+        <ProjectStatus library={projectLibrary} onOpenGallery={onOpenProjectGallery} />
+
+        <div className="header__divider" />
+
         <TechniqueMenu technique={technique} onTechniqueChange={onTechniqueChange} />
 
         {/* Вход в режим плетения — рядом с выбором техники, а не среди иконок
@@ -71,6 +80,7 @@ export const Header = (props: HeaderProps) => {
           <PaletteWidget
             palette={palette}
             onPaletteChange={onPaletteChange}
+            colorSources={colorSources}
             activeColor={activeColor}
             setActiveColor={setActiveColor}
             activeTool={activeTool}

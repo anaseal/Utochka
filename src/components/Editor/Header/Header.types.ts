@@ -1,6 +1,8 @@
 import { DrawingTool } from '../../../hooks/useDrawing';
+import { ProjectLibrary } from '../../../hooks/useProjectLibrary';
 import { Thread } from '../../../types/thread';
 import { StampAnchorEdge } from '../../../utils/stamp';
+import { ColorSource } from '../../../utils/projectPalette';
 import { WeaveTool } from './WeaveControls';
 
 export type Technique = 'silyanka' | 'crossWeave' | 'peyote' | 'loom';
@@ -13,6 +15,10 @@ export type CanvasOrientation = 'vertical' | 'horizontal';
 export interface SharedHeaderProps {
   palette: string[];
   onPaletteChange: (palette: string[]) => void;
+  // Карты цветов проекта для вкладки Project в ColorPicker («извлечь палитру
+  // из схемы»). Каждая техника собирает свой список: у силянки, кроме
+  // designMap, есть отдельные colorMap подвесок/цепочек/хвостов/зубцов.
+  colorSources: readonly (ColorSource | undefined)[];
   activeColor: string;
   setActiveColor: (color: string) => void;
   activeTool: DrawingTool;
@@ -28,6 +34,11 @@ export interface SharedHeaderProps {
   // рендерится в XxxEditor.tsx рядом с GridSidebar/PendantsSidebar, здесь
   // только триггер в хедере.
   onOpenProjectGallery: () => void;
+  // Библиотека проектов активной техники — один экземпляр хука на всё
+  // приложение (создаётся в App.tsx, см. useProjectLibrary.ts). Хедеру нужна
+  // ради левого блока «имя проекта + статус сохранения» (ProjectStatus.tsx),
+  // тот же объект уходит и в саму галерею.
+  projectLibrary: ProjectLibrary;
   zoom: number;
   onZoomChange: (delta: number) => void;
   onSetZoom?: (v: number) => void;

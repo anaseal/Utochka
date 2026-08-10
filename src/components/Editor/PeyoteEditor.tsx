@@ -5,6 +5,8 @@ import { PeyoteCanvasView } from './CanvasView/PeyoteCanvasView';
 import { ProjectGallery } from './ProjectGallery/ProjectGallery';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
+import { ProjectLibrary } from '../../hooks/useProjectLibrary';
+import { ShowToast } from '../../hooks/useToast';
 import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
 import { PeyoteProject } from '../../hooks/usePeyoteProject';
 import { DrawingTool } from '../../hooks/useDrawing';
@@ -13,12 +15,18 @@ import { exportProject } from '../../utils/projectFile';
 interface PeyoteEditorProps {
   settings: AppSettings;
   projectIO: ProjectIO;
+  // Тост живёт в App — сюда проходит транзитом только ради отказа экспорта
+  // PNG на холсте (см. PeyoteCanvasView.handleExport).
+  showToast: ShowToast;
   peyote: PeyoteProject;
   setPeyoteTool: (tool: DrawingTool) => void;
   cancelPeyoteStampPattern: () => void;
   activeSidebar: 'pendants' | 'grid' | null;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  // Один экземпляр на приложение (создаётся в App.tsx) — делится между
+  // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
+  projectLibrary: ProjectLibrary;
   projectGalleryOpen: boolean;
   onOpenProjectGallery: () => void;
   onCloseProjectGallery: () => void;
@@ -29,9 +37,9 @@ interface PeyoteEditorProps {
 // подключён так же, как у SilyankaEditor/CrossWeaveEditor/LoomEditor —
 // сегмент здесь целая колонка, не ряд (см. usePeyoteProject.ts, weaveSegment.ts).
 export const PeyoteEditor = ({
-  settings, projectIO, peyote, setPeyoteTool, cancelPeyoteStampPattern,
+  settings, projectIO, showToast, peyote, setPeyoteTool, cancelPeyoteStampPattern,
   activeSidebar, onToggleGridSidebar, weavePanel,
-  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
+  projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: PeyoteEditorProps) => (
   <>
     <Header
@@ -39,6 +47,7 @@ export const PeyoteEditor = ({
       onTechniqueChange={settings.setTechnique}
       palette={settings.palette}
       onPaletteChange={settings.setPalette}
+      colorSources={[peyote.drawingControls.designMap]}
       activeColor={peyote.drawingControls.activeColor}
       setActiveColor={peyote.drawingControls.setActiveColor}
       activeTool={peyote.drawingControls.activeTool}
@@ -50,6 +59,7 @@ export const PeyoteEditor = ({
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
       onOpenProjectGallery={onOpenProjectGallery}
+      projectLibrary={projectLibrary}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -127,13 +137,13 @@ export const PeyoteEditor = ({
       weaveTool={weavePanel.weaveTool}
       weave={peyote.weave}
       weaveShowLast={weavePanel.weaveShowLast}
+      showToast={showToast}
     />
 
     <ProjectGallery
       open={projectGalleryOpen}
       onClose={onCloseProjectGallery}
-      technique="peyote"
-      canvasTheme={settings.canvasTheme}
+      library={projectLibrary}
     />
   </>
 );

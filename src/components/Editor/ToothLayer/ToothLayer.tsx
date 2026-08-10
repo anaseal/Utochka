@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react';
 import { ToothPlacement } from '../../../types/pendant';
 import { ToothMesh, toothBeadId } from '../../../utils/tooth';
-import { BEAD_THEME, beadStateClass, defaultColorFor } from '../../../config/theme';
+import { BEAD_THEME, beadStateClass, defaultColorFor, effectiveBeadColor } from '../../../config/theme';
 import './ToothLayer.css';
 
 interface ToothLayerProps {
@@ -87,7 +87,7 @@ export const ToothLayer = memo(({
           >
             {mesh.beads.map((bead, index) => {
               const id = `${tooth.placementId}${ID_SEP}${index}`;
-              const color = tooth.colorMap[index] ?? defaultColorFor(bead.kind === 'node' ? 'NODE' : 'SPAN');
+              const color = effectiveBeadColor(tooth.colorMap[index], defaultColorFor(bead.kind === 'node' ? 'NODE' : 'SPAN'));
               const groupClassName =
                 `tooth-bead bead bead--type-${bead.kind}${beadStateClass(tooth.colorMap[index])}`;
               const bodyStyle = { '--bead-color': color } as React.CSSProperties;

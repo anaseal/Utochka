@@ -2,7 +2,7 @@
 import { useCallback, useMemo } from 'react';
 import { Bead } from '../types/bead';
 import { PendantPlacement, PendantTemplate, PendantChain, DecorTailPlacement, ToothPlacement } from '../types/pendant';
-import { defaultColorFor } from '../config/theme';
+import { defaultColorFor, effectiveBeadColor } from '../config/theme';
 import { chainBeadCountBetween, resolveChainAnchor } from '../utils/pendantChain';
 import { ToothMesh } from '../utils/tooth';
 
@@ -82,25 +82,25 @@ export const usePendantStats = ({
     validPendantPlacements.forEach((p) => {
       const template = pendantTemplates[p.templateId];
       template.beads.forEach((bead, index) => {
-        const color = p.colorMap[index] ?? defaultColorFor(bead.type);
+        const color = effectiveBeadColor(p.colorMap[index], defaultColorFor(bead.type));
         stats.set(color, (stats.get(color) || 0) + 1);
       });
     });
     validPendantChains.forEach(({ chain, count }) => {
       for (let i = 0; i < count; i++) {
-        const color = chain.colorMap[i] ?? defaultColorFor('SPAN');
+        const color = effectiveBeadColor(chain.colorMap[i], defaultColorFor('SPAN'));
         stats.set(color, (stats.get(color) || 0) + 1);
       }
     });
     validDecorTailPlacements.forEach((t) => {
       for (let i = 0; i < t.rows; i++) {
-        const color = t.colorMap[i] ?? defaultColorFor('SPAN');
+        const color = effectiveBeadColor(t.colorMap[i], defaultColorFor('SPAN'));
         stats.set(color, (stats.get(color) || 0) + 1);
       }
     });
     validTeeth.forEach(({ tooth, mesh }) => {
       mesh.beads.forEach((bead, i) => {
-        const color = tooth.colorMap[i] ?? defaultColorFor(bead.kind === 'node' ? 'NODE' : 'SPAN');
+        const color = effectiveBeadColor(tooth.colorMap[i], defaultColorFor(bead.kind === 'node' ? 'NODE' : 'SPAN'));
         stats.set(color, (stats.get(color) || 0) + 1);
       });
     });

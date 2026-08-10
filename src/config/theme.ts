@@ -83,28 +83,33 @@ export const BEAD_THEME = {
 export const defaultColorFor = (type: BeadType): string =>
   type === 'NODE' ? BEAD_THEME.colors.nodeDefault : BEAD_THEME.colors.spanDefault;
 
-// Прозрачный (стеклянный) бисер — полноценный цвет схемы, а НЕ отсутствие
-// цвета. Отдельное значение нужно потому, что 'transparent' выше уже занят под
-// НЕзакрашенную бисерину: сводка материалов считает пустые именно под этим
-// ключом (см. computeColorStats), и совпади значения — «здесь прозрачный
-// бисер» и «здесь ещё ничего не решено» слились бы в одну строку.
-// Восьмизначный hex выбран потому, что это валидная запись цвета и в SVG
-// fill, и в CSS: путь быстрой протяжки (useFastPaint пишет fill прямо в DOM)
-// и экспорт PNG работают с ним без спецкейсов. Вид «стекла» (контур + блик)
-// задаёт класс .bead--clear, см. BeadView.css.
+// Прозрачный бисер — «цвет» кисти, которым помечают, что в этом месте стоит
+// прозрачная бусина. Прозрачная бусина и НЕзакрашенная — это одно и то же:
+// одинаковый вид на холсте и в PNG, одна строка `transparent` в сводке
+// материалов (там она и означает «купить столько прозрачного бисера»).
+// Поэтому значение не заводит вторую сущность в схеме: оно ложится в
+// designMap как обычный цвет (заливка, штамп, зеркало работают без единого
+// спецкейса), а на чтении приводится к незакрашенной через effectiveBeadColor
+// и beadStateClass ниже. Восьмизначный hex — валидная запись цвета и в SVG
+// fill, и в CSS, поэтому даже путь мимо нормализации не ломает отрисовку.
 export const CLEAR_BEAD_COLOR = '#ffffff00';
 
 export const isClearBead = (color: string | undefined): boolean => color === CLEAR_BEAD_COLOR;
 
+// Бисерина выглядит незакрашенной: цвета нет вовсе либо он прозрачный.
+export const isUnfilledBead = (color: string | undefined): boolean => !color || isClearBead(color);
+
+// Цвет, которым бисерина реально рисуется и под которым считается в сводке
+// материалов (`defaultColorFor` — 'transparent').
+export const effectiveBeadColor = (color: string | undefined, fallback: string): string =>
+  isUnfilledBead(color) ? fallback : color!;
+
 // Модификатор состояния бисерины по её цвету — с ведущим пробелом, чтобы
 // подставляться прямо в шаблон className (там, где раньше стояло
 // `${!color ? ' bead--empty' : ''}`). Общий для всех четырёх техник и для
-// слоёв подвесок/цепочек/зубцов/декор-хвостов силянки: правило вида живёт
-// в одном BeadView.css, поэтому и класс должен назначаться из одного места.
-export const beadStateClass = (color: string | undefined): string => {
-  if (!color) return ' bead--empty';
-  return isClearBead(color) ? ' bead--clear' : '';
-};
+// слоёв подвесок/цепочек/зубцов/декор-хвостов силянки.
+export const beadStateClass = (color: string | undefined): string =>
+  isUnfilledBead(color) ? ' bead--empty' : '';
 
 // Дефолты «кисти» нитки (см. useSilyankaProject/useCrossWeaveProject —
 // activeThreadColor/activeThreadOpacity, персистятся отдельно от истории

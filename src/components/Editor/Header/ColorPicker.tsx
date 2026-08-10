@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Wand2, Lock, Unlock, Pipette, RefreshCw } from 'lucide-react';
+import { Wand2, Lock, Unlock, Pipette, RefreshCw, Layers } from 'lucide-react';
 import './ColorPicker.css';
+import { CLEAR_BEAD_COLOR } from '../../../config/theme';
 import { generatePaletteFromColormind } from '../../../utils/colormindApi';
 import { useSvHuePicker } from '../../../hooks/useSvHuePicker';
+import { ColorSource, extractProjectColors } from '../../../utils/projectPalette';
 
-type Mode = 'pick' | 'generate';
+type Mode = 'pick' | 'generate' | 'project';
 
 // Сгенерированные 2-3 цвета сами по себе — слишком скудная палитра для рисования;
 // добиваем недостающие слоты до PALETTE_TARGET_SIZE базовыми цветами.
@@ -16,10 +18,14 @@ interface Props {
   onConfirm: (color: string) => void;
   onClose: () => void;
   onReplacePalette: (colors: string[]) => void;
+  /** Карты цветов проекта для вкладки Project (см. utils/projectPalette.ts). */
+  colorSources: readonly (ColorSource | undefined)[];
   triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export const ColorPicker = ({ initialColor, onConfirm, onClose, onReplacePalette, triggerRef }: Props) => {
+export const ColorPicker = ({
+  initialColor, onConfirm, onClose, onReplacePalette, colorSources, triggerRef,
+}: Props) => {
   const [mode, setMode] = useState<Mode>('pick');
   const mainPicker = useSvHuePicker(initialColor);
 
@@ -29,6 +35,14 @@ export const ColorPicker = ({ initialColor, onConfirm, onClose, onReplacePalette
   const [genLocked, setGenLocked] = useState<(string | null)[]>(Array(PALETTE_TARGET_SIZE).fill(null));
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+
+  // Цвета проекта считаются один раз — в момент перехода на вкладку (см.
+  // openProjectTab), а не в рендере: colorSources собирается родителем заново
+  // на каждый рендер, и useMemo по нему сбрасывал бы выбор пользователя.
+  // Пересчёт при каждом возврате на вкладку — то, что нужно: список должен
+  // отражать схему на момент открытия.
+  const [projectColors, setProjectColors] = useState<[string, number][]>([]);
+  const [projectSelected, setProjectSelected] = useState<Set<string>>(new Set());
 
   const [openColorIndex, setOpenColorIndex] = useState<number | null>(null);
   const insertPicker = useSvHuePicker('#ffffff');
@@ -156,10 +170,41 @@ export const ColorPicker = ({ initialColor, onConfirm, onClose, onReplacePalette
     onClose();
   };
 
+  const openProjectTab = () => {
+    const colors = extractProjectColors(colorSources);
+    setProjectColors(colors);
+    // Предвыбраны самые массовые цвета: extractProjectColors отдаёт список уже
+    // отсортированным по количеству бисерин. Это и есть «извлечь палитру» в
+    // один клик — снять лишнее или добрать другое можно тут же.
+    setProjectSelected(new Set(colors.slice(0, PALETTE_TARGET_SIZE).map(([c]) => c)));
+    setMode('project');
+  };
+
+  const toggleProjectColor = (color: string) => {
+    setProjectSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(color)) next.delete(color);
+      else if (next.size < PALETTE_TARGET_SIZE) next.add(color);
+      return next;
+    });
+  };
+
+  // В отличие от Generate, недостающие слоты базовыми цветами НЕ добиваются:
+  // «извлечь палитру из проекта» должно дать ровно цвета проекта — подмешанный
+  // белый/красный/чёрный, которых в схеме нет, противоречил бы названию.
+  // Порядок сохраняем списочный (по убыванию количества) — самый массовый цвет
+  // встаёт первым слотом.
+  const handleUseProjectColors = () => {
+    const colors = projectColors.map(([c]) => c).filter(c => projectSelected.has(c));
+    if (colors.length === 0) return;
+    onReplacePalette(colors);
+    onClose();
+  };
+
   const hueColor = `hsl(${mainPicker.hsv.h}, 100%, 50%)`;
 
   return (
-    <div className={`color-picker ${mode === 'generate' ? 'color-picker--generate' : ''}`} ref={rootRef} role="dialog" aria-label="Pick a color">
+    <div className={`color-picker ${mode !== 'pick' ? 'color-picker--wide' : ''}`} ref={rootRef} role="dialog" aria-label="Pick a color">
       <div className="color-picker__tabs" role="tablist">
         <button
           type="button"
@@ -180,9 +225,21 @@ export const ColorPicker = ({ initialColor, onConfirm, onClose, onReplacePalette
           <Wand2 size={12} />
           Generate
         </button>
+        {/* Пересобирает список цветов при каждом входе на вкладку — см.
+            openProjectTab, поэтому не просто setMode('project'). */}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'project'}
+          className={`color-picker__tab ${mode === 'project' ? 'color-picker__tab--active' : ''}`}
+          onClick={openProjectTab}
+        >
+          <Layers size={12} />
+          Project
+        </button>
       </div>
 
-      {mode === 'pick' ? (
+      {mode === 'pick' && (
         <>
           <div
             ref={mainPicker.svRef}
@@ -218,6 +275,20 @@ export const ColorPicker = ({ initialColor, onConfirm, onClose, onReplacePalette
             />
           </div>
 
+          {/* Прозрачный бисер — «цвет», которым помечают прозрачную бусину.
+              Отдельной кнопкой, а не свотчем в палитре: ряд палитры целиком
+              заменяет генератор Colormind (Replace Palette ниже), и оттуда
+              прозрачный пропадал бы при каждой генерации. Подтверждает выбор
+              сразу, как Confirm — SV-квадрат и hex к нему отношения не имеют. */}
+          <button
+            type="button"
+            className="color-picker__clear"
+            onClick={() => onConfirm(CLEAR_BEAD_COLOR)}
+          >
+            <span className="color-picker__clear-swatch" aria-hidden="true" />
+            Transparent bead
+          </button>
+
           <button
             type="button"
             className="color-picker__confirm"
@@ -226,7 +297,9 @@ export const ColorPicker = ({ initialColor, onConfirm, onClose, onReplacePalette
             Confirm
           </button>
         </>
-      ) : (
+      )}
+
+      {mode === 'generate' && (
         <div className="color-picker__generate">
           <div className="color-picker__generate-buttons">
             <button type="button" onClick={() => generate(2)} disabled={genLoading} className="color-picker__generate-btn">2</button>
@@ -343,6 +416,61 @@ export const ColorPicker = ({ initialColor, onConfirm, onClose, onReplacePalette
                 disabled={genSelected.size === 0}
               >
                 Replace Palette ({Math.max(genSelected.size, PALETTE_TARGET_SIZE)})
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {mode === 'project' && (
+        <div className="color-picker__project">
+          {projectColors.length === 0 ? (
+            <p className="color-picker__project-empty">
+              Nothing is painted yet — color the scheme first, then pick its colors here.
+            </p>
+          ) : (
+            <>
+              <p className="color-picker__project-hint">
+                Colors of this scheme, most used first. Pick up to {PALETTE_TARGET_SIZE}
+                {' '}— {projectSelected.size}/{PALETTE_TARGET_SIZE} selected.
+              </p>
+
+              <ul className="color-picker__project-list">
+                {projectColors.map(([color, count]) => {
+                  const selected = projectSelected.has(color);
+                  // Слоты кончились: невыбранные строки гасим, а не молча
+                  // игнорируем клик — иначе кнопка выглядит сломанной.
+                  const full = !selected && projectSelected.size >= PALETTE_TARGET_SIZE;
+                  return (
+                    <li key={color}>
+                      <button
+                        type="button"
+                        className={`color-picker__project-row ${selected ? 'color-picker__project-row--selected' : ''}`}
+                        onClick={() => toggleProjectColor(color)}
+                        disabled={full}
+                        aria-pressed={selected}
+                        title={full ? `The palette holds ${PALETTE_TARGET_SIZE} colors — unpick one first` : color}
+                      >
+                        <span
+                          className="color-picker__project-swatch"
+                          style={{ '--color-value': color } as React.CSSProperties}
+                          aria-hidden="true"
+                        />
+                        <span className="color-picker__project-hex">{color}</span>
+                        <span className="color-picker__project-count">{count}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <button
+                type="button"
+                className="color-picker__confirm"
+                onClick={handleUseProjectColors}
+                disabled={projectSelected.size === 0}
+              >
+                Replace Palette ({projectSelected.size})
               </button>
             </>
           )}

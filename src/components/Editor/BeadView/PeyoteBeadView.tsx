@@ -1,7 +1,7 @@
 /* FILE: src\components\Editor\BeadView\PeyoteBeadView.tsx */
 import { memo } from 'react';
 import { PEYOTE_THEME } from '../../../config/peyoteTheme';
-import { beadStateClass, isClearBead } from '../../../config/theme';
+import { beadStateClass, effectiveBeadColor } from '../../../config/theme';
 import './BeadView.css';
 
 interface PeyoteBeadViewProps {
@@ -40,7 +40,7 @@ export const PeyoteBeadView = memo(({
   onPointerDown,
   onPointerEnter,
 }: PeyoteBeadViewProps) => {
-  const finalColor = color || defaultColor;
+  const finalColor = effectiveBeadColor(color, defaultColor);
 
   const { cornerRadius, hitboxRadius } = PEYOTE_THEME.sizes;
 
@@ -90,7 +90,7 @@ export const PeyoteBeadView = memo(({
       />
       {previewColor && (
         <rect
-          className={`bead__preview${isClearBead(previewColor) ? ' bead__preview--clear' : ''}`}
+          className="bead__preview"
           x={x - beadWidth / 2}
           y={y - beadHeight / 2}
           width={beadWidth}

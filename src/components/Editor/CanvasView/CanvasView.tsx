@@ -8,7 +8,6 @@ import {
 } from '../../../types/pendant';
 import { Thread, ThreadCommitOptions } from '../../../types/thread';
 import { BeadGrid } from './BeadGrid';
-import { BeadDefs } from '../BeadView/BeadDefs';
 import { WeaveLayer } from '../WeaveLayer/WeaveLayer';
 import { WeaveTool } from '../Header/WeaveControls';
 import { CanvasOrientation } from '../Header/Header.types';
@@ -29,6 +28,7 @@ import { buildBeadPositionIndex } from '../../../utils/beadPositions';
 import { StampPattern } from '../../../utils/stamp';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { exportSchemeToPng } from '../../../utils/exportScheme';
+import type { ShowToast } from '../../../hooks/useToast';
 import { WeaveProgressControls } from '../../../hooks/useWeaveProgress';
 import { useWeaveCanvas } from '../../../hooks/useWeaveCanvas';
 import { useCanvasView } from '../../../hooks/useCanvasView';
@@ -160,6 +160,9 @@ interface CanvasViewProps {
   // Показ рамки «здесь я остановилась»: включается кнопкой Locate в хедере
   // на пару секунд (App), а не горит постоянно.
   weaveShowLast: boolean;
+  // Отказ экспорта PNG нечем показать на самом холсте — уходит тостом
+  // (варианта error), иначе кнопка «Download PNG» молчит и файла нет.
+  showToast: ShowToast;
 }
 
 export const CanvasView = ({
@@ -240,6 +243,7 @@ export const CanvasView = ({
   weaveTool,
   weave,
   weaveShowLast,
+  showToast,
 }: CanvasViewProps) => {
 
   const { offsetX, offsetY } = BEAD_THEME.gridDefaults;
@@ -566,8 +570,9 @@ export const CanvasView = ({
     if (!svg) return;
     exportSchemeToPng(svg, colorStats, totalCount, canvasTheme).catch((err) => {
       console.error('Failed to export scheme:', err);
+      showToast('Export failed', 'error');
     });
-  }, [canvasSvgRef, colorStats, totalCount, canvasTheme]);
+  }, [canvasSvgRef, colorStats, totalCount, canvasTheme, showToast]);
 
   return (
     <CanvasSurface
@@ -606,7 +611,6 @@ export const CanvasView = ({
               viewBox={`0 0 ${canvasView.viewW} ${canvasView.viewH}`}
               className="canvas__svg-content"
             >
-              <BeadDefs />
               {/* Группа трансформации: отделяем визуальный отступ от логики координат.
                   effectiveOffsetX уже (offsetXCollapsed) при свёрнутых
                   span-контролах, шире (offsetX) при развёрнутых — освобождает

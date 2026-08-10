@@ -8,13 +8,19 @@ import { PENDANT_TEMPLATES, PENDANT_TEMPLATES_BY_ID } from '../../data/pendantTe
 import { DrawingTool } from '../../hooks/useDrawing';
 import { AppSettings } from '../../hooks/useAppSettings';
 import { ProjectIO } from '../../hooks/useProjectIO';
+import { ProjectLibrary } from '../../hooks/useProjectLibrary';
+import { ShowToast } from '../../hooks/useToast';
 import { WeaveModePanel } from '../../hooks/useWeaveModePanel';
 import { SilyankaProject } from '../../hooks/useSilyankaProject';
 import { exportProject } from '../../utils/projectFile';
+import { collectColorSources } from '../../utils/projectPalette';
 
 interface SilyankaEditorProps {
   settings: AppSettings;
   projectIO: ProjectIO;
+  // Тост живёт в App — сюда проходит транзитом только ради отказа экспорта
+  // PNG на холсте (см. CanvasView.handleExport).
+  showToast: ShowToast;
   silyanka: SilyankaProject;
   setSilyankaTool: (tool: DrawingTool) => void;
   cancelStampPattern: () => void;
@@ -22,15 +28,18 @@ interface SilyankaEditorProps {
   onTogglePendantsSidebar: () => void;
   onToggleGridSidebar: () => void;
   weavePanel: WeaveModePanel;
+  // Один экземпляр на приложение (создаётся в App.tsx) — делится между
+  // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
+  projectLibrary: ProjectLibrary;
   projectGalleryOpen: boolean;
   onOpenProjectGallery: () => void;
   onCloseProjectGallery: () => void;
 }
 
 export const SilyankaEditor = ({
-  settings, projectIO, silyanka, setSilyankaTool, cancelStampPattern,
+  settings, projectIO, showToast, silyanka, setSilyankaTool, cancelStampPattern,
   activeSidebar, onTogglePendantsSidebar, onToggleGridSidebar, weavePanel,
-  projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
+  projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: SilyankaEditorProps) => (
   <>
     <Header
@@ -38,6 +47,11 @@ export const SilyankaEditor = ({
       onTechniqueChange={settings.setTechnique}
       palette={settings.palette}
       onPaletteChange={settings.setPalette}
+      colorSources={collectColorSources(
+        silyanka.drawingControls.designMap,
+        silyanka.pendantPlacements, silyanka.pendantChains,
+        silyanka.decorTailPlacements, silyanka.teeth,
+      )}
       activeColor={silyanka.drawingControls.activeColor}
       setActiveColor={silyanka.drawingControls.setActiveColor}
       activeTool={silyanka.drawingControls.activeTool}
@@ -49,6 +63,7 @@ export const SilyankaEditor = ({
       onLoadProject={projectIO.handleLoadProject}
       onShareProject={projectIO.handleShareProject}
       onOpenProjectGallery={onOpenProjectGallery}
+      projectLibrary={projectLibrary}
       zoom={settings.zoom}
       onZoomChange={settings.updateZoom}
       onSetZoom={settings.setZoomAbsolute}
@@ -204,6 +219,7 @@ export const SilyankaEditor = ({
       weaveTool={weavePanel.weaveTool}
       weave={silyanka.weave}
       weaveShowLast={weavePanel.weaveShowLast}
+      showToast={showToast}
       {...silyanka.drawingControls}
     />
 
@@ -264,8 +280,7 @@ export const SilyankaEditor = ({
     <ProjectGallery
       open={projectGalleryOpen}
       onClose={onCloseProjectGallery}
-      technique="silyanka"
-      canvasTheme={settings.canvasTheme}
+      library={projectLibrary}
     />
   </>
 );

@@ -1,23 +1,8 @@
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Palette, Replace } from 'lucide-react';
-import { CLEAR_BEAD_COLOR } from '../../../config/theme';
 import './CanvasStats.css';
 
-// Восьмизначный вариант — прозрачный бисер (CLEAR_BEAD_COLOR): он такой же
-// выбранный цвет, как и любой другой, поэтому его строку тоже можно заменить
-// текущим цветом. Всё, что под этот шаблон НЕ подходит — 'transparent' из
-// defaultColorFor, то есть незакрашенные бусины: заменять «пустоту» нечем.
-const HEX_RE = /^#([0-9a-f]{6}|[0-9a-f]{8})$/i;
-
-// Подпись строки сводки. «Не закрашено» и «прозрачный бисер» — две разные
-// строки, обе без собственного видимого цвета в свотче; без явной подписи и
-// разного вида индикатора они выглядели бы одинаковыми пустыми кружками, и
-// спецификацию материалов нельзя было бы прочитать.
-const labelFor = (color: string, isClear: boolean, isUnfilled: boolean): string => {
-  if (isClear) return 'transparent';
-  if (isUnfilled) return 'not filled';
-  return color;
-};
+const HEX_RE = /^#[0-9a-f]{6}$/i;
 
 interface CanvasStatsProps {
   totalCount: number;
@@ -99,12 +84,11 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
           <ul className="stats__list">
             {colorStats.map(([color, count]) => {
               const isReplaceable = HEX_RE.test(color);
-              const isClear = color === CLEAR_BEAD_COLOR;
-              const isUnfilled = !isReplaceable;
-              const label = labelFor(color, isClear, isUnfilled);
-              const indicatorModifier = isClear
-                ? ' stats__indicator--clear'
-                : isUnfilled ? ' stats__indicator--empty' : '';
+              // Единственная не-hex строка сводки — 'transparent': и
+              // незакрашенные бисерины, и покрашенные прозрачным (это одно и
+              // то же, см. effectiveBeadColor). Залить её свотч цветом нельзя,
+              // поэтому вместо невидимого кружка — пунктирное кольцо.
+              const isTransparent = !isReplaceable;
               const isHighlighted = highlightedColor === color;
               const isActiveColor = isReplaceable && color.toLowerCase() === activeColor.toLowerCase();
               return (
@@ -117,11 +101,11 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
                     className="stats__indicator-btn"
                     onClick={() => onToggleHighlight(color)}
                     aria-pressed={isHighlighted}
-                    aria-label={`Highlight beads of color ${label}`}
-                    title={`${label} — highlight on canvas`}
+                    aria-label={`Highlight beads of color ${color}`}
+                    title={`${color} — highlight on canvas`}
                   >
                     <span
-                      className={`stats__indicator${indicatorModifier}`}
+                      className={`stats__indicator${isTransparent ? ' stats__indicator--transparent' : ''}`}
                       style={{ backgroundColor: color }}
                     />
                   </button>
@@ -133,7 +117,7 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
                       onClick={() => onReplaceColor(color)}
                       disabled={isActiveColor}
                       title={isActiveColor ? 'This is already the current color' : `Replace with current color (${activeColor})`}
-                      aria-label={`Replace color ${label} with the currently selected one`}
+                      aria-label={`Replace color ${color} with the currently selected one`}
                     >
                       <Replace size={11} aria-hidden="true" />
                     </button>

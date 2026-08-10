@@ -37,6 +37,126 @@
   display: none;
 }
 
+/* --- Имя активного проекта и статус сохранения (ProjectStatus.tsx) ----------
+   Самый левый блок хедера, левее переключателя техники — то же место, что
+   занимает имя файла в редакторах вообще, и одинаковое в обоих режимах
+   (рисование/плетение), как и остальной левый край. Двухэтажная подпись
+   (имя сверху, статус снизу) укладывается в существующую высоту хедера
+   (--palette-height) тем же приёмом, что блок ZOOM и .weave-progress. */
+.project-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.project-status__open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 11rem;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.project-status__open:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* Точка-индикатор: единственное, что остаётся от блока на ≤479.98px, поэтому
+   состояние читается по цвету, а не только по подписи. Цвета — те же три,
+   что уже несут этот смысл во всём приложении: циановый акцент = всё хорошо,
+   #fbbf24 = требует внимания (как .project-gallery__warning), слейт = никакой
+   информации (черновик вне библиотеки). */
+.project-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #64748b;
+  flex-shrink: 0;
+}
+.project-status__dot--saved { background: #22d3ee; }
+/* Полупрозрачный тот же циан, а не третий цвет: «сейчас догонит» — это
+   переходная фаза сохранённого состояния, а не отдельная тревога. */
+.project-status__dot--saving { background: #22d3ee; opacity: 0.45; }
+.project-status__dot--unsaved { background: #fbbf24; }
+/* Отказ хранилища — тот же красный, что у danger-действий хедера и тоста
+   ошибки (#f87171): это уже не «пока не сохранено», а «сохранить не вышло». */
+.project-status__dot--failed { background: #f87171; }
+
+.project-status__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.project-status__name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e3f3ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-status__state {
+  font-size: 9px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Появляется только в состоянии unsaved (автосейв у проекта выключен —
+   состояние по умолчанию), поэтому красится в тот же янтарный, что и точка
+   рядом: кнопка и индикатор — одно сообщение, а не два соседних элемента. */
+.project-status__save {
+  padding: 4px 7px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 7px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.project-status__save:hover { background: rgba(251, 191, 36, 0.22); }
+.project-status__save:disabled { opacity: 0.5; cursor: default; }
+
+/* Ширина хедера — дефицитный ресурс на каждом брейкпоинте (см. комментарии к
+   медиа-запросам ниже: на ≤1024px сумма блоков упирается в ~727px, а на
+   ≤767.98px Zoom и Save/Load/Share уже уехали в overflow-меню). Поэтому блок
+   проекта отдаёт своё место ступенями, а не пытается уместить две строки
+   везде: сначала уходит подпись статуса, затем и имя. Точка-индикатор
+   остаётся всегда — состояние продолжает читаться по цвету, а имя и статус
+   лежат в title/aria-label и в самой галерее, которую открывает тот же клик. */
+@media (max-width: 1279.98px) {
+  .project-status__state { display: none; }
+  .project-status__open { max-width: 8rem; padding: 3px 5px; }
+}
+
+/* Ровно та же ширина, с которой .header__nav начинает сжимать всё остальное
+   (см. большой блок ниже) — на ней имя уже не окупает своих ~110px. Кнопка
+   держит 22px, как .grid-controls__btn на узких экранах: по 7px-точке
+   пальцем не попасть. */
+@media (max-width: 1024px) {
+  .project-status__text { display: none; }
+  .project-status__open {
+    max-width: none;
+    width: 22px;
+    height: 22px;
+    justify-content: center;
+    padding: 0;
+  }
+}
+
 /* Разделитель между палитрой и инструментами — нужен только на ≤767.98px,
    где эти две группы визуально слипаются (см. брейкпоинт ниже). На более
    широких экранах между ними уже достаточно "воздуха" за счёт других отступов. */
@@ -127,21 +247,6 @@
 }
 .palette__color:hover {
   transform: scale(1.15);
-}
-
-/* Прозрачный бисер — тот же визуальный язык, что у .bead--clear на холсте
-   (BeadView.css): блик в левом верхнем углу по едва заметной заливке плюс
-   заметное кольцо. Именно кольцо и блик отличают его от пустого места —
-   свотч без них читался бы как «кнопка без цвета». */
-.palette__color--clear {
-  background-color: transparent;
-  background-image: radial-gradient(
-    circle at 32% 28%,
-    rgba(255, 255, 255, 0.85) 0%,
-    rgba(255, 255, 255, 0.28) 45%,
-    rgba(255, 255, 255, 0.08) 100%
-  );
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .palette__color--active {
   transform: scale(1.2);
@@ -673,6 +778,12 @@
     display: block;
   }
 
+  /* Вторая строка статуса уходит в title/aria-label: на этой ширине место
+     дороже неё, а на вопрос «где я» отвечает само имя, которое остаётся.
+     Состояние при этом не теряется — его продолжает нести цвет точки. */
+  .project-status__state { display: none; }
+  .project-status__open { max-width: 6.5rem; }
+
   .header__overflow { display: block; }
 
   .header__overflow-mobile-extra {
@@ -756,6 +867,20 @@
     gap: 0.3rem;
     padding: 0.3rem 0.35rem;
   }
+
+  /* От блока проекта остаётся одна точка-индикатор: цвет продолжает нести
+     состояние, имя доступно по тапу (title/aria-label) и в самой галерее,
+     которую этот тап и открывает. Кнопка держит 22px, как .grid-controls__btn
+     на этой ширине, — по 7px-точке пальцем не попасть. */
+  .project-status__text { display: none; }
+  .project-status__open {
+    max-width: none;
+    width: 22px;
+    height: 22px;
+    justify-content: center;
+    padding: 0;
+  }
+  .project-status__save { padding: 3px 5px; }
 
   /* Палитра сворачивается в иконку; сама палитра становится попапом,
      который перекрывает соседние элементы хедера, а не толкает их. */

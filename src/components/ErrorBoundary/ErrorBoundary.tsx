@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { clearOwnStorage } from '../../utils/projectFile';
+import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
 import './ErrorBoundary.css';
 
 interface ErrorBoundaryProps {
@@ -9,14 +10,15 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  confirmingReset: boolean;
 }
 
 // componentDidCatch ловит ошибки рендера только в классовых компонентах —
 // хук-эквивалента у React нет.
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  override state: ErrorBoundaryState = { hasError: false };
+  override state: ErrorBoundaryState = { hasError: false, confirmingReset: false };
 
-  static getDerivedStateFromError(): ErrorBoundaryState {
+  static getDerivedStateFromError(): Pick<ErrorBoundaryState, 'hasError'> {
     return { hasError: true };
   }
 
@@ -32,12 +34,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   // испорченными данными в localStorage (например, некорректным размером
   // сетки): обычная перезагрузка в этом случае приводит к той же ошибке по
   // кругу, и единственный выход — стереть свои данные и начать заново.
+  //
+  // Подтверждение — тот же ConfirmDialog, что и везде, но состояние своё:
+  // useConfirm тут не применим, экран падения рендерится вместо рухнувшего
+  // дерева, и хуки этого дерева уже размонтированы.
   private handleReset = () => {
-    if (!window.confirm('This will permanently delete your saved design and progress. Continue?')) {
-      return;
-    }
+    this.setState({ confirmingReset: true });
+  };
+
+  private handleResetConfirmed = () => {
     clearOwnStorage();
     window.location.reload();
+  };
+
+  private handleResetCancelled = () => {
+    this.setState({ confirmingReset: false });
   };
 
   override render() {
@@ -62,6 +73,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         >
           Reset data and start over
         </button>
+
+        {this.state.confirmingReset && (
+          <ConfirmDialog
+            title="Reset data and start over?"
+            message="This will permanently delete your saved design and progress."
+            confirmLabel="Reset"
+            danger
+            onConfirm={this.handleResetConfirmed}
+            onCancel={this.handleResetCancelled}
+          />
+        )}
       </div>
     );
   }

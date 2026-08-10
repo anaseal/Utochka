@@ -1,7 +1,7 @@
 /* FILE: src\components\Editor\BeadView\BeadView.tsx */
 import { memo } from 'react';
 import { BeadType } from '../../../types/bead';
-import { BEAD_THEME, beadStateClass, isClearBead } from '../../../config/theme'; // Импортируем тему
+import { BEAD_THEME, beadStateClass, effectiveBeadColor } from '../../../config/theme'; // Импортируем тему
 import './BeadView.css';
 
 interface BeadViewProps {
@@ -46,7 +46,7 @@ export const BeadView = memo(({
   onPointerEnter
 }: BeadViewProps) => {
   const isNode = type === 'NODE';
-  const finalColor = color || defaultColor;
+  const finalColor = effectiveBeadColor(color, defaultColor);
 
   const { nodeRadius, spanRadius, hitboxRadius } = BEAD_THEME.sizes;
 
@@ -111,7 +111,7 @@ export const BeadView = memo(({
       )}
       {previewColor && (
         <circle
-          className={`bead__preview${isClearBead(previewColor) ? ' bead__preview--clear' : ''}`}
+          className="bead__preview"
           cx={x}
           cy={y}
           r={isNode ? nodeRadius : spanRadius}

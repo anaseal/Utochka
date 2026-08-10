@@ -1,7 +1,7 @@
 /* FILE: src\components\Editor\BeadView\LoomBeadView.tsx */
 import { memo } from 'react';
 import { LOOM_THEME } from '../../../config/loomTheme';
-import { beadStateClass, isClearBead } from '../../../config/theme';
+import { beadStateClass, effectiveBeadColor } from '../../../config/theme';
 import './BeadView.css';
 
 interface LoomBeadViewProps {
@@ -41,7 +41,7 @@ export const LoomBeadView = memo(({
   onPointerDown,
   onPointerEnter,
 }: LoomBeadViewProps) => {
-  const finalColor = color || defaultColor;
+  const finalColor = effectiveBeadColor(color, defaultColor);
 
   const { cornerRadius, hitboxRadius } = LOOM_THEME.sizes;
 
@@ -91,7 +91,7 @@ export const LoomBeadView = memo(({
       />
       {previewColor && (
         <rect
-          className={`bead__preview${isClearBead(previewColor) ? ' bead__preview--clear' : ''}`}
+          className="bead__preview"
           x={x - beadWidth / 2}
           y={y - beadHeight / 2}
           width={beadWidth}
