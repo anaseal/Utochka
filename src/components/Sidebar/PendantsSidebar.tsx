@@ -16,7 +16,6 @@ import './Sidebar.css';
 import './PendantsSidebar.css';
 
 interface PendantsSidebarProps {
-  open: boolean;
   templates: PendantTemplate[];
   placements: PendantPlacement[];
   onHoveredPendantAnchorChange: (anchor: PendantAnchor | null) => void;
@@ -46,7 +45,7 @@ interface PendantsSidebarProps {
   onRemoveDecorTail: (placementId: string) => void;
   onClearDecorTails: () => void;
   onHoveredDecorTailColChange: (col: number | null) => void;
-  // Bottom Chain теперь включается/выключается в панели «Сетка» (GridSidebar) —
+  // Bottom Chain теперь включается/выключается на вкладке «Grid» (GridSidebar) —
   // здесь только читаем флаг, чтобы блокировать карточки подвесок (взаимоисключение,
   // см. spec.md, «Взаимоисключение с Bottom Chain»).
   bottomEdgeEnabled: boolean;
@@ -66,7 +65,7 @@ interface PendantsSidebarProps {
   toothPendingStart: number | null;
   onRemoveTooth: (placementId: string) => void;
   onClearTeeth: () => void;
-  // Дыра (GridSidebar раньше — теперь здесь, среди остальных инструментов
+  // Дыра (вкладка «Grid» раньше — теперь здесь, среди остальных инструментов
   // редактирования содержимого, а не среди чистой геометрии сетки).
   holeToolActive: boolean;
   onToggleHoleTool: () => void;
@@ -78,8 +77,11 @@ interface PendantsSidebarProps {
   onConfirmPendingDelete: () => void;
 }
 
+// Содержимое вкладки «Decor» правой панели — оболочку <aside> и полосу
+// вкладок даёт EditorSidebar.tsx (см. тот же комментарий у GridSidebar).
+// Есть только у силянки: подвесок, цепочек, зубцов и декор-хвостов у
+// RAW/Peyote/Loom нет вовсе.
 export const PendantsSidebar = ({
-  open,
   templates,
   placements,
   onHoveredPendantAnchorChange,
@@ -228,11 +230,7 @@ export const PendantsSidebar = ({
   }, [onClearAll, onClearDecor, onClearChains, onClearDecorTails, onClearTeeth, onClearDeletedBeads]);
 
   return (
-    <aside className={`sidebar${open ? ' sidebar--open' : ''}`}>
-      <div className="sidebar__header">
-        <h2 className="sidebar__title">Pendants &amp; Decor</h2>
-      </div>
-
+    <>
       <div className="sidebar__body">
         <PendantsCatalogSection
           templates={templates}
@@ -311,6 +309,6 @@ export const PendantsSidebar = ({
             : 'Drag a pendant or a tail onto a bottom-row node, or a band onto a row gap'}
         </p>
       </div>
-    </aside>
+    </>
   );
 };

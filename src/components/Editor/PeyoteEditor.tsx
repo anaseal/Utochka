@@ -1,5 +1,6 @@
 /* src/components/Editor/PeyoteEditor.tsx */
 import { Header } from './Header/Header';
+import { EditorSidebar } from '../Sidebar/EditorSidebar';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { PeyoteCanvasView } from './CanvasView/PeyoteCanvasView';
 import { ProjectGallery } from './ProjectGallery/ProjectGallery';
@@ -21,8 +22,8 @@ interface PeyoteEditorProps {
   peyote: PeyoteProject;
   setPeyoteTool: (tool: DrawingTool) => void;
   cancelPeyoteStampPattern: () => void;
-  activeSidebar: 'pendants' | 'grid' | null;
-  onToggleGridSidebar: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
   weavePanel: WeaveModePanel;
   // Один экземпляр на приложение (создаётся в App.tsx) — делится между
   // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
@@ -32,13 +33,13 @@ interface PeyoteEditorProps {
   onCloseProjectGallery: () => void;
 }
 
-// Peyote — третья техника: без панели «Pendants & Decor» (см. spec.md,
+// Peyote — третья техника: без вкладки «Decor» в правой панели (см. spec.md,
 // «Peyote»), поэтому Editor заметно проще SilyankaEditor. Режим плетения
 // подключён так же, как у SilyankaEditor/CrossWeaveEditor/LoomEditor —
 // сегмент здесь целая колонка, не ряд (см. usePeyoteProject.ts, weaveSegment.ts).
 export const PeyoteEditor = ({
   settings, projectIO, showToast, peyote, setPeyoteTool, cancelPeyoteStampPattern,
-  activeSidebar, onToggleGridSidebar, weavePanel,
+  sidebarOpen, onToggleSidebar, weavePanel,
   projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: PeyoteEditorProps) => (
   <>
@@ -72,8 +73,8 @@ export const PeyoteEditor = ({
       onOpenWelcome={settings.openWelcome}
       threads={[]}
       onClearAllThreads={() => {}}
-      gridSidebarOpen={activeSidebar === 'grid'}
-      onToggleGridSidebar={onToggleGridSidebar}
+      sidebarOpen={sidebarOpen}
+      onToggleSidebar={onToggleSidebar}
       weaveMode={weavePanel.weaveMode}
       onToggleWeaveMode={weavePanel.toggleWeaveMode}
       weaveControls={weavePanel.weaveControls}
@@ -88,22 +89,27 @@ export const PeyoteEditor = ({
       }}
     />
 
-    <GridSidebar
-      technique="peyote"
-      open={activeSidebar === 'grid'}
-      peyoteProps={{
-        gridWidth: peyote.gridSize.width,
-        gridHeight: peyote.gridSize.height,
-        spacing: peyote.gridSize.pitchX,
-        onWidthChange: (delta) => peyote.updateDimension('width', delta),
-        onHeightChange: (delta) => peyote.updateDimension('height', delta),
-        onSpacingChange: peyote.updateSpacing,
-        onSetWidth: peyote.setWidthAbsolute,
-        onSetHeight: peyote.setHeightAbsolute,
-        onSetSpacing: peyote.setSpacingAbsolute,
-        onResetAll: peyote.resetGridAll,
-        resetAllDisabled: peyote.gridIsDefault,
-      }}
+    {/* Без слота decor — панель одновкладочная (см. EditorSidebar.tsx). */}
+    <EditorSidebar
+      open={sidebarOpen}
+      grid={(
+        <GridSidebar
+          technique="peyote"
+          peyoteProps={{
+            gridWidth: peyote.gridSize.width,
+            gridHeight: peyote.gridSize.height,
+            spacing: peyote.gridSize.pitchX,
+            onWidthChange: (delta) => peyote.updateDimension('width', delta),
+            onHeightChange: (delta) => peyote.updateDimension('height', delta),
+            onSpacingChange: peyote.updateSpacing,
+            onSetWidth: peyote.setWidthAbsolute,
+            onSetHeight: peyote.setHeightAbsolute,
+            onSetSpacing: peyote.setSpacingAbsolute,
+            onResetAll: peyote.resetGridAll,
+            resetAllDisabled: peyote.gridIsDefault,
+          }}
+        />
+      )}
     />
 
     <PeyoteCanvasView

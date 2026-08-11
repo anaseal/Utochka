@@ -22,7 +22,7 @@ export const Header = (props: HeaderProps) => {
     technique, onTechniqueChange,
     referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome,
     threads, onClearAllThreads,
-    gridSidebarOpen, onToggleGridSidebar,
+    sidebarOpen, onToggleSidebar,
     weaveMode, onToggleWeaveMode, weaveControls, canvasView,
   } = props;
 
@@ -49,7 +49,16 @@ export const Header = (props: HeaderProps) => {
 
         <div className="header__divider" />
 
-        <TechniqueMenu technique={technique} onTechniqueChange={onTechniqueChange} />
+        {/* Кроме выбора техники, на ≤479.98px это же меню держит правую панель
+            (Decor/Grid) — её кнопка на этой ширине из строки убрана
+            (см. Header.css, .technique-menu__narrow-extra). */}
+        <TechniqueMenu
+          technique={technique}
+          onTechniqueChange={onTechniqueChange}
+          weaveMode={weaveMode}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={onToggleSidebar}
+        />
 
         {/* Вход в режим плетения — рядом с выбором техники, а не среди иконок
             панелей справа. Причины: это не панель, а мод (техника отвечает
@@ -65,7 +74,7 @@ export const Header = (props: HeaderProps) => {
         <div className="header__divider" />
         <button
           onClick={onToggleWeaveMode}
-          className={`tool-btn tool-btn--lg ${weaveMode ? 'tool-btn--active' : ''}`}
+          className={`tool-btn tool-btn--lg tool-btn--mode ${weaveMode ? 'tool-btn--active' : ''}`}
           title={weaveMode ? 'Exit weave mode' : 'Weave mode: mark your progress as you go'}
           aria-pressed={weaveMode}
         >
@@ -150,6 +159,10 @@ export const Header = (props: HeaderProps) => {
           weaveMode={weaveMode}
           technique={technique}
           weaveControls={weaveControls}
+          canvasView={canvasView}
+          referenceWindowOpen={referenceWindowOpen}
+          onToggleReferenceWindow={onToggleReferenceWindow}
+          onClearAll={onClearAll}
         />
 
         {/* header__divider--before-end: на ≤767.98px в режиме плетения весь
@@ -173,9 +186,9 @@ export const Header = (props: HeaderProps) => {
           referenceWindowOpen={referenceWindowOpen}
           onToggleReferenceWindow={onToggleReferenceWindow}
           onOpenWelcome={onOpenWelcome}
-          silyankaProps={silyankaProps}
-          gridSidebarOpen={gridSidebarOpen}
-          onToggleGridSidebar={onToggleGridSidebar}
+          technique={technique}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={onToggleSidebar}
         />
       </nav>
     </header>

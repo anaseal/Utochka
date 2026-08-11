@@ -1,5 +1,6 @@
 /* src/components/Editor/CrossWeaveEditor.tsx */
 import { Header } from './Header/Header';
+import { EditorSidebar } from '../Sidebar/EditorSidebar';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { CrossWeaveCanvasView } from './CanvasView/CrossWeaveCanvasView';
 import { ProjectGallery } from './ProjectGallery/ProjectGallery';
@@ -18,8 +19,8 @@ interface CrossWeaveEditorProps {
   // PNG на холсте (см. CrossWeaveCanvasView.handleExport).
   showToast: ShowToast;
   crossWeave: CrossWeaveProject;
-  activeSidebar: 'pendants' | 'grid' | null;
-  onToggleGridSidebar: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
   weavePanel: WeaveModePanel;
   // Один экземпляр на приложение (создаётся в App.tsx) — делится между
   // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
@@ -30,7 +31,7 @@ interface CrossWeaveEditorProps {
 }
 
 export const CrossWeaveEditor = ({
-  settings, projectIO, showToast, crossWeave, activeSidebar, onToggleGridSidebar, weavePanel,
+  settings, projectIO, showToast, crossWeave, sidebarOpen, onToggleSidebar, weavePanel,
   projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: CrossWeaveEditorProps) => (
   <>
@@ -64,8 +65,8 @@ export const CrossWeaveEditor = ({
       onOpenWelcome={settings.openWelcome}
       threads={crossWeave.threads}
       onClearAllThreads={crossWeave.threadControls.clearAllThreads}
-      gridSidebarOpen={activeSidebar === 'grid'}
-      onToggleGridSidebar={onToggleGridSidebar}
+      sidebarOpen={sidebarOpen}
+      onToggleSidebar={onToggleSidebar}
       weaveMode={weavePanel.weaveMode}
       onToggleWeaveMode={weavePanel.toggleWeaveMode}
       weaveControls={weavePanel.weaveControls}
@@ -84,22 +85,27 @@ export const CrossWeaveEditor = ({
       }}
     />
 
-    <GridSidebar
-      technique="crossWeave"
-      open={activeSidebar === 'grid'}
-      crossWeaveProps={{
-        gridWidth: crossWeave.gridSize.width,
-        gridHeight: crossWeave.gridSize.height,
-        spacing: crossWeave.gridSize.pitchX,
-        onWidthChange: (delta) => crossWeave.updateDimension('width', delta),
-        onHeightChange: (delta) => crossWeave.updateDimension('height', delta),
-        onSpacingChange: crossWeave.updateSpacing,
-        onSetWidth: crossWeave.setWidthAbsolute,
-        onSetHeight: crossWeave.setHeightAbsolute,
-        onSetSpacing: crossWeave.setSpacingAbsolute,
-        onResetAll: crossWeave.resetGridAll,
-        resetAllDisabled: crossWeave.gridIsDefault,
-      }}
+    {/* Без слота decor — панель одновкладочная (см. EditorSidebar.tsx). */}
+    <EditorSidebar
+      open={sidebarOpen}
+      grid={(
+        <GridSidebar
+          technique="crossWeave"
+          crossWeaveProps={{
+            gridWidth: crossWeave.gridSize.width,
+            gridHeight: crossWeave.gridSize.height,
+            spacing: crossWeave.gridSize.pitchX,
+            onWidthChange: (delta) => crossWeave.updateDimension('width', delta),
+            onHeightChange: (delta) => crossWeave.updateDimension('height', delta),
+            onSpacingChange: crossWeave.updateSpacing,
+            onSetWidth: crossWeave.setWidthAbsolute,
+            onSetHeight: crossWeave.setHeightAbsolute,
+            onSetSpacing: crossWeave.setSpacingAbsolute,
+            onResetAll: crossWeave.resetGridAll,
+            resetAllDisabled: crossWeave.gridIsDefault,
+          }}
+        />
+      )}
     />
 
     <CrossWeaveCanvasView

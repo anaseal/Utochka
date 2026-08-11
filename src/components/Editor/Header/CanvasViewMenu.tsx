@@ -1,5 +1,6 @@
-import { RotateCw, FlipHorizontal, MoveHorizontal, Check } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
 import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
+import { CanvasViewOptions } from './CanvasViewOptions';
 import { CanvasOrientation } from './Header.types';
 
 // Вид полотна (поворот на 90° и зеркальное отражение) — не инструмент
@@ -8,6 +9,10 @@ import { CanvasOrientation } from './Header.types';
 // всегда, в любой технике и в любом режиме, но живёт в одном месте, а не
 // дублируется. Единая кнопка раскрывает мини-попап с двумя независимыми
 // тумблерами — та же визуальная схема, что и у Mirror Mode (MirrorMenu).
+// Собственный класс canvas-view-menu поверх общего mirror-menu — зацепка для
+// ≤479.98px, где эта кнопка из строки убрана, а её пункты (CanvasViewOptions)
+// показывает меню «Функции»; по одному .mirror-menu отличить её от кнопки
+// зеркала было бы нельзя.
 export const CanvasViewMenu = ({
   orientation, onToggleOrientation, flipped, onToggleFlip,
 }: {
@@ -20,7 +25,7 @@ export const CanvasViewMenu = ({
   const active = orientation === 'horizontal' || flipped;
 
   return (
-    <div className="mirror-menu" ref={ref}>
+    <div className="mirror-menu canvas-view-menu" ref={ref}>
       <button
         ref={triggerRef}
         onClick={() => setOpen(o => !o)}
@@ -34,26 +39,12 @@ export const CanvasViewMenu = ({
 
       {open && (
         <div className="mirror-menu__panel" role="menu">
-          <button
-            onClick={onToggleOrientation}
-            className={`mirror-menu__item ${orientation === 'horizontal' ? 'mirror-menu__item--active' : ''}`}
-            role="menuitemcheckbox"
-            aria-checked={orientation === 'horizontal'}
-          >
-            <MoveHorizontal size={12} className="mirror-menu__item-icon" />
-            <span className="mirror-menu__item-label">Lay horizontally</span>
-            {orientation === 'horizontal' && <Check size={12} className="mirror-menu__item-check" />}
-          </button>
-          <button
-            onClick={onToggleFlip}
-            className={`mirror-menu__item ${flipped ? 'mirror-menu__item--active' : ''}`}
-            role="menuitemcheckbox"
-            aria-checked={flipped}
-          >
-            <FlipHorizontal size={12} className="mirror-menu__item-icon" />
-            <span className="mirror-menu__item-label">Flip</span>
-            {flipped && <Check size={12} className="mirror-menu__item-check" />}
-          </button>
+          <CanvasViewOptions
+            orientation={orientation}
+            onToggleOrientation={onToggleOrientation}
+            flipped={flipped}
+            onToggleFlip={onToggleFlip}
+          />
         </div>
       )}
     </div>

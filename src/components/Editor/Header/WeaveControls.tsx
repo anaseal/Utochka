@@ -76,7 +76,9 @@ export const WeaveControls = ({
 
       <div className="header__divider" />
 
-      {/* Прогресс — как блок Zoom: подпись сверху, значение под ней. */}
+      {/* Прогресс — как блок Zoom: подпись сверху, значение под ней; на
+          ≤479.98px подпись убирается и блок ужимается в одну строку в две
+          колонки сетки хедера (Header.css). */}
       <div className="grid-controls grid-controls--vertical-zoom">
         <div className="grid-controls__group weave-progress">
           <span className="grid-controls__label">Done</span>

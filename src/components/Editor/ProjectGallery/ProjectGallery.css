@@ -1,3 +1,7 @@
+/* z-index 170 — нижняя из трёх модалок (галерея → приветственное окно 180 →
+   ConfirmDialog 190), но выше хедера (100) и его попапов (110–140): хедер
+   зафиксирован сверху и при прежних 70 рисовался поверх затемнения, пряча
+   верх панели на узких экранах. Подробнее — WelcomeDialog.css. */
 .project-gallery__backdrop {
   position: fixed;
   inset: 0;
@@ -5,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 70;
+  z-index: 170;
   padding: 24px;
 }
 
@@ -14,6 +18,10 @@
   flex-direction: column;
   width: min(720px, 100%);
   max-height: 85vh;
+  /* dvh вместо vh — та же причина, что у .welcome (см. WelcomeDialog.css):
+     затемнение занимает реально видимую область, а 85vh считаются от высоты
+     без адресной строки, и панель переполняла контейнер сверху и снизу. */
+  max-height: 85dvh;
   background: var(--color-panel);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;

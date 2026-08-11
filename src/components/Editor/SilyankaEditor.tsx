@@ -1,5 +1,6 @@
 /* src/components/Editor/SilyankaEditor.tsx */
 import { Header } from './Header/Header';
+import { EditorSidebar, SidebarTab } from '../Sidebar/EditorSidebar';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { CanvasView } from './CanvasView/CanvasView';
 import { PendantsSidebar } from '../Sidebar/PendantsSidebar';
@@ -24,9 +25,10 @@ interface SilyankaEditorProps {
   silyanka: SilyankaProject;
   setSilyankaTool: (tool: DrawingTool) => void;
   cancelStampPattern: () => void;
-  activeSidebar: 'pendants' | 'grid' | null;
-  onTogglePendantsSidebar: () => void;
-  onToggleGridSidebar: () => void;
+  sidebarOpen: boolean;
+  sidebarTab: SidebarTab;
+  onToggleSidebar: () => void;
+  onSidebarTabChange: (tab: SidebarTab) => void;
   weavePanel: WeaveModePanel;
   // Один экземпляр на приложение (создаётся в App.tsx) — делится между
   // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
@@ -38,7 +40,7 @@ interface SilyankaEditorProps {
 
 export const SilyankaEditor = ({
   settings, projectIO, showToast, silyanka, setSilyankaTool, cancelStampPattern,
-  activeSidebar, onTogglePendantsSidebar, onToggleGridSidebar, weavePanel,
+  sidebarOpen, sidebarTab, onToggleSidebar, onSidebarTabChange, weavePanel,
   projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: SilyankaEditorProps) => (
   <>
@@ -76,8 +78,8 @@ export const SilyankaEditor = ({
       onOpenWelcome={settings.openWelcome}
       threads={silyanka.threads}
       onClearAllThreads={silyanka.threadControls.clearAllThreads}
-      gridSidebarOpen={activeSidebar === 'grid'}
-      onToggleGridSidebar={onToggleGridSidebar}
+      sidebarOpen={sidebarOpen}
+      onToggleSidebar={onToggleSidebar}
       weaveMode={weavePanel.weaveMode}
       onToggleWeaveMode={weavePanel.toggleWeaveMode}
       weaveControls={weavePanel.weaveControls}
@@ -87,8 +89,6 @@ export const SilyankaEditor = ({
         setMirrorMode: silyanka.setMirrorMode,
         onMakeSymmetric: silyanka.makeSymmetric,
         canMakeSymmetric: Object.keys(silyanka.drawingControls.designMap).length > 0,
-        sidebarOpen: activeSidebar === 'pendants',
-        onToggleSidebar: onTogglePendantsSidebar,
         hasStampPattern: silyanka.stampPattern !== null,
         stampAnchorEdge: silyanka.stampAnchorEdge,
         onToggleStampAnchorEdge: silyanka.toggleStampAnchorEdge,
@@ -100,55 +100,118 @@ export const SilyankaEditor = ({
       }}
     />
 
-    <GridSidebar
-      technique="silyanka"
-      open={activeSidebar === 'grid'}
-      silyankaProps={{
-        // Линейка на холсте — источник правды: чётный ряд её колонок на 1 меньше
-        // gridSize.width, а ряд её строк на 1 больше gridSize.height (см. spec.md,
-        // «Ширина/высота в панели Сетка vs. линейка»). Панель показывает и принимает
-        // числа линейки, поэтому здесь ±1 — единственное место преобразования.
-        gridWidth: silyanka.gridSize.width - 1,
-        gridHeight: silyanka.gridSize.height + 1,
-        spacing: silyanka.gridSize.spacing,
-        topSpan: silyanka.gridSize.topSpan,
-        bottomSpan: silyanka.gridSize.bottomSpan,
-        onWidthChange: (delta) => silyanka.updateDimension('width', delta),
-        onHeightChange: (delta) => silyanka.updateDimension('height', delta),
-        onSpacingChange: silyanka.updateSpacing,
-        onSetWidth: (v) => silyanka.setWidthAbsolute(v + 1),
-        onSetHeight: (v) => silyanka.setHeightAbsolute(v - 1),
-        onSetSpacing: silyanka.setSpacingAbsolute,
-        onTopSpanChange: silyanka.updateTopSpan,
-        onBottomSpanChange: silyanka.updateBottomSpan,
-        onSetTopSpan: silyanka.setTopSpanAbsolute,
-        onSetBottomSpan: silyanka.setBottomSpanAbsolute,
-        onTopEdgeReset: () => silyanka.resetEdge('top'),
-        onBottomEdgeReset: () => silyanka.resetEdge('bottom'),
-        topEdgeEnabled: silyanka.topEdgeEnabled,
-        onTopEdgeToggle: silyanka.toggleTopEdgeEnabled,
-        bottomEdgeEnabled: silyanka.bottomEdgeDecor.enabled,
-        onBottomEdgeToggle: silyanka.toggleBottomEdgeEnabled,
-        hasPendants: silyanka.pendantPlacements.length > 0,
-        hasDecorTails: silyanka.decorTailPlacements.length > 0,
-        extendLeftEdge: silyanka.edgeExtension.left,
-        extendRightEdge: silyanka.edgeExtension.right,
-        onToggleExtendLeftEdge: silyanka.toggleExtendLeftEdge,
-        onToggleExtendRightEdge: silyanka.toggleExtendRightEdge,
-        taper: silyanka.taper,
-        taperRowsMax: silyanka.taperRowsMax,
-        taperDepthMax: silyanka.taperDepthMax,
-        onTaperRowsChange: silyanka.updateTaperRows,
-        onSetTaperRows: silyanka.setTaperRowsAbsolute,
-        onTaperSideReset: silyanka.resetTaperSide,
-        onTaperDepthChange: silyanka.updateTaperDepth,
-        onSetTaperDepth: silyanka.setTaperDepthAbsolute,
-        onTaperDepthReset: silyanka.resetTaperDepth,
-        taperRowsLinked: silyanka.taperRowsLinked,
-        onToggleTaperRowsLinked: silyanka.toggleTaperRowsLinked,
-        onResetAll: silyanka.resetGridAll,
-        resetAllDisabled: silyanka.gridIsDefault,
-      }}
+    {/* Единственная техника с двумя вкладками: подвески, цепочки, зубцы и
+        декор-хвосты есть только у силянки. Обе вкладки объявлены здесь, но в
+        DOM живёт только активная — неактивная не смонтирована вовсе. */}
+    <EditorSidebar
+      open={sidebarOpen}
+      tab={sidebarTab}
+      onTabChange={onSidebarTabChange}
+      decor={(
+        <PendantsSidebar
+          templates={PENDANT_TEMPLATES}
+          placements={silyanka.pendantPlacements}
+          onHoveredPendantAnchorChange={silyanka.setHoveredPendantAnchor}
+          onAddPlacement={silyanka.pendantControls.addPlacement}
+          onClearAll={silyanka.pendantControls.clearAllPlacements}
+          canvasSvgRef={silyanka.canvasSvgRef}
+          stampGroupRef={silyanka.stampGroupRef}
+          bottomNodes={silyanka.bottomNodes}
+          decorBands={silyanka.decorBands}
+          rowGaps={silyanka.rowGaps}
+          onDecorDrop={silyanka.handleDecorDrop}
+          onDecorCount={silyanka.updateDecorBand}
+          onClearDecor={silyanka.handleClearDecor}
+          onHoveredRowChange={silyanka.setHoveredRow}
+          decorTailPlacements={silyanka.decorTailPlacements}
+          onAddDecorTail={silyanka.decorTailControls.addPlacement}
+          onUpdateDecorTailLength={silyanka.decorTailControls.updateLength}
+          onRemoveDecorTail={silyanka.decorTailControls.removePlacement}
+          onClearDecorTails={silyanka.decorTailControls.clearAllPlacements}
+          onHoveredDecorTailColChange={silyanka.setHoveredDecorTailCol}
+          bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
+          pendantChains={silyanka.pendantChains}
+          chainToolActive={silyanka.drawingControls.activeTool === 'pendant-chain'}
+          onToggleChainTool={() => setSilyankaTool(
+            silyanka.drawingControls.activeTool === 'pendant-chain' ? 'pencil' : 'pendant-chain',
+          )}
+          chainPendingStart={silyanka.chainPendingStart}
+          onRemoveChain={silyanka.chainControls.removeChain}
+          onClearChains={silyanka.chainControls.clearAllChains}
+          teeth={silyanka.teeth}
+          toothMeshes={silyanka.toothMeshes}
+          toothToolActive={silyanka.drawingControls.activeTool === 'tooth'}
+          onToggleToothTool={() => setSilyankaTool(
+            silyanka.drawingControls.activeTool === 'tooth' ? 'pencil' : 'tooth',
+          )}
+          toothPendingStart={silyanka.toothPendingStart}
+          onRemoveTooth={silyanka.toothControls.removeTooth}
+          onClearTeeth={silyanka.toothControls.clearAllTeeth}
+          holeToolActive={silyanka.drawingControls.activeTool === 'hole'}
+          onToggleHoleTool={() => setSilyankaTool(
+            silyanka.drawingControls.activeTool === 'hole' ? 'pencil' : 'hole',
+          )}
+          holeSegmentToolActive={silyanka.drawingControls.activeTool === 'hole-segment'}
+          onToggleHoleSegmentTool={() => setSilyankaTool(
+            silyanka.drawingControls.activeTool === 'hole-segment' ? 'pencil' : 'hole-segment',
+          )}
+          hasDeletedBeads={silyanka.hasDeletedBeads}
+          onClearDeletedBeads={silyanka.clearDeletedBeads}
+          pendingDeleteCount={silyanka.pendingDeleteCount}
+          onConfirmPendingDelete={silyanka.confirmPendingDelete}
+        />
+      )}
+      grid={(
+        <GridSidebar
+          technique="silyanka"
+          silyankaProps={{
+            // Линейка на холсте — источник правды: чётный ряд её колонок на 1 меньше
+            // gridSize.width, а ряд её строк на 1 больше gridSize.height (см. spec.md,
+            // «Ширина/высота в панели Сетка vs. линейка»). Панель показывает и принимает
+            // числа линейки, поэтому здесь ±1 — единственное место преобразования.
+            gridWidth: silyanka.gridSize.width - 1,
+            gridHeight: silyanka.gridSize.height + 1,
+            spacing: silyanka.gridSize.spacing,
+            topSpan: silyanka.gridSize.topSpan,
+            bottomSpan: silyanka.gridSize.bottomSpan,
+            onWidthChange: (delta) => silyanka.updateDimension('width', delta),
+            onHeightChange: (delta) => silyanka.updateDimension('height', delta),
+            onSpacingChange: silyanka.updateSpacing,
+            onSetWidth: (v) => silyanka.setWidthAbsolute(v + 1),
+            onSetHeight: (v) => silyanka.setHeightAbsolute(v - 1),
+            onSetSpacing: silyanka.setSpacingAbsolute,
+            onTopSpanChange: silyanka.updateTopSpan,
+            onBottomSpanChange: silyanka.updateBottomSpan,
+            onSetTopSpan: silyanka.setTopSpanAbsolute,
+            onSetBottomSpan: silyanka.setBottomSpanAbsolute,
+            onTopEdgeReset: () => silyanka.resetEdge('top'),
+            onBottomEdgeReset: () => silyanka.resetEdge('bottom'),
+            topEdgeEnabled: silyanka.topEdgeEnabled,
+            onTopEdgeToggle: silyanka.toggleTopEdgeEnabled,
+            bottomEdgeEnabled: silyanka.bottomEdgeDecor.enabled,
+            onBottomEdgeToggle: silyanka.toggleBottomEdgeEnabled,
+            hasPendants: silyanka.pendantPlacements.length > 0,
+            hasDecorTails: silyanka.decorTailPlacements.length > 0,
+            extendLeftEdge: silyanka.edgeExtension.left,
+            extendRightEdge: silyanka.edgeExtension.right,
+            onToggleExtendLeftEdge: silyanka.toggleExtendLeftEdge,
+            onToggleExtendRightEdge: silyanka.toggleExtendRightEdge,
+            taper: silyanka.taper,
+            taperRowsMax: silyanka.taperRowsMax,
+            taperDepthMax: silyanka.taperDepthMax,
+            onTaperRowsChange: silyanka.updateTaperRows,
+            onSetTaperRows: silyanka.setTaperRowsAbsolute,
+            onTaperSideReset: silyanka.resetTaperSide,
+            onTaperDepthChange: silyanka.updateTaperDepth,
+            onSetTaperDepth: silyanka.setTaperDepthAbsolute,
+            onTaperDepthReset: silyanka.resetTaperDepth,
+            taperRowsLinked: silyanka.taperRowsLinked,
+            onToggleTaperRowsLinked: silyanka.toggleTaperRowsLinked,
+            onResetAll: silyanka.resetGridAll,
+            resetAllDisabled: silyanka.gridIsDefault,
+          }}
+        />
+      )}
     />
 
     <CanvasView
@@ -222,60 +285,6 @@ export const SilyankaEditor = ({
       weaveShowLast={weavePanel.weaveShowLast}
       showToast={showToast}
       {...silyanka.drawingControls}
-    />
-
-    <PendantsSidebar
-      open={activeSidebar === 'pendants'}
-      templates={PENDANT_TEMPLATES}
-      placements={silyanka.pendantPlacements}
-      onHoveredPendantAnchorChange={silyanka.setHoveredPendantAnchor}
-      onAddPlacement={silyanka.pendantControls.addPlacement}
-      onClearAll={silyanka.pendantControls.clearAllPlacements}
-      canvasSvgRef={silyanka.canvasSvgRef}
-      stampGroupRef={silyanka.stampGroupRef}
-      bottomNodes={silyanka.bottomNodes}
-      decorBands={silyanka.decorBands}
-      rowGaps={silyanka.rowGaps}
-      onDecorDrop={silyanka.handleDecorDrop}
-      onDecorCount={silyanka.updateDecorBand}
-      onClearDecor={silyanka.handleClearDecor}
-      onHoveredRowChange={silyanka.setHoveredRow}
-      decorTailPlacements={silyanka.decorTailPlacements}
-      onAddDecorTail={silyanka.decorTailControls.addPlacement}
-      onUpdateDecorTailLength={silyanka.decorTailControls.updateLength}
-      onRemoveDecorTail={silyanka.decorTailControls.removePlacement}
-      onClearDecorTails={silyanka.decorTailControls.clearAllPlacements}
-      onHoveredDecorTailColChange={silyanka.setHoveredDecorTailCol}
-      bottomEdgeEnabled={silyanka.bottomEdgeDecor.enabled}
-      pendantChains={silyanka.pendantChains}
-      chainToolActive={silyanka.drawingControls.activeTool === 'pendant-chain'}
-      onToggleChainTool={() => setSilyankaTool(
-        silyanka.drawingControls.activeTool === 'pendant-chain' ? 'pencil' : 'pendant-chain',
-      )}
-      chainPendingStart={silyanka.chainPendingStart}
-      onRemoveChain={silyanka.chainControls.removeChain}
-      onClearChains={silyanka.chainControls.clearAllChains}
-      teeth={silyanka.teeth}
-      toothMeshes={silyanka.toothMeshes}
-      toothToolActive={silyanka.drawingControls.activeTool === 'tooth'}
-      onToggleToothTool={() => setSilyankaTool(
-        silyanka.drawingControls.activeTool === 'tooth' ? 'pencil' : 'tooth',
-      )}
-      toothPendingStart={silyanka.toothPendingStart}
-      onRemoveTooth={silyanka.toothControls.removeTooth}
-      onClearTeeth={silyanka.toothControls.clearAllTeeth}
-      holeToolActive={silyanka.drawingControls.activeTool === 'hole'}
-      onToggleHoleTool={() => setSilyankaTool(
-        silyanka.drawingControls.activeTool === 'hole' ? 'pencil' : 'hole',
-      )}
-      holeSegmentToolActive={silyanka.drawingControls.activeTool === 'hole-segment'}
-      onToggleHoleSegmentTool={() => setSilyankaTool(
-        silyanka.drawingControls.activeTool === 'hole-segment' ? 'pencil' : 'hole-segment',
-      )}
-      hasDeletedBeads={silyanka.hasDeletedBeads}
-      onClearDeletedBeads={silyanka.clearDeletedBeads}
-      pendingDeleteCount={silyanka.pendingDeleteCount}
-      onConfirmPendingDelete={silyanka.confirmPendingDelete}
     />
 
     <ProjectGallery

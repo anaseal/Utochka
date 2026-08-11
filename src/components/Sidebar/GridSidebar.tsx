@@ -9,10 +9,6 @@ import { Taper } from '../../types/bead';
 import './Sidebar.css';
 import './GridSidebar.css';
 
-interface SharedGridSidebarProps {
-  open: boolean;
-}
-
 interface SilyankaGridSidebarProps {
   gridWidth: number;
   gridHeight: number;
@@ -79,15 +75,18 @@ type CrossWeaveGridSidebarProps = BasicGridSidebarProps;
 type PeyoteGridSidebarProps = BasicGridSidebarProps;
 type LoomGridSidebarProps = BasicGridSidebarProps;
 
-type GridSidebarProps = SharedGridSidebarProps & (
+type GridSidebarProps =
   | { technique: 'silyanka'; silyankaProps: SilyankaGridSidebarProps; crossWeaveProps?: undefined; peyoteProps?: undefined; loomProps?: undefined }
   | { technique: 'crossWeave'; crossWeaveProps: CrossWeaveGridSidebarProps; silyankaProps?: undefined; peyoteProps?: undefined; loomProps?: undefined }
   | { technique: 'peyote'; peyoteProps: PeyoteGridSidebarProps; silyankaProps?: undefined; crossWeaveProps?: undefined; loomProps?: undefined }
-  | { technique: 'loom'; loomProps: LoomGridSidebarProps; silyankaProps?: undefined; crossWeaveProps?: undefined; peyoteProps?: undefined }
-);
+  | { technique: 'loom'; loomProps: LoomGridSidebarProps; silyankaProps?: undefined; crossWeaveProps?: undefined; peyoteProps?: undefined };
 
+// Содержимое вкладки «Grid» правой панели (оболочку <aside> и полосу вкладок
+// даёт EditorSidebar.tsx) — отсюда фрагмент из .sidebar__body и
+// .sidebar__footer, а не собственный <aside>, и никакого пропа open: панель
+// целиком показывает/прячет оболочка, а неактивная вкладка просто не
+// монтируется.
 export const GridSidebar = (props: GridSidebarProps) => {
-  const { open } = props;
   const silyankaProps = props.technique === 'silyanka' ? props.silyankaProps : undefined;
   const crossWeaveProps = props.technique === 'crossWeave' ? props.crossWeaveProps : undefined;
   const peyoteProps = props.technique === 'peyote' ? props.peyoteProps : undefined;
@@ -113,11 +112,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
   const taperActive = taperDepthEnabled;
 
   return (
-    <aside className={`sidebar${open ? ' sidebar--open' : ''}`}>
-      <div className="sidebar__header">
-        <h2 className="sidebar__title">Grid</h2>
-      </div>
-
+    <>
       <div className="sidebar__body">
         <section className="sidebar__section">
           <header className="sidebar__section-heading">
@@ -310,7 +305,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
                 />
                 {!silyankaProps.bottomEdgeEnabled && (silyankaProps.hasPendants || silyankaProps.hasDecorTails) && (
                   <p className="bottom-chain-control__hint">
-                    Clear pendants and tails (Pendants &amp; Decor panel) to enable Bottom Chain
+                    Clear pendants and tails (Decor tab) to enable Bottom Chain
                   </p>
                 )}
               </div>
@@ -360,6 +355,6 @@ export const GridSidebar = (props: GridSidebarProps) => {
           Reset all
         </button>
       </div>
-    </aside>
+    </>
   );
 };

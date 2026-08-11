@@ -1,5 +1,6 @@
 /* src/components/Editor/LoomEditor.tsx */
 import { Header } from './Header/Header';
+import { EditorSidebar } from '../Sidebar/EditorSidebar';
 import { GridSidebar } from '../Sidebar/GridSidebar';
 import { LoomCanvasView } from './CanvasView/LoomCanvasView';
 import { ProjectGallery } from './ProjectGallery/ProjectGallery';
@@ -21,8 +22,8 @@ interface LoomEditorProps {
   loom: LoomProject;
   setLoomTool: (tool: DrawingTool) => void;
   cancelLoomStampPattern: () => void;
-  activeSidebar: 'pendants' | 'grid' | null;
-  onToggleGridSidebar: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
   weavePanel: WeaveModePanel;
   // Один экземпляр на приложение (создаётся в App.tsx) — делится между
   // статусом проекта в хедере и галереей, см. useProjectLibrary.ts.
@@ -32,14 +33,14 @@ interface LoomEditorProps {
   onCloseProjectGallery: () => void;
 }
 
-// Loom — четвёртая техника: без панели «Pendants & Decor» и без нитки (как
+// Loom — четвёртая техника: без вкладки «Decor» в правой панели и без нитки (как
 // Peyote, см. spec.md, «Loom»). Режим плетения подключён так же, как у
 // Peyote/SilyankaEditor/CrossWeaveEditor — сегмент здесь целый ряд (Peyote,
 // в отличие от Loom, отмечает колонку, см. usePeyoteProject.ts), поэтому
 // weavePanel пробрасывается тем же способом.
 export const LoomEditor = ({
   settings, projectIO, showToast, loom, setLoomTool, cancelLoomStampPattern,
-  activeSidebar, onToggleGridSidebar, weavePanel,
+  sidebarOpen, onToggleSidebar, weavePanel,
   projectLibrary, projectGalleryOpen, onOpenProjectGallery, onCloseProjectGallery,
 }: LoomEditorProps) => (
   <>
@@ -73,8 +74,8 @@ export const LoomEditor = ({
       onOpenWelcome={settings.openWelcome}
       threads={[]}
       onClearAllThreads={() => {}}
-      gridSidebarOpen={activeSidebar === 'grid'}
-      onToggleGridSidebar={onToggleGridSidebar}
+      sidebarOpen={sidebarOpen}
+      onToggleSidebar={onToggleSidebar}
       weaveMode={weavePanel.weaveMode}
       onToggleWeaveMode={weavePanel.toggleWeaveMode}
       weaveControls={weavePanel.weaveControls}
@@ -89,22 +90,27 @@ export const LoomEditor = ({
       }}
     />
 
-    <GridSidebar
-      technique="loom"
-      open={activeSidebar === 'grid'}
-      loomProps={{
-        gridWidth: loom.gridSize.width,
-        gridHeight: loom.gridSize.height,
-        spacing: loom.gridSize.pitchX,
-        onWidthChange: (delta) => loom.updateDimension('width', delta),
-        onHeightChange: (delta) => loom.updateDimension('height', delta),
-        onSpacingChange: loom.updateSpacing,
-        onSetWidth: loom.setWidthAbsolute,
-        onSetHeight: loom.setHeightAbsolute,
-        onSetSpacing: loom.setSpacingAbsolute,
-        onResetAll: loom.resetGridAll,
-        resetAllDisabled: loom.gridIsDefault,
-      }}
+    {/* Без слота decor — панель одновкладочная (см. EditorSidebar.tsx). */}
+    <EditorSidebar
+      open={sidebarOpen}
+      grid={(
+        <GridSidebar
+          technique="loom"
+          loomProps={{
+            gridWidth: loom.gridSize.width,
+            gridHeight: loom.gridSize.height,
+            spacing: loom.gridSize.pitchX,
+            onWidthChange: (delta) => loom.updateDimension('width', delta),
+            onHeightChange: (delta) => loom.updateDimension('height', delta),
+            onSpacingChange: loom.updateSpacing,
+            onSetWidth: loom.setWidthAbsolute,
+            onSetHeight: loom.setHeightAbsolute,
+            onSetSpacing: loom.setSpacingAbsolute,
+            onResetAll: loom.resetGridAll,
+            resetAllDisabled: loom.gridIsDefault,
+          }}
+        />
+      )}
     />
 
     <LoomCanvasView

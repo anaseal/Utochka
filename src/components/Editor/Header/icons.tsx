@@ -198,8 +198,30 @@ export const LoomIcon = ({ size = 14, strokeWidth = 0.6 }: RingIconProps) => (
 // множество мелких бисерин-колец, где тонкая обводка не даёт им слиться в
 // пятно) — здесь всего 4 отрезка, и лента должна читаться как лента, а не
 // как волосяная линия.
-export const WeaveSwitchIcon = ({ size = 18 }: IconProps) => (
+// Иконка единственной кнопки правой панели (EditorSidebar: вкладки «Decor» и
+// «Grid», см. spec.md, «Панель изделия»). Раньше кнопок было две — подвеска
+// (PendantIcon) и ползунки (SlidersHorizontal), — и ни одна из них не годится
+// на объединённую: подвеска врала бы у RAW/Peyote/Loom (подвесок там нет
+// вовсе, панель одновкладочная), а голые ползунки уже стоят триггером меню
+// «Изделие» на ≤479.98px, и две одинаковые иконки в одной строке читались бы
+// как одна и та же кнопка. Поэтому — карточка-панель с двумя ползунками
+// внутри: рисует не содержимое вкладок, а сам предмет действия («открыть
+// панель настроек»), одинаково честно для всех четырёх техник. Два ползунка,
+// а не три: при трёх в 20px кружки-бегунки почти касаются друг друга.
+export const SettingsPanelIcon = ({ size = 20 }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" strokeWidth={1.7} />
+    <g stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
+      <path d="M6.5 9.5H17.5" />
+      <path d="M6.5 14.5H17.5" />
+    </g>
+    <circle cx="14.5" cy="9.5" r="1.7" fill="currentColor" />
+    <circle cx="9.5" cy="14.5" r="1.7" fill="currentColor" />
+  </svg>
+);
+
+export const WeaveSwitchIcon = ({ size = 18, className }: IconProps & { className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <g stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
       <path d="M8 3V13.5M8 18.5V21" />
       <path d="M16 3V5.5M16 10.5V21" />

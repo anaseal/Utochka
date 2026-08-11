@@ -1,5 +1,7 @@
-/* Общий каркас правых боковых панелей (PendantsSidebar, GridSidebar) —
-   переиспользуется обеими, чтобы не разъезжались по ширине/паддингам/скроллбару. */
+/* Каркас единственной правой панели (EditorSidebar) и её вкладок Decor/Grid
+   (GridSidebar, PendantsSidebar — содержимое вкладок, .sidebar__body +
+   .sidebar__footer каждая). Общие правила живут здесь, чтобы вкладки не
+   разъезжались по ширине/паддингам/скроллбару. */
 .sidebar {
   position: fixed;
   top: var(--palette-height);
@@ -32,6 +34,52 @@
   color: #e3f3ff;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* Полоса вкладок на месте заголовка панели (у техник без декора там остаётся
+   обычный .sidebar__title). Две равные половины, а не текст по левому краю:
+   на 170px ширины панели (≤767.98px) подписи иначе жмутся к одному краю и
+   зона нажатия у второй вкладки становится вдвое меньше первой. */
+.sidebar__tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.sidebar__tab {
+  flex: 1;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color var(--transition-speed) ease, background var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.sidebar__tab:hover {
+  color: #e3f3ff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Тот же язык подсветки, что у .tool-btn--active в хедере и у
+   .sidebar__tool-picker__btn--active ниже: бирюзовая рамка + подложка. */
+.sidebar__tab--active {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: #22d3ee;
+  color: #22d3ee;
+}
+
+/* :hover и --active бьют по одним и тем же свойствам с равной
+   специфичностью — без этого правила наведение на активную вкладку гасило бы
+   её подсветку (та же оговорка, что у .sidebar__tool-toggle--active:hover). */
+.sidebar__tab--active:hover {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: #22d3ee;
+  color: #22d3ee;
 }
 
 .sidebar__section + .sidebar__section {

@@ -57,10 +57,13 @@ export interface SharedHeaderProps {
   onOpenWelcome: () => void;
   threads: Thread[];
   onClearAllThreads: () => void;
-  // Технико-независимая панель «Сетка» (Width/Height/Spacing/Edges/Edge
-  // Extension/Bottom Chain) — см. src/components/Sidebar/GridSidebar.tsx.
-  gridSidebarOpen: boolean;
-  onToggleGridSidebar: () => void;
+  // Правая панель приложения — одна на все техники, с вкладками «Decor» и
+  // «Grid» (см. src/components/Sidebar/EditorSidebar.tsx). Хедеру нужен только
+  // тумблер «открыта/закрыта»: вкладку переключают внутри самой панели, и
+  // отдельной кнопки «открыть сразу на Decor» в хедере нет — именно от двух
+  // кнопок на один слот мы и уходили.
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
   // Режим плетения — отдельный мод: пока он включён, инструменты рисования и
   // палитра из хедера убраны, холст только отмечает прогресс
   // (см. spec.md, «Режим плетения»).
@@ -96,8 +99,6 @@ export interface SilyankaHeaderProps {
   setMirrorMode: (v: boolean) => void;
   onMakeSymmetric: () => void;
   canMakeSymmetric: boolean;
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
   hasStampPattern: boolean;
   stampAnchorEdge: StampAnchorEdge;
   onToggleStampAnchorEdge: () => void;

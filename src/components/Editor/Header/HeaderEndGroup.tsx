@@ -1,9 +1,9 @@
 import { ChangeEvent, RefObject } from 'react';
 import {
-  Trash2, Download, Upload, Share2, FolderOpen, Image, SlidersHorizontal, HelpCircle,
+  Trash2, Download, Upload, Share2, FolderOpen, Image, HelpCircle, Undo2, Redo2,
 } from 'lucide-react';
-import { PendantIcon } from './icons';
-import { SilyankaHeaderProps } from './Header.types';
+import { SettingsPanelIcon } from './icons';
+import { Technique } from './Header.types';
 
 interface HeaderEndGroupProps {
   weaveMode: boolean;
@@ -20,13 +20,15 @@ interface HeaderEndGroupProps {
   referenceWindowOpen: boolean;
   onToggleReferenceWindow: () => void;
   onOpenWelcome: () => void;
-  silyankaProps?: SilyankaHeaderProps;
-  gridSidebarOpen: boolean;
-  onToggleGridSidebar: () => void;
+  // Нужна только ради подписи кнопки панели: у силянки в ней две вкладки
+  // (Decor/Grid), у остальных техник — одна.
+  technique: Technique;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
-// На ≤767.98px тулбар Undo/Redo/Clear и иконки Reference/Pendant/
-// Grid Settings не помещаются в одну строку хедера и обрезаются за
+// На ≤767.98px тулбар Undo/Redo/Clear и иконки Reference/Panel
+// не помещаются в одну строку хедера и обрезаются за
 // краем экрана (нет ни переноса, ни скролла у .header__nav) — эта
 // обёртка сворачивает их в 2 внутренних ряда (тот же приём, что уже
 // даёт двухрядность .tool-group), не трогая раскладку на десктопе/
@@ -40,8 +42,8 @@ interface HeaderEndGroupProps {
 export const HeaderEndGroup = ({
   weaveMode, onUndo, onRedo, canUndo, canRedo, onClearAll,
   onSaveProject, onShareProject, onOpenProjectGallery, loadInputRef, onLoadInputChange,
-  referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome, silyankaProps,
-  gridSidebarOpen, onToggleGridSidebar,
+  referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome,
+  technique, sidebarOpen, onToggleSidebar,
 }: HeaderEndGroupProps) => {
   return (
     <div className="header__end-group">
@@ -53,8 +55,16 @@ export const HeaderEndGroup = ({
           {!weaveMode && (
             <>
               <div className="grid-controls__actions-row">
-                <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">↩</button>
-                <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">↪</button>
+                {/* Иконки, а не текстовые ↩ ↪, и на всех ширинах: текстовые
+                    глифы невозможно привести к одной оптике с иконками рядом —
+                    другая насыщенность и базовая линия, — а весь остальной
+                    хедер уже на lucide. */}
+                <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">
+                  <Undo2 size={14} />
+                </button>
+                <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">
+                  <Redo2 size={14} />
+                </button>
                 <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">
                   <Trash2 size={12} className="grid-controls__btn-reset-icon" />
                   <span className="grid-controls__btn-reset-label">CLEAR</span>
@@ -98,7 +108,7 @@ export const HeaderEndGroup = ({
           следом за ним скрыт условием ниже. */}
       {!weaveMode && <div className="header__divider header__divider--end-adjacent" />}
 
-      {/* Референс, подвески и настройки сетки — редакторские панели. В
+      {/* Референс и правая панель (Decor/Grid) — редакторские панели. В
           режиме плетения группа скрыта целиком (сами панели App закрывает
           при входе в режим), поэтому условие одно на всю обёртку: пустой
           .header__end-icons на ≤767.98px всё равно занимал бы строку в
@@ -113,41 +123,41 @@ export const HeaderEndGroup = ({
               В режиме плетения не показывается вместе со всей группой — там
               своя «?» рядом с WeaveControls (WeaveHelp.tsx), и две кнопки
               помощи в одной строке читались бы как одна и та же. */}
+          {/* tool-btn--help: на ≤479.98px строка разложена в два ряда, и «?» —
+              единственное, что в DOM стоит раньше своего места в раскладке
+              (перед образцом и панелью, а нужно последним) — уводится
+              туда через order, см. Header.css. */}
           <button
             onClick={onOpenWelcome}
-            className="tool-btn"
+            className="tool-btn tool-btn--help"
             title="What this app is"
           >
             <HelpCircle size={14} />
           </button>
 
+          {/* Две кнопки ниже на ≤479.98px из строки убраны: образец уехал в
+              меню «Функции» (HeaderOverflowMenu), панель — в меню «Изделие»
+              (TechniqueMenu). Классы-модификаторы нужны как зацепки: по
+              одному .tool-btn их от соседей не отличить. */}
           <button
             onClick={onToggleReferenceWindow}
-            className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
+            className={`tool-btn tool-btn--reference ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
             title="Reference image"
             aria-pressed={referenceWindowOpen}
           >
             <Image size={14} />
           </button>
 
-          {silyankaProps && (
-            <button
-              onClick={silyankaProps.onToggleSidebar}
-              className={`tool-btn tool-btn--lg ${silyankaProps.sidebarOpen ? 'tool-btn--active' : ''}`}
-              title="Decor"
-              aria-pressed={silyankaProps.sidebarOpen}
-            >
-              <PendantIcon size={22} />
-            </button>
-          )}
-
+          {/* Одна кнопка на всю правую панель, а не по одной на вкладку:
+              панель и слот справа одни, и вторая кнопка означала бы «открыть
+              то же самое, но на другой вкладке» — вкладки для этого и есть. */}
           <button
-            onClick={onToggleGridSidebar}
-            className={`tool-btn tool-btn--lg ${gridSidebarOpen ? 'tool-btn--active' : ''}`}
-            title="Grid settings"
-            aria-pressed={gridSidebarOpen}
+            onClick={onToggleSidebar}
+            className={`tool-btn tool-btn--lg tool-btn--panel ${sidebarOpen ? 'tool-btn--active' : ''}`}
+            title={technique === 'silyanka' ? 'Decor and grid settings' : 'Grid settings'}
+            aria-pressed={sidebarOpen}
           >
-            <SlidersHorizontal size={20} />
+            <SettingsPanelIcon size={20} />
           </button>
         </div>
       )}

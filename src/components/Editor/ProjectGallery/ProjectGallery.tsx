@@ -234,7 +234,7 @@ export const ProjectGallery = ({ open, onClose, library }: ProjectGalleryProps) 
         )}
       </div>
 
-      {/* Диалог подтверждения лежит поверх галереи (z-index 90 против 70) и
+      {/* Диалог подтверждения лежит поверх галереи (z-index 190 против 170) и
           гасит клик по своему затемнению, чтобы не закрыть галерею под собой —
           см. ConfirmDialog.tsx. */}
       {confirmDialog}

@@ -5,11 +5,39 @@
   padding: 0 14px 14px;
 }
 
-/* Лейбл остаётся слева, а -/значение/+ (и reset, если есть) прижимаются
-   к правому краю панели — margin-left: auto на .grid-controls__actions
-   выталкивает её и всё, что после (reset), в конец строки. */
+/* Строка степпера — сетка «лейбл | −значение+ | сброс», а не flex с
+   margin-left: auto на .grid-controls__actions (как было раньше). Что это
+   чинит:
+   • minmax(0, 1fr) у лейбла: во flex длинный лейбл («Bottom Edge») не
+     сжимался ниже min-content и выталкивал контролы за правый край панели —
+     ряд уезжал вправо относительно соседних;
+   • последняя колонка (сброс) фиксированная, 22px, и занимает своё место
+     всегда — даже в строках, где кнопки сброса нет (Size). Поэтому таблетки
+     −/значение/+ у всех строк панели стоят в одной колонке. Раньше в строках
+     без сброса таблетка доезжала до правого края, а в строках с ним
+     сдвигалась влево на ширину кнопки, и правый край получался рваным. */
+.grid-sidebar__steppers .grid-controls__group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 22px;
+  align-items: center;
+}
+
+/* Колонка задана вместе со строкой (grid-area: 1 / N), одной grid-column
+   мало: курсор авторазмещения не ходит назад, и любой элемент, чья колонка
+   левее уже занятой, переносится на следующую строку — так под степпером
+   появлялась пустая вторая строка с иконкой сброса под лейблом. */
 .grid-sidebar__steppers .grid-controls__actions {
-  margin-left: auto;
+  grid-area: 1 / 2;
+}
+
+.grid-sidebar__steppers .grid-controls__reset {
+  grid-area: 1 / 3;
+}
+
+/* Без min-width: 0 grid-элемент не сжимается ниже min-content, и длинное
+   слово в лейбле снова распёрло бы колонку (см. выше). */
+.grid-sidebar__steppers .grid-controls__label {
+  min-width: 0;
 }
 
 /* Подзаголовок «Rows» внутри секции Taper — тот же регистр/размер/цвет,
@@ -132,4 +160,58 @@
 .edge-extension-control__label {
   font-size: 12px;
   color: #94a3b8;
+}
+
+/* Своя размерность .grid-controls__btn в панели: глобальное правило
+   Header.css на ≤1024px растит кнопку до 26px ради пальца в тулбаре хедера, а
+   панель на тех же ширинах, наоборот, сужается (260 → 220 → 170px) — с 26px
+   таблетка перестаёт помещаться в строку рядом с лейблом и сбросом и вылезает
+   за правый край. Раскладка строки при этом везде одна и та же: лейбл,
+   таблетка, сброс — в одну строку. */
+@media (max-width: 1024px) {
+  .grid-sidebar__steppers .grid-controls__btn {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* 170px панели — самая тесная раскладка: на лейбл после таблетки, кнопки
+   сброса и зазоров остаётся ~35px, и «Bottom Edge» переносится по словам.
+   Ужимаем всё, кроме лейбла: таблетку, значение в ней и кнопку сброса (вместе
+   с её колонкой в сетке — иначе ужатая иконка просто болталась бы в прежних
+   22px). Лейбл остаётся 8px: на этих ширинах его до 8px уже опускает
+   .grid-controls__label в Header.css, и меньше — за гранью читаемости для
+   верхнего регистра с letter-spacing. Размер иконки сброса задан пропом
+   (`<RotateCcw size={13} />`, Stepper.tsx) — из CSS его перебиваем правилом
+   по svg: это атрибуты width/height, CSS их перекрывает. */
+@media (max-width: 767.98px) {
+  .grid-sidebar__steppers .grid-controls__group {
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+  }
+
+  .grid-sidebar__steppers .grid-controls__btn {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+
+  .grid-sidebar__steppers .grid-controls__value {
+    min-width: 20px;
+    font-size: 10px;
+  }
+
+  .grid-sidebar__steppers .grid-controls__input {
+    width: 28px;
+    font-size: 10px;
+  }
+
+  .grid-sidebar__steppers .grid-controls__reset {
+    width: 18px;
+    height: 18px;
+  }
+
+  .grid-sidebar__steppers .grid-controls__reset svg {
+    width: 11px;
+    height: 11px;
+  }
 }

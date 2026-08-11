@@ -21,6 +21,7 @@ import { LoomEditor } from './components/Editor/LoomEditor';
 import { ReferenceWindow } from './components/Editor/ReferenceWindow/ReferenceWindow';
 import { WelcomeDialog } from './components/WelcomeDialog/WelcomeDialog';
 import { Toast } from './components/Toast/Toast';
+import { SidebarTab } from './components/Sidebar/EditorSidebar';
 
 function App() {
   const settings = useAppSettings();
@@ -48,20 +49,24 @@ function App() {
   const { setPeyoteTool, cancelPeyoteStampPattern } = usePeyoteToolSwitch(peyote);
   const { setLoomTool, cancelLoomStampPattern } = useLoomToolSwitch(loom);
 
-  // Панели «Pendants & Decor» и «Grid» делят один и тот же правый слот
-  // (см. Sidebar.css, .sidebar — оба fixed/right:0) и поэтому взаимоисключают
-  // друг друга: null | одна из двух, а не два независимых булевых стейта.
-  const [activeSidebar, setActiveSidebar] = useState<'pendants' | 'grid' | null>(null);
-  const togglePendantsSidebar = () => setActiveSidebar(s => (s === 'pendants' ? null : 'pendants'));
-  const toggleGridSidebar = () => setActiveSidebar(s => (s === 'grid' ? null : 'grid'));
+  // Правая панель одна на всё приложение (EditorSidebar), «Decor» и «Grid» —
+  // её вкладки. Раньше это были две панели с двумя кнопками в хедере, которые
+  // всё равно делили один и тот же слот справа и гасили друг друга
+  // (activeSidebar: 'pendants' | 'grid' | null) — то есть вели себя как
+  // вкладки, не выглядя ими. Вкладка живёт отдельно от «открыта/закрыта»:
+  // закрыли и открыли снова — вернулись туда же, где были. Дефолт — 'grid':
+  // единственная вкладка, которая есть у всех четырёх техник.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('grid');
+  const toggleSidebar = () => setSidebarOpen(o => !o);
 
   // Галерея проектов — модалка (ProjectGallery.tsx), а не панель в правом
-  // слоте, поэтому не часть activeSidebar выше; закрывает соседние панели
+  // слоте, поэтому не часть sidebarOpen выше; закрывает соседние панели
   // при открытии тем же приёмом, что и onEnterWeaveMode ниже.
   const [projectGalleryOpen, setProjectGalleryOpen] = useState(false);
   const openProjectGallery = () => {
     setProjectGalleryOpen(true);
-    setActiveSidebar(null);
+    setSidebarOpen(false);
     settings.setReferenceOpen(false);
   };
 
@@ -72,7 +77,7 @@ function App() {
     peyote,
     loom,
     onEnterWeaveMode: () => {
-      setActiveSidebar(null);
+      setSidebarOpen(false);
       settings.setReferenceOpen(false);
     },
   });
@@ -85,7 +90,7 @@ function App() {
   });
 
   return (
-    <main className={`editor${activeSidebar !== null ? ' editor--sidebar-open' : ''}`}>
+    <main className={`editor${sidebarOpen ? ' editor--sidebar-open' : ''}`}>
       {settings.technique === 'silyanka' ? (
         <SilyankaEditor
           settings={settings}
@@ -94,9 +99,10 @@ function App() {
           silyanka={silyanka}
           setSilyankaTool={setSilyankaTool}
           cancelStampPattern={cancelStampPattern}
-          activeSidebar={activeSidebar}
-          onTogglePendantsSidebar={togglePendantsSidebar}
-          onToggleGridSidebar={toggleGridSidebar}
+          sidebarOpen={sidebarOpen}
+          sidebarTab={sidebarTab}
+          onToggleSidebar={toggleSidebar}
+          onSidebarTabChange={setSidebarTab}
           weavePanel={weavePanel}
           projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}
@@ -109,8 +115,8 @@ function App() {
           projectIO={projectIO}
           showToast={showToast}
           crossWeave={crossWeave}
-          activeSidebar={activeSidebar}
-          onToggleGridSidebar={toggleGridSidebar}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
           weavePanel={weavePanel}
           projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}
@@ -125,8 +131,8 @@ function App() {
           peyote={peyote}
           setPeyoteTool={setPeyoteTool}
           cancelPeyoteStampPattern={cancelPeyoteStampPattern}
-          activeSidebar={activeSidebar}
-          onToggleGridSidebar={toggleGridSidebar}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
           weavePanel={weavePanel}
           projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}
@@ -141,8 +147,8 @@ function App() {
           loom={loom}
           setLoomTool={setLoomTool}
           cancelLoomStampPattern={cancelLoomStampPattern}
-          activeSidebar={activeSidebar}
-          onToggleGridSidebar={toggleGridSidebar}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
           weavePanel={weavePanel}
           projectLibrary={projectLibrary}
           projectGalleryOpen={projectGalleryOpen}

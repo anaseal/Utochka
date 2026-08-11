@@ -1,9 +1,10 @@
 import { RefObject } from 'react';
 import {
-  MoreHorizontal, Download, Upload, Share2, FolderOpen, RotateCcw, Maximize2, Minimize2,
+  MoreHorizontal, Download, Upload, Share2, FolderOpen, RotateCcw, Maximize2, Minimize2, Image, Trash2,
 } from 'lucide-react';
 import { Stepper } from '../../common/Stepper';
 import { WeaveHelp } from './WeaveHelp';
+import { CanvasViewOptions } from './CanvasViewOptions';
 import { APP_CONSTRAINTS } from '../../../config/theme';
 import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
 import { SharedHeaderProps, Technique } from './Header.types';
@@ -19,14 +20,22 @@ interface HeaderOverflowMenuProps {
   weaveMode: boolean;
   technique: Technique;
   weaveControls: SharedHeaderProps['weaveControls'];
+  // Ниже — только для секции ≤479.98px (.header__overflow-narrow-extra):
+  // вид полотна, образец и очистка, чьи кнопки на этой ширине убраны из
+  // строки хедера (см. Header.css).
+  canvasView: SharedHeaderProps['canvasView'];
+  referenceWindowOpen: boolean;
+  onToggleReferenceWindow: () => void;
+  onClearAll: () => void;
 }
 
 // Попап «⋯»: на ≤767.98px сюда переезжают дубли Zoom/Save-Load-Share (и,
 // в режиме плетения, Fullscreen/Reset/«?») из основной строки хедера — там
-// им не хватает места (см. Header.css).
+// им не хватает места (см. Header.css). На ≤479.98px к ним добавляется вид
+// полотна, образец и очистка — это и есть меню «Функции» целевой раскладки.
 export const HeaderOverflowMenu = ({
   zoom, onZoomChange, onSetZoom, onSaveProject, onShareProject, onOpenProjectGallery, loadInputRef,
-  weaveMode, technique, weaveControls,
+  weaveMode, technique, weaveControls, canvasView, referenceWindowOpen, onToggleReferenceWindow, onClearAll,
 }: HeaderOverflowMenuProps) => {
   const { open, setOpen, ref, triggerRef } = useDismissablePopup();
 
@@ -104,6 +113,56 @@ export const HeaderOverflowMenu = ({
                   <WeaveHelp technique={technique} />
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* ≤479.98px: то, что уехало из строки хедера ради двух ровных рядов
+              (см. Header.css). Вид полотна нужен и в режиме плетения — кнопка
+              CanvasViewMenu убрана из строки в обоих режимах; образец и очистка
+              к плетению не относятся и там не рендерятся, как и везде в
+              хедере. */}
+          <div className="header__overflow-narrow-extra">
+            <div className="header__overflow-row header__overflow-row--stacked">
+              <span className="header__overflow-label">Canvas view</span>
+              <div className="header__overflow-options">
+                <CanvasViewOptions
+                  orientation={canvasView.orientation}
+                  onToggleOrientation={canvasView.onToggleOrientation}
+                  flipped={canvasView.flipped}
+                  onToggleFlip={canvasView.onToggleFlip}
+                />
+              </div>
+            </div>
+
+            {!weaveMode && (
+              <>
+                <div className="header__overflow-row">
+                  <span className="header__overflow-label">Reference image</span>
+                  <div className="grid-controls__actions">
+                    <button
+                      onClick={onToggleReferenceWindow}
+                      className={`grid-controls__btn ${referenceWindowOpen ? 'grid-controls__btn--on' : ''}`}
+                      title="Reference image"
+                      aria-pressed={referenceWindowOpen}
+                    >
+                      <Image size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="header__overflow-row">
+                  <span className="header__overflow-label">Clear all</span>
+                  <div className="grid-controls__actions">
+                    <button
+                      onClick={onClearAll}
+                      className="grid-controls__btn grid-controls__btn--danger"
+                      title="Clear All"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
