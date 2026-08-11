@@ -73,6 +73,7 @@ export const SilyankaEditor = ({
       canRedo={silyanka.drawingControls.canRedo}
       referenceWindowOpen={settings.referenceOpen}
       onToggleReferenceWindow={() => settings.setReferenceOpen(o => !o)}
+      onOpenWelcome={settings.openWelcome}
       threads={silyanka.threads}
       onClearAllThreads={silyanka.threadControls.clearAllThreads}
       gridSidebarOpen={activeSidebar === 'grid'}

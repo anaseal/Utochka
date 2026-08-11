@@ -50,6 +50,11 @@ export interface SharedHeaderProps {
   onTechniqueChange: (technique: Technique) => void;
   referenceWindowOpen: boolean;
   onToggleReferenceWindow: () => void;
+  // Приветственное окно (WelcomeDialog.tsx) — само показывается один раз, на
+  // первом запуске; кнопка «?» в хедере остаётся единственным способом
+  // открыть его снова. Без парного onClose: окно закрывает себя само через
+  // settings.closeWelcome, хедеру этого знать не нужно.
+  onOpenWelcome: () => void;
   threads: Thread[];
   onClearAllThreads: () => void;
   // Технико-независимая панель «Сетка» (Width/Height/Spacing/Edges/Edge

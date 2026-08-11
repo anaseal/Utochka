@@ -7,14 +7,19 @@
 //
 // Что именно попадает в снимок: ключи localStorage с префиксом `${technique}:`
 // (та же единица, что режет collectKeysWithPrefix/applyKeysWithPrefix в
-// projectFile.ts) — но НЕ `app:`-ключи (zoom, палитра, тема холста и т.п. —
-// это настройки приложения, а не свойства конкретной схемы, переключение
-// проекта их не должно менять). Единственное исключение — поворот/отражение
-// полотна (orientation/flipped): это свойство формы сетки (см. комментарий в
-// useWeaveModePanel.ts), но хранится оно под `app:weaveOrientation`/
-// `app:weaveFlip` как объект по всем техникам сразу, поэтому вынимается и
-// вливается отдельным кодом (readViewState/writeViewState), не общим
-// prefix-сканом.
+// projectFile.ts) — но НЕ `app:`-ключи целиком (zoom, тема холста и т.п. — это
+// настройки приложения, а не свойства конкретной схемы, переключение проекта
+// их не должно менять). Исключений из этого правила два, и оба вынимаются и
+// вливаются отдельным кодом (readViewState/writeViewState, readPalette/
+// writePalette), не общим prefix-сканом:
+//   * поворот/отражение полотна (orientation/flipped) — свойство формы сетки
+//     (см. комментарий в useWeaveModePanel.ts), но лежит под
+//     `app:weaveOrientation`/`app:weaveFlip` как объект по всем техникам сразу;
+//   * палитра (`app:palette`) — цвета подбираются под конкретную схему (для
+//     того и вкладка Project в пикере, см. utils/projectPalette.ts), поэтому
+//     переключение проекта должно приносить его палитру, а не оставлять цвета
+//     от предыдущего. Ключ общий на все техники, per-technique среза у него
+//     нет — пишется целиком.
 //
 // "Текущая работа" (то, что сейчас лежит в localStorage под `${technique}:`)
 // сама библиотекой не является — это черновик, который пользователь явно
@@ -25,6 +30,7 @@
 
 import { Technique, CanvasOrientation } from '../components/Editor/Header/Header.types';
 import { collectKeysWithPrefix, applyKeysWithPrefix } from './projectFile';
+import { isPaletteColors } from './projectPalette';
 
 const DB_NAME = 'silyanka-projects';
 const DB_VERSION = 1;
@@ -35,6 +41,7 @@ const RECORD_VERSION = 1;
 const ACTIVE_ID_KEY = 'app:activeLibraryProjectId';
 const ORIENTATION_KEY = 'app:weaveOrientation';
 const FLIP_KEY = 'app:weaveFlip';
+const PALETTE_KEY = 'app:palette';
 
 export interface ProjectRecord {
   id: string;
@@ -47,6 +54,12 @@ export interface ProjectRecord {
   data: Record<string, string>;
   orientation?: CanvasOrientation;
   flipped?: boolean;
+  /**
+   * Палитра, с которой рисовали схему (`app:palette`). `undefined` — у записей,
+   * сохранённых до того, как палитра стала частью снимка: у них палитры нет, и
+   * загрузка такого проекта оставляет текущую (см. writePalette).
+   */
+  palette?: string[];
   /** PNG-превью (captureSchemeThumbnail) или null, если растеризация не удалась/холст пуст. */
   thumbnail: Blob | null;
   /** Автосейв выключен по умолчанию — поле пишется только при явном включении, отсутствие/`undefined` = выключено. */
@@ -217,6 +230,26 @@ const writeViewState = (technique: Technique, orientation: CanvasOrientation | u
   }
 };
 
+/** Текущая палитра приложения или `undefined`, если ключа нет/он повреждён. */
+const readPalette = (): string[] | undefined => {
+  try {
+    const raw = localStorage.getItem(PALETTE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return isPaletteColors(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/** Ставит палитру проекта. Записи без палитры (старые) текущую не трогают. */
+const writePalette = (palette: string[] | undefined): void => {
+  if (!isPaletteColors(palette)) return;
+  localStorage.setItem(PALETTE_KEY, JSON.stringify(palette));
+};
+
+const samePalette = (a: string[] | undefined, b: string[] | undefined): boolean =>
+  a === b || (!!a && !!b && a.length === b.length && a.every((color, i) => color === b[i]));
+
 /**
  * Сравнивает текущую живую работу техники (localStorage) со снимком уже
  * сохранённого проекта — для фонового автосейва (см. useProjectLibrary.ts):
@@ -225,10 +258,21 @@ const writeViewState = (technique: Technique, orientation: CanvasOrientation | u
  */
 export const hasLiveDataChanged = (
   technique: Technique,
-  against: { data: Record<string, string>; orientation?: CanvasOrientation; flipped?: boolean },
+  against: {
+    data: Record<string, string>;
+    orientation?: CanvasOrientation;
+    flipped?: boolean;
+    palette?: string[];
+  },
 ): boolean => {
   const { orientation, flipped } = readViewState(technique);
   if (orientation !== against.orientation || flipped !== against.flipped) return true;
+  // Записи без палитры (сохранённые до того, как она вошла в снимок) сравнивать
+  // не с чем: живая палитра есть всегда (usePersistedState пишет и дефолт), и
+  // строгое сравнение навсегда пометило бы такие проекты изменёнными — статус в
+  // хедере горел бы, пока пользователь не нажмёт Save вручную. Палитра доедет в
+  // запись при первом же настоящем сохранении.
+  if (against.palette !== undefined && !samePalette(readPalette(), against.palette)) return true;
   const live = collectKeysWithPrefix(`${technique}:`);
   const liveKeys = Object.keys(live);
   const againstKeys = Object.keys(against.data);
@@ -252,6 +296,7 @@ export const saveNewProject = async (
     data: collectKeysWithPrefix(`${technique}:`),
     orientation,
     flipped,
+    palette: readPalette(),
     thumbnail,
   };
   await putRecord(record);
@@ -273,6 +318,7 @@ export const updateActiveProject = async (
     data: collectKeysWithPrefix(`${technique}:`),
     orientation,
     flipped,
+    palette: readPalette(),
     thumbnail,
     updatedAt: new Date().toISOString(),
   };
@@ -291,6 +337,7 @@ export const loadProject = async (id: string): Promise<ProjectRecord> => {
   if (!record) throw new Error('Project not found');
   applyKeysWithPrefix(`${record.technique}:`, record.data);
   writeViewState(record.technique, record.orientation, record.flipped);
+  writePalette(record.palette);
   setActiveProjectId(record.technique, record.id);
   return record;
 };

@@ -40,8 +40,12 @@ export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme
   const [activeId, setActiveId] = useState<string | null>(() => getActiveProjectId(technique));
   const [error, setError] = useState<string | null>(null);
 
+  // isLoading поднимает не refresh, а эффект ниже: флаг значит «списка этой
+  // техники ещё нет», а не «идёт любое чтение». refresh() вызывают все мутации
+  // (rename, remove, duplicate, toggleAutosave) и каждый тик автосейва, а
+  // галерея на isLoading подменяет всю сетку карточек на «Loading…» — подними
+  // флаг здесь, и сетка мигала бы на каждый клик по тумблеру «Auto».
   const refresh = useCallback(async () => {
-    setIsLoading(true);
     try {
       setProjects(await listProjects(technique));
     } finally {
@@ -49,8 +53,12 @@ export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme
     }
   }, [technique]);
 
+  // Смена техники — единственный, кроме монтирования, случай, когда флаг надо
+  // вернуть: projects до конца чтения держит список прошлой техники, и без
+  // этого полсекунды показывались бы её карточки.
   useEffect(() => {
     setActiveId(getActiveProjectId(technique));
+    setIsLoading(true);
     refresh();
   }, [technique, refresh]);
 

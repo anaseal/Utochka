@@ -70,6 +70,7 @@ export const LoomEditor = ({
       canRedo={loom.drawingControls.canRedo}
       referenceWindowOpen={settings.referenceOpen}
       onToggleReferenceWindow={() => settings.setReferenceOpen(o => !o)}
+      onOpenWelcome={settings.openWelcome}
       threads={[]}
       onClearAllThreads={() => {}}
       gridSidebarOpen={activeSidebar === 'grid'}

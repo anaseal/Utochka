@@ -20,7 +20,7 @@ export const Header = (props: HeaderProps) => {
     zoom, onZoomChange, onSetZoom,
     onUndo, onRedo, canUndo, canRedo,
     technique, onTechniqueChange,
-    referenceWindowOpen, onToggleReferenceWindow,
+    referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome,
     threads, onClearAllThreads,
     gridSidebarOpen, onToggleGridSidebar,
     weaveMode, onToggleWeaveMode, weaveControls, canvasView,
@@ -172,6 +172,7 @@ export const Header = (props: HeaderProps) => {
           onLoadInputChange={handleLoadInputChange}
           referenceWindowOpen={referenceWindowOpen}
           onToggleReferenceWindow={onToggleReferenceWindow}
+          onOpenWelcome={onOpenWelcome}
           silyankaProps={silyankaProps}
           gridSidebarOpen={gridSidebarOpen}
           onToggleGridSidebar={onToggleGridSidebar}

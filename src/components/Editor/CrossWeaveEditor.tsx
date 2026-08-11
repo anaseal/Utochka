@@ -61,6 +61,7 @@ export const CrossWeaveEditor = ({
       canRedo={crossWeave.drawingControls.canRedo}
       referenceWindowOpen={settings.referenceOpen}
       onToggleReferenceWindow={() => settings.setReferenceOpen(o => !o)}
+      onOpenWelcome={settings.openWelcome}
       threads={crossWeave.threads}
       onClearAllThreads={crossWeave.threadControls.clearAllThreads}
       gridSidebarOpen={activeSidebar === 'grid'}

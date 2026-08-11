@@ -19,6 +19,7 @@ import { CrossWeaveEditor } from './components/Editor/CrossWeaveEditor';
 import { PeyoteEditor } from './components/Editor/PeyoteEditor';
 import { LoomEditor } from './components/Editor/LoomEditor';
 import { ReferenceWindow } from './components/Editor/ReferenceWindow/ReferenceWindow';
+import { WelcomeDialog } from './components/WelcomeDialog/WelcomeDialog';
 import { Toast } from './components/Toast/Toast';
 
 function App() {
@@ -151,6 +152,11 @@ function App() {
       )}
 
       <ReferenceWindow open={settings.referenceOpen} setOpen={settings.setReferenceOpen} />
+
+      {/* Рассказ о приложении на первом запуске — рядом с тостом и диалогом
+          подтверждения, а не внутри XxxEditor: окно ничего не знает о технике
+          и не должно перемонтироваться при её переключении. */}
+      <WelcomeDialog open={settings.welcomeOpen} onClose={settings.closeWelcome} />
 
       {toast && (
         <Toast key={toast.id} message={toast.message} variant={toast.variant} onDismiss={dismissToast} />

@@ -52,6 +52,28 @@ describe('hasLiveDataChanged', () => {
 
     expect(hasLiveDataChanged('silyanka', { data, flipped: undefined })).toBe(true);
   });
+
+  it('изменилась палитра — true', () => {
+    seedLocalStorage({ 'silyanka:designMap': {}, 'app:palette': ['#ff0000', '#00ff00'] });
+    const data = collectKeysWithPrefix('silyanka:');
+    seedLocalStorage({ 'app:palette': ['#ff0000', '#0000ff'] });
+
+    expect(hasLiveDataChanged('silyanka', { data, palette: ['#ff0000', '#00ff00'] })).toBe(true);
+  });
+
+  it('палитра та же — false', () => {
+    seedLocalStorage({ 'silyanka:designMap': {}, 'app:palette': ['#ff0000', '#00ff00'] });
+    const data = collectKeysWithPrefix('silyanka:');
+
+    expect(hasLiveDataChanged('silyanka', { data, palette: ['#ff0000', '#00ff00'] })).toBe(false);
+  });
+
+  it('у записи палитры нет (старый проект) — на dirty-check не влияет', () => {
+    seedLocalStorage({ 'silyanka:designMap': {}, 'app:palette': ['#ff0000'] });
+    const data = collectKeysWithPrefix('silyanka:');
+
+    expect(hasLiveDataChanged('silyanka', { data })).toBe(false);
+  });
 });
 
 describe('isAutosaveEnabled', () => {

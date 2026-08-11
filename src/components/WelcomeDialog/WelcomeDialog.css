@@ -1,0 +1,167 @@
+/* Затемнение и панель — тот же язык, что у галереи проектов
+   (ProjectGallery.css) и диалога подтверждения: это те же модальные окна.
+   z-index 80 — между галереей (70) и ConfirmDialog (90): приветственное окно
+   открывается поверх пустого редактора, ни с чем из них одновременно не
+   пересекается, но если человек нажмёт «?» при открытой галерее — ляжет
+   поверх неё. */
+.welcome__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 24px;
+}
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: 85vh;
+  background: var(--color-panel);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.welcome__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.welcome__title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e3f3ff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.welcome__icon-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background-color: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-speed);
+}
+.welcome__icon-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: #e3f3ff; }
+
+/* Тело прокручивается, шапка и подвал с кнопкой остаются на месте — на
+   ландшафтном телефоне (~350px высоты) текст иначе выталкивал бы кнопку
+   «Start designing» за край экрана. */
+.welcome__body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  color: #e3f3ff;
+  font-size: 12px;
+  line-height: 1.55;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+/* Тот же скролл, что у сайдбара, окна референса и подсказки режима плетения:
+   прозрачная дорожка, полупрозрачный палец с циановым ховером. */
+.welcome__body::-webkit-scrollbar { width: 8px; }
+.welcome__body::-webkit-scrollbar-track { background: transparent; }
+.welcome__body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background var(--transition-speed) ease;
+}
+.welcome__body::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.55);
+  background-clip: padding-box;
+}
+
+.welcome__lead {
+  margin: 0 0 14px;
+  color: #cbd5e1;
+}
+
+.welcome__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.welcome__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #94a3b8;
+}
+
+.welcome__icon {
+  flex-shrink: 0;
+  display: flex;
+  margin-top: 3px;
+  color: #22d3ee;
+  opacity: 0.85;
+}
+
+.welcome b {
+  color: #e3f3ff;
+  font-weight: 600;
+}
+
+.welcome__footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.welcome__note {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.welcome__start {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border: 1px solid #22d3ee;
+  border-radius: 8px;
+  background: var(--color-page);
+  color: #22d3ee;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: color var(--transition-speed), border-color var(--transition-speed);
+}
+.welcome__start:hover { color: #67e8f9; border-color: #67e8f9; }
+.welcome__start:active { transform: translateY(1px); }
+.welcome__start:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
+
+/* Узкий экран: подпись про «?» съедает строку подвала, а кнопка сжимается до
+   двух строк текста — на телефоне подсказка не нужна (кнопка «?» там всё
+   равно есть), поэтому подвал остаётся только с кнопкой во всю ширину. */
+@media (max-width: 479.98px) {
+  .welcome__note { display: none; }
+  .welcome__start { flex: 1; }
+}

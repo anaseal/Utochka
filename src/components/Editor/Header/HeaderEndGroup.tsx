@@ -1,6 +1,6 @@
 import { ChangeEvent, RefObject } from 'react';
 import {
-  Trash2, Download, Upload, Share2, FolderOpen, Image, SlidersHorizontal,
+  Trash2, Download, Upload, Share2, FolderOpen, Image, SlidersHorizontal, HelpCircle,
 } from 'lucide-react';
 import { PendantIcon } from './icons';
 import { SilyankaHeaderProps } from './Header.types';
@@ -19,6 +19,7 @@ interface HeaderEndGroupProps {
   onLoadInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   referenceWindowOpen: boolean;
   onToggleReferenceWindow: () => void;
+  onOpenWelcome: () => void;
   silyankaProps?: SilyankaHeaderProps;
   gridSidebarOpen: boolean;
   onToggleGridSidebar: () => void;
@@ -39,7 +40,7 @@ interface HeaderEndGroupProps {
 export const HeaderEndGroup = ({
   weaveMode, onUndo, onRedo, canUndo, canRedo, onClearAll,
   onSaveProject, onShareProject, onOpenProjectGallery, loadInputRef, onLoadInputChange,
-  referenceWindowOpen, onToggleReferenceWindow, silyankaProps,
+  referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome, silyankaProps,
   gridSidebarOpen, onToggleGridSidebar,
 }: HeaderEndGroupProps) => {
   return (
@@ -107,6 +108,19 @@ export const HeaderEndGroup = ({
           шестой элемент внутри неё проваливался бы в одинокую 3-ю строку. */}
       {!weaveMode && (
         <div className="header__end-icons">
+          {/* «?» — то самое окно, что показывается на первом запуске
+              (WelcomeDialog.tsx): без кнопки оно доступно ровно один раз.
+              В режиме плетения не показывается вместе со всей группой — там
+              своя «?» рядом с WeaveControls (WeaveHelp.tsx), и две кнопки
+              помощи в одной строке читались бы как одна и та же. */}
+          <button
+            onClick={onOpenWelcome}
+            className="tool-btn"
+            title="What this app is"
+          >
+            <HelpCircle size={14} />
+          </button>
+
           <button
             onClick={onToggleReferenceWindow}
             className={`tool-btn ${referenceWindowOpen ? 'tool-btn--active' : ''}`}

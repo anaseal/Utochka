@@ -13,10 +13,20 @@
 //
 // Отсюда и фильтр: в палитру попадает только `#rrggbb`. Прозрачный бисер
 // (CLEAR_BEAD_COLOR = '#ffffff00', 8 знаков) отсеивается тем же условием —
-// палитра его не принимает (см. isPalette в useAppSettings.ts), и ставится он
+// палитра его не принимает (см. isPaletteColors ниже), и ставится он
 // отдельной кнопкой в пикере, а не свотчем.
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Годен ли массив на роль палитры приложения (`app:palette`). Один валидатор
+ * на двоих: им проверяет прочитанное из localStorage `useAppSettings`, и им же
+ * — палитру из записи проекта библиотека (projectLibrary.ts). Разъедься они,
+ * библиотека могла бы записать палитру, которую настройки при чтении молча
+ * откатят к DEFAULT_PALETTE.
+ */
+export const isPaletteColors = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.length > 0 && v.every(c => typeof c === 'string' && HEX_RE.test(c));
 
 /**
  * Карта «ключ бисерины → цвет». `designMap` ключуется строкой (bead.id),

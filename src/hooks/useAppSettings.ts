@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { usePersistedState } from './usePersistedState';
 import { Technique } from '../components/Editor/Header/Header.types';
 import { APP_CONSTRAINTS } from '../config/theme';
 import { clamp } from '../utils/clamp';
+import { isPaletteColors } from '../utils/projectPalette';
 
 export const DEFAULT_PALETTE = ['#ff4757', '#ffd32a', '#22d3ee', '#e879f9', '#ffffff'];
 
@@ -11,9 +12,6 @@ const isZoom = (v: unknown): v is number =>
 
 const isTechnique = (v: unknown): v is Technique =>
   v === 'silyanka' || v === 'crossWeave' || v === 'peyote' || v === 'loom';
-
-const isPalette = (v: unknown): v is string[] =>
-  Array.isArray(v) && v.length > 0 && v.every(c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c));
 
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 
@@ -24,13 +22,33 @@ const isCanvasTheme = (v: unknown): v is 'dark' | 'light' => v === 'dark' || v =
 export const useAppSettings = () => {
   const [technique, setTechnique] = usePersistedState<Technique>('app:technique', 'silyanka', isTechnique);
   const [zoom, setZoom] = usePersistedState<number>('app:zoom', 1, isZoom);
-  const [palette, setPalette] = usePersistedState<string[]>('app:palette', DEFAULT_PALETTE, isPalette);
+  const [palette, setPalette] = usePersistedState<string[]>('app:palette', DEFAULT_PALETTE, isPaletteColors);
   const [canvasTheme, setCanvasTheme] = usePersistedState<'dark' | 'light'>(
     'app:canvasTheme', 'dark', isCanvasTheme,
   );
   const [referenceOpen, setReferenceOpen] = usePersistedState<boolean>(
     'app:referenceWindow:open', false, isBoolean,
   );
+
+  // Приветственное окно (WelcomeDialog.tsx). Персистится не «открыто ли оно»
+  // (как у referenceOpen выше), а только факт «человек его уже видел»:
+  // открывается оно само ровно один раз, на первом запуске, а дальше — по
+  // кнопке «?» в хедере. Отсюда и обычный useState для самой открытости:
+  // восстанавливать окно открытым после перезагрузки незачем.
+  const [welcomeSeen, setWelcomeSeen] = usePersistedState<boolean>(
+    'app:welcomeSeen', false, isBoolean,
+  );
+  const [welcomeOpen, setWelcomeOpen] = useState(!welcomeSeen);
+
+  const openWelcome = useCallback(() => setWelcomeOpen(true), []);
+
+  // Отметка «видел» ставится на закрытии, а не на показе: закрыть окно можно
+  // только осознанно (кнопка, Escape, клик по фону), и до этого момента оно
+  // должно вернуться, если вкладку перезагрузили на полпути.
+  const closeWelcome = useCallback(() => {
+    setWelcomeOpen(false);
+    setWelcomeSeen(true);
+  }, [setWelcomeSeen]);
 
   const updateZoom = useCallback((delta: number) => {
     setZoom(prev => clamp(prev + delta, APP_CONSTRAINTS.minZoom, APP_CONSTRAINTS.maxZoom));
@@ -50,6 +68,7 @@ export const useAppSettings = () => {
     palette, setPalette,
     canvasTheme, toggleCanvasTheme,
     referenceOpen, setReferenceOpen,
+    welcomeOpen, openWelcome, closeWelcome,
   };
 };
 
