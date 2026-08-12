@@ -53,9 +53,9 @@
 .grid-sidebar__hint {
   margin: 0;
   padding: 0 14px 8px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   line-height: 1.4;
-  color: #64748b;
+  color: var(--color-text-dim);
 }
 
 /* Разделяет группы Rows/Depth внутри секции Taper — без него подсказка
@@ -63,83 +63,30 @@
 .grid-sidebar__subsection--divider {
   margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  border-top: 1px dashed var(--color-border-subtle);
 }
 
-/* Тумблер синхронизации Top/Bottom Rows секции Taper — рядом с лейблом
-   «Rows», выровнен как кнопка-сброс (см. .sidebar__section-clear). */
-.grid-sidebar__link-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #94a3b8;
-  cursor: pointer;
-}
-
-.grid-sidebar__link-btn:hover {
-  background: rgba(148, 163, 184, 0.12);
-  color: #e3f3ff;
-}
-
-.grid-sidebar__link-btn[aria-pressed="true"] {
-  color: #22d3ee;
-}
+/* Тумблер синхронизации Top/Bottom Rows секции Taper (рядом с лейблом «Rows»)
+   — <IconButton size="sm" shape="square" variant="ghost"> с пропом active, той
+   же формы и размера, что кнопки-сбросы секций. Своего класса не осталось:
+   раскладку даёт ряд заголовка, оформление — вариант. */
 
 .bottom-chain-control {
   flex-shrink: 0;
   padding: 0 14px 14px;
 }
 
-.bottom-chain-control__toggle {
-  position: relative;
-  width: 32px;
-  height: 18px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
-  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
-  flex-shrink: 0;
-}
-
-.bottom-chain-control__toggle::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #64748b;
-  transition: transform var(--transition-speed) ease, background var(--transition-speed) ease;
-}
-
-.bottom-chain-control__toggle--active {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22d3ee;
-}
-
-.bottom-chain-control__toggle--active::after {
-  transform: translateX(14px);
-  background: #22d3ee;
-}
-
-.bottom-chain-control__toggle:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+/* Четыре тумблера секций (Top Chain, Bottom Chain, Left/Right Edge Extension)
+   — <Switch> (common/Switch.css). Класса .bottom-chain-control__toggle больше
+   нет: именно с него сняты 32×18, бегунок 12px и обе раскраски компонента,
+   так что состояния --active и :disabled переехали туда же один в один
+   (рамка в покое округлена до --color-border, решение 2.0). */
 
 .bottom-chain-control__hint {
   margin: 6px 0 0;
-  font-size: 11px;
+  font-size: var(--text-sm);
   line-height: 1.4;
-  color: #64748b;
+  color: var(--color-text-dim);
 }
 
 .edge-extension-control {
@@ -158,8 +105,8 @@
 }
 
 .edge-extension-control__label {
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
 }
 
 /* Своя размерность .grid-controls__btn в панели: глобальное правило
@@ -192,22 +139,21 @@
   .grid-sidebar__steppers .grid-controls__btn {
     width: 20px;
     height: 20px;
-    font-size: 12px;
+    font-size: var(--text-md);
   }
 
   .grid-sidebar__steppers .grid-controls__value {
     min-width: 20px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
 
   .grid-sidebar__steppers .grid-controls__input {
     width: 28px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
 
   .grid-sidebar__steppers .grid-controls__reset {
-    width: 18px;
-    height: 18px;
+    --icon-btn-size: 18px;
   }
 
   .grid-sidebar__steppers .grid-controls__reset svg {

@@ -25,16 +25,16 @@
 
 .tooth-remove-btn__bg {
   fill: #ff4757;
-  stroke: #0f172a;
+  stroke: var(--color-page);
   stroke-width: 1.5;
 }
 
 .tooth-remove-btn:hover .tooth-remove-btn__bg {
-  fill: #f87171;
+  fill: var(--color-danger);
 }
 
 .tooth-remove-btn__icon {
-  stroke: #e3f3ff;
+  stroke: var(--color-text);
   stroke-width: 2;
   stroke-linecap: round;
   pointer-events: none;

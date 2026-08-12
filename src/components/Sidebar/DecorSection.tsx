@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { RotateCcw } from 'lucide-react';
 import { DecorTailPlacement } from '../../types/pendant';
 import { SectionHelp } from '../common/SectionHelp';
+import { IconButton } from '../common/IconButton';
 import { BandPreview, TailPreview } from './PendantPreviews';
 import { useSidebarDragDrop } from '../../hooks/useSidebarDragDrop';
 
@@ -74,16 +75,16 @@ export const DecorSection = ({
             <h3 className="sidebar__section-title">Decor</h3>
             <SectionHelp text="Drag a band into a gap between rows, or a tail onto a bottom-row node." />
           </span>
-          <button
-            type="button"
-            className="sidebar__section-clear"
+          <IconButton
+            size="sm"
+            shape="square"
+            variant="ghost"
             onClick={handleClearDecorSection}
             disabled={activeBands.length === 0 && !hasDecorTails}
             aria-label="Clear Decor"
             title="Clear Decor"
-          >
-            <RotateCcw size={13} />
-          </button>
+            icon={<RotateCcw size={13} />}
+          />
         </div>
       </header>
       <div className="pendants-sidebar__catalog decor-catalog">

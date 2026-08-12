@@ -1,4 +1,5 @@
 import { X, Undo2 } from 'lucide-react';
+import { IconButton } from '../../common/IconButton';
 import { ThreadTrace } from '../../../types/thread';
 
 interface ThreadTraceControlsProps {
@@ -17,27 +18,32 @@ export const ThreadTraceControls = ({ trace, onRemoveLastPoint, onCancel }: Thre
   return (
     <div className="thread-trace-controls">
       {trace.beadIds.length >= 2 && (
-        <button
-          type="button"
+        <IconButton
           className="thread-trace-controls__btn"
+          size="md"
+          shape="square"
+          variant="secondary"
           onClick={onRemoveLastPoint}
           onPointerDown={(e) => e.stopPropagation()}
           title="Undo last point"
           aria-label="Undo last point"
-        >
-          <Undo2 size={14} />
-        </button>
+          icon={<Undo2 size={14} />}
+        />
       )}
-      <button
-        type="button"
-        className="thread-trace-controls__btn thread-trace-controls__btn--cancel"
+      {/* danger, а не secondary с красным ховером: сброс нитки стирает всю
+          недоведённую трассировку, и в проекте такие действия красные и в покое
+          (см. controlVariants.css). */}
+      <IconButton
+        className="thread-trace-controls__btn"
+        size="md"
+        shape="square"
+        variant="danger"
         onClick={onCancel}
         onPointerDown={(e) => e.stopPropagation()}
         title="Cancel thread"
         aria-label="Cancel thread"
-      >
-        <X size={14} />
-      </button>
+        icon={<X size={14} />}
+      />
     </div>
   );
 };

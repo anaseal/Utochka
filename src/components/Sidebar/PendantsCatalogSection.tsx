@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom';
 import { RotateCcw } from 'lucide-react';
 import { PendantAnchor, PendantPlacement, PendantTemplate } from '../../types/pendant';
 import { SectionHelp } from '../common/SectionHelp';
+import { IconButton } from '../common/IconButton';
 import { PendantPreview } from './PendantPreviews';
 import { useSidebarDragDrop } from '../../hooks/useSidebarDragDrop';
 
@@ -44,16 +45,16 @@ export const PendantsCatalogSection = ({
             <h3 className="sidebar__section-title">Pendants</h3>
             <SectionHelp text="Drag a design onto a bottom-row bead." />
           </span>
-          <button
-            type="button"
-            className="sidebar__section-clear"
+          <IconButton
+            size="sm"
+            shape="square"
+            variant="ghost"
             onClick={onClearAll}
             disabled={!hasPendants}
             aria-label="Clear Pendants"
             title="Clear Pendants"
-          >
-            <RotateCcw size={13} />
-          </button>
+            icon={<RotateCcw size={13} />}
+          />
         </div>
       </header>
       <div className="pendants-sidebar__catalog">

@@ -1,74 +1,31 @@
-/* z-index 170 — нижняя из трёх модалок (галерея → приветственное окно 180 →
-   ConfirmDialog 190), но выше хедера (100) и его попапов (110–140): хедер
-   зафиксирован сверху и при прежних 70 рисовался поверх затемнения, пряча
-   верх панели на узких экранах. Подробнее — WelcomeDialog.css. */
-.project-gallery__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 170;
-  padding: 24px;
-}
+/* Затемнение, панель, шапка с заголовком и крестиком и высота 85dvh —
+   в common/Modal.css: галерея собрана из <Modal size="lg" layout="stack">.
+   «stack» значит, что содержимое встаёт колонкой прямо в панели, без общего
+   прокручиваемого тела: полоса ошибки и тулбар закреплены под шапкой, а
+   прокручивается только сетка карточек ниже.
 
-.project-gallery {
-  display: flex;
-  flex-direction: column;
-  width: min(720px, 100%);
-  max-height: 85vh;
-  /* dvh вместо vh — та же причина, что у .welcome (см. WelcomeDialog.css):
-     затемнение занимает реально видимую область, а 85vh считаются от высоты
-     без адресной строки, и панель переполняла контейнер сверху и снизу. */
-  max-height: 85dvh;
-  background: var(--color-panel);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-}
-
-.project-gallery__header {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 12px 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.project-gallery__title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #e3f3ff;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  flex: 1;
-}
-
-.project-gallery__icon-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background-color: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-.project-gallery__icon-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: #e3f3ff; }
+   Три действия карточки — <IconButton variant="chip">, оформление в
+   common/IconButton.css и controlVariants.css. Здесь остаётся только
+   содержимое галереи. */
 
 .project-gallery__warning {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   padding: 8px 16px;
-  font-size: 11px;
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: var(--text-sm);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* Вторая строка полосы — «что делать» (STORAGE_ERROR_HINT). Тот же янтарный,
+   но приглушённый: это продолжение одного сообщения, а не вторая тревога, и
+   первой всё равно должна читаться сама ошибка. */
+.project-gallery__warning-hint {
+  opacity: 0.75;
+  font-weight: 400;
 }
 
 .project-gallery__toolbar {
@@ -76,24 +33,14 @@
   display: flex;
   gap: 8px;
   padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.project-gallery__text-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  background-color: rgba(34, 211, 238, 0.15);
-  color: #67e8f9;
-  font-size: 12px;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-.project-gallery__text-btn:hover { background-color: rgba(34, 211, 238, 0.28); }
+/* «New project» — <Button variant="primary" size="sm">. Геометрия прежняя
+   (padding 6/12, радиус 6px = --radius-sm), а заливка --color-accent-soft
+   убрана намеренно: в покое она совпадала с активным состоянием дизайн-системы
+   (--ctl-bg-active у всех вариантов — тот же --color-accent-soft), то есть
+   обычная кнопка была одета как включённый режим. Разбор — задача 3.5. */
 
 .project-gallery__empty {
   flex: 1;
@@ -101,8 +48,8 @@
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
-  color: #94a3b8;
-  font-size: 13px;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
   text-align: center;
 }
 
@@ -118,15 +65,19 @@
 .project-gallery__card {
   display: flex;
   flex-direction: column;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-overlay);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .project-gallery__card--active {
-  border-color: #22d3ee;
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.5);
+  border-color: var(--color-accent);
+  /* Не тень, а второе акцентное кольцо в 1px поверх бордера — утолщает рамку
+     активной карточки, не сдвигая раскладку. Отсюда токен акцента, а не
+     шкала --shadow-*; прежняя rgba(34,211,238,.5) — это --color-accent-strong
+     с точностью до сотой альфы. */
+  box-shadow: 0 0 0 1px var(--color-accent-strong);
 }
 
 .project-gallery__thumb {
@@ -136,7 +87,7 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  background: repeating-conic-gradient(#0f172a 0% 25%, #17223a 0% 50%) 50% / 16px 16px;
+  /* Фон — .u-checkerboard в index.css */
 }
 
 .project-gallery__thumb-img {
@@ -152,8 +103,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
-  font-size: 11px;
+  color: var(--color-text-dim);
+  font-size: var(--text-sm);
 }
 
 .project-gallery__card-body {
@@ -173,9 +124,9 @@
 .project-gallery__name {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 600;
-  color: #e3f3ff;
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -189,55 +140,30 @@
    что и имя, — карточке не нужно становиться выше ради этого. */
 .project-gallery__autosave-label {
   flex-shrink: 0;
-  font-size: 9px;
-  color: #94a3b8;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 
-.project-gallery__autosave-switch {
-  flex-shrink: 0;
-  position: relative;
-  width: 28px;
-  height: 16px;
-  padding: 2px;
-  border: none;
-  border-radius: 999px;
-  background-color: rgba(148, 163, 184, 0.35);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-.project-gallery__autosave-switch:hover { background-color: rgba(148, 163, 184, 0.5); }
-.project-gallery__autosave-switch[aria-checked="true"] { background-color: #22d3ee; }
-.project-gallery__autosave-switch[aria-checked="true"]:hover { background-color: #67e8f9; }
+/* Сам переключатель — <Switch> (common/Switch.css). Своих классов у него
+   здесь не осталось: тумблер приведён к форме сайдбарного (32×18 вместо
+   28×16, голубая рамка с подсветкой вместо сплошной заливки, бегунок
+   акцентный вместо белого) — см. задачу 5.6. */
 
-.project-gallery__autosave-switch-thumb {
-  display: block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: #e3f3ff;
-  transition: transform 0.2s;
-}
-.project-gallery__autosave-switch[aria-checked="true"] .project-gallery__autosave-switch-thumb {
-  transform: translateX(12px);
-}
-
+/* Инлайн-переименование — <TextField> (common/TextField.css): размер,
+   рамка, фон и цвет текста оттуда. Здесь остаётся только место в строке
+   карточки и полужирность — имя и в режиме правки должно читаться так же,
+   как span рядом. Рамка в покое серая, но поле открывается сразу в фокусе
+   (autoFocus) и по blur закрывается, так что видна только акцентная.
+   Строка карточки на время правки становится выше: у поля дизайн-системы
+   высота 28px против прежних ~19px. */
 .project-gallery__name-input {
-  font-size: 12px;
-  font-weight: 600;
-  font-family: inherit;
-  color: #e3f3ff;
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid #22d3ee;
-  border-radius: 4px;
-  padding: 1px 4px;
   flex: 1;
-  min-width: 0;
-  outline: none;
+  font-weight: 600;
 }
 
 .project-gallery__date {
-  font-size: 10px;
-  color: #94a3b8;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 
 .project-gallery__card-actions {

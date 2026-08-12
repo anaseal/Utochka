@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X, Plus, Pencil, Copy, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Copy, Trash2 } from 'lucide-react';
+import { Button } from '../../common/Button';
+import { IconButton } from '../../common/IconButton';
+import { Modal } from '../../common/Modal';
+import { Switch } from '../../common/Switch';
+import { TextField } from '../../common/TextField';
 import './ProjectGallery.css';
 import { ProjectRecord, isAutosaveEnabled } from '../../../utils/projectLibrary';
-import { ProjectLibrary } from '../../../hooks/useProjectLibrary';
+import { ProjectLibrary, STORAGE_ERROR_HINT } from '../../../hooks/useProjectLibrary';
 import { useConfirm } from '../../../hooks/useConfirm';
 import { formatDate, formatRelativeTime, RELATIVE_TIME_TICK_MS } from '../../../utils/relativeTime';
 
@@ -136,28 +141,34 @@ export const ProjectGallery = ({ open, onClose, library }: ProjectGalleryProps) 
     if (confirmed) remove(project.id);
   };
 
+  // layout="stack" — содержимое встаёт колонкой прямо в панели, без общего
+  // прокручиваемого тела: полоса ошибки и тулбар закреплены под шапкой, а
+  // прокручивается только сетка карточек.
   return (
-    <div className="project-gallery__backdrop" onClick={onClose}>
-      <div className="project-gallery" onClick={(e) => e.stopPropagation()}>
-        <div className="project-gallery__header">
-          <span className="project-gallery__title">Projects</span>
-          <button
-            type="button"
-            className="project-gallery__icon-btn"
-            onClick={onClose}
-            title="Close"
-            aria-label="Close project gallery"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {error && <div className="project-gallery__warning">{error}</div>}
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        title="Projects"
+        size="lg"
+        layout="stack"
+        closeLabel="Close project gallery"
+      >
+        {/* Две строки, а не одна: «что сломалось» и «что делать». Повтор Save
+            при переполненной квоте вернёт ту же ошибку, поэтому выход из
+            тупика (удалить старые проекты здесь же / выгрузить файлом) должен
+            быть виден рядом с самой ошибкой — см. STORAGE_ERROR_HINT. */}
+        {error && (
+          <div className="project-gallery__warning">
+            {error}
+            <span className="project-gallery__warning-hint">{STORAGE_ERROR_HINT}</span>
+          </div>
+        )}
 
         <div className="project-gallery__toolbar">
-          <button type="button" className="project-gallery__text-btn" onClick={handleSaveNew}>
-            <Plus size={14} /> New project
-          </button>
+          <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={handleSaveNew}>
+            New project
+          </Button>
         </div>
 
         {isLoading ? (
@@ -175,7 +186,7 @@ export const ProjectGallery = ({ open, onClose, library }: ProjectGalleryProps) 
               >
                 <button
                   type="button"
-                  className="project-gallery__thumb"
+                  className="project-gallery__thumb u-checkerboard"
                   onClick={() => handleSwitch(project)}
                   title="Open this project"
                 >
@@ -184,11 +195,10 @@ export const ProjectGallery = ({ open, onClose, library }: ProjectGalleryProps) 
                 <div className="project-gallery__card-body">
                   <div className="project-gallery__card-title-row">
                     {editingId === project.id ? (
-                      <input
-                        type="text"
+                      <TextField
                         className="project-gallery__name-input"
                         value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
+                        onChange={setEditingValue}
                         onBlur={commitEditing}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') { e.preventDefault(); commitEditing(); }
@@ -202,42 +212,34 @@ export const ProjectGallery = ({ open, onClose, library }: ProjectGalleryProps) 
                       <span className="project-gallery__name" title={project.name}>{project.name}</span>
                     )}
                     <span className="project-gallery__autosave-label">Auto</span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={isAutosaveEnabled(project)}
-                      className="project-gallery__autosave-switch"
-                      onClick={() => toggleAutosave(project.id, !isAutosaveEnabled(project))}
+                    <Switch
+                      checked={isAutosaveEnabled(project)}
+                      onChange={(next) => toggleAutosave(project.id, next)}
                       title={isAutosaveEnabled(project) ? 'Autosave on — click to turn off' : 'Autosave off — click to turn on'}
-                    >
-                      <span className="project-gallery__autosave-switch-thumb" />
-                    </button>
+                      aria-label="Toggle autosave"
+                    />
                   </div>
                   <span className="project-gallery__date" title={formatDate(project.updatedAt)}>
                     {formatRelativeTime(project.updatedAt)}
                   </span>
                 </div>
                 <div className="project-gallery__card-actions">
-                  <button type="button" className="project-gallery__icon-btn" onClick={() => startEditing(project)} title="Rename">
-                    <Pencil size={13} />
-                  </button>
-                  <button type="button" className="project-gallery__icon-btn" onClick={() => handleDuplicate(project)} title="Duplicate">
-                    <Copy size={13} />
-                  </button>
-                  <button type="button" className="project-gallery__icon-btn" onClick={() => handleDelete(project)} title="Delete">
-                    <Trash2 size={13} />
-                  </button>
+                  <IconButton variant="chip" onClick={() => startEditing(project)} title="Rename" icon={<Pencil size={13} />} />
+                  <IconButton variant="chip" onClick={() => handleDuplicate(project)} title="Duplicate" icon={<Copy size={13} />} />
+                  <IconButton variant="chip" onClick={() => handleDelete(project)} title="Delete" icon={<Trash2 size={13} />} />
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Modal>
 
-      {/* Диалог подтверждения лежит поверх галереи (z-index 190 против 170) и
-          гасит клик по своему затемнению, чтобы не закрыть галерею под собой —
-          см. ConfirmDialog.tsx. */}
+      {/* Диалог подтверждения — сосед галереи, а не её содержимое: обе модалки
+          лежат на одном слое (--z-modal), и поверх оказывается та, что ниже
+          в разметке. Внутри <Modal> он попал бы под overflow: hidden панели.
+          Escape при этом закрывает только его: <Modal> ведёт стопку открытых
+          окон, см. комментарий там. */}
       {confirmDialog}
-    </div>
+    </>
   );
 };

@@ -4,6 +4,7 @@ import './Header.css';
 import { TechniqueMenu } from './TechniqueMenu';
 import { ProjectStatus } from './ProjectStatus';
 import { Stepper } from '../../common/Stepper';
+import { IconButton } from '../../common/IconButton';
 import { APP_CONSTRAINTS } from '../../../config/theme';
 import { WeaveControls } from './WeaveControls';
 import { CanvasViewMenu } from './CanvasViewMenu';
@@ -43,22 +44,21 @@ export const Header = (props: HeaderProps) => {
       <nav className="header__nav">
         {/* Имя активного проекта и статус сохранения — самое левое, что есть
             в хедере, и в обоих режимах на одном месте (см. ProjectStatus.tsx).
-            Клик открывает ту же галерею, что и кнопка FolderOpen справа: до
-            этого имя проекта нигде, кроме самой галереи, не показывалось. */}
+            Клик открывает галерею проектов — и это единственный вход в неё во
+            всём интерфейсе на любой ширине: кнопка FolderOpen справа (рядом с
+            Save/Load/Share) и её дубль в overflow-меню «⋯» убраны как вторая и
+            третья точки входа в то же окно. Имя и статус видны на всех
+            ширинах; при нехватке места имя ужимается многоточием, а не
+            исчезает (см. .project-status в Header.css). */}
         <ProjectStatus library={projectLibrary} onOpenGallery={onOpenProjectGallery} />
 
         <div className="header__divider" />
 
-        {/* Кроме выбора техники, на ≤479.98px это же меню держит правую панель
-            (Decor/Grid) — её кнопка на этой ширине из строки убрана
-            (см. Header.css, .technique-menu__narrow-extra). */}
-        <TechniqueMenu
-          technique={technique}
-          onTechniqueChange={onTechniqueChange}
-          weaveMode={weaveMode}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={onToggleSidebar}
-        />
+        {/* Только выбор техники. Правая панель (Decor/Grid) здесь пунктом была
+            и уехала обратно в строку хедера на всех ширинах — прятать её в
+            попап «что я плету» значило, что на телефоне (где она нужнее всего)
+            до подвесок и сетки надо было докликиваться через меню. */}
+        <TechniqueMenu technique={technique} onTechniqueChange={onTechniqueChange} />
 
         {/* Вход в режим плетения — рядом с выбором техники, а не среди иконок
             панелей справа. Причины: это не панель, а мод (техника отвечает
@@ -72,14 +72,15 @@ export const Header = (props: HeaderProps) => {
             техник — режим плетения поддерживают все (см. spec.md, «Режим
             плетения»). */}
         <div className="header__divider" />
-        <button
+        <IconButton
+          variant="chip"
+          className="tool-btn tool-btn--mode"
+          active={weaveMode}
           onClick={onToggleWeaveMode}
-          className={`tool-btn tool-btn--lg tool-btn--mode ${weaveMode ? 'tool-btn--active' : ''}`}
           title={weaveMode ? 'Exit weave mode' : 'Weave mode: mark your progress as you go'}
           aria-pressed={weaveMode}
-        >
-          <ListChecks size={20} />
-        </button>
+          icon={<ListChecks size={14} />}
+        />
 
         <div className="header__divider" />
 
@@ -120,12 +121,7 @@ export const Header = (props: HeaderProps) => {
             режима плетения (см. spec.md, «Поворот и отражение полотна»),
             поэтому кнопка стоит здесь безусловно, а не внутри WeaveControls
             (там её больше нет — копий не заводим). */}
-        <CanvasViewMenu
-          orientation={canvasView.orientation}
-          onToggleOrientation={canvasView.onToggleOrientation}
-          flipped={canvasView.flipped}
-          onToggleFlip={canvasView.onToggleFlip}
-        />
+        <CanvasViewMenu {...canvasView} />
 
         <div className="header__divider header__divider--zoom-adjacent" />
 
@@ -154,7 +150,6 @@ export const Header = (props: HeaderProps) => {
           onSetZoom={onSetZoom}
           onSaveProject={onSaveProject}
           onShareProject={onShareProject}
-          onOpenProjectGallery={onOpenProjectGallery}
           loadInputRef={loadInputRef}
           weaveMode={weaveMode}
           technique={technique}
@@ -162,7 +157,7 @@ export const Header = (props: HeaderProps) => {
           canvasView={canvasView}
           referenceWindowOpen={referenceWindowOpen}
           onToggleReferenceWindow={onToggleReferenceWindow}
-          onClearAll={onClearAll}
+          onOpenWelcome={onOpenWelcome}
         />
 
         {/* header__divider--before-end: на ≤767.98px в режиме плетения весь
@@ -180,7 +175,6 @@ export const Header = (props: HeaderProps) => {
           onClearAll={onClearAll}
           onSaveProject={onSaveProject}
           onShareProject={onShareProject}
-          onOpenProjectGallery={onOpenProjectGallery}
           loadInputRef={loadInputRef}
           onLoadInputChange={handleLoadInputChange}
           referenceWindowOpen={referenceWindowOpen}

@@ -1,8 +1,16 @@
-/* Стили для осей координат */
+/* Стили для осей координат.
+
+   Номера рядов и колонок набраны верхней ступенью шкалы (--text-xl, 14px).
+   Раньше здесь стоял литерал 17px — единственный кегль проекта мимо --text-*;
+   подписи стали на 3px мельче, но позиционирование не поехало: baselineX/
+   baselineY в CanvasRulers.tsx — числовые SVG-координаты, от кегля они не
+   зависят. Литералом остаётся только 8px у --compact ниже (он ниже нижней
+   ступени шкалы); 12px и 10px в тех же блоках совпали со ступенями и записаны
+   токенами. */
 .canvas__axis-text {
-  fill: #64748b;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 17px;
+  fill: var(--color-text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
   font-weight: 600;
   pointer-events: none;
   user-select: none;
@@ -16,7 +24,7 @@
    с offsetX в CanvasView.tsx — см. useMediaQuery). */
 @media (max-width: 767.98px) {
   .canvas__axis-text {
-    font-size: 12px;
+    font-size: var(--text-md);
   }
 }
 
@@ -27,7 +35,7 @@
    двузначные номера колонок сливались в нечитаемую кашу. Модификатор только
    у PeyoteRulers.tsx — силянку/crossWeave не трогает. */
 .canvas__axis-text--compact {
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 @media (max-width: 767.98px) {
@@ -43,39 +51,40 @@
 
 /* Ножки (r чётный, even→odd) — янтарный, плечи (r нечётный) — синий/циан.
    Полупрозрачная заливка + сплошная обводка — тот же приём, что у активных
-   чипов инструментов по всему проекту (rgba(акцент,.15) + сплошной цвет,
-   см. .tool-btn--active в Header.css). Раньше заливка была тёмной сплошной
+   чипов инструментов по всему проекту (var(--color-accent) с альфой .15
+   на заливке + он же сплошным на обводке, см. --ctl-bg-active
+   в controlVariants.css). Раньше заливка была тёмной сплошной
    (#451a03/#082f49) — на тёмном холсте она почти сливалась с фоном
    (--canvas-surface: #0f172a), кнопки было плохо видно. Среднетоновые
    #d97706/#0284c7 читаются на обеих темах холста одинаково, поэтому
    значения общие, без переопределения под [data-canvas-theme="light"]. */
 .span-ctrl__btn--bottom {
-  fill: var(--span-btn-bottom-fill, rgba(217, 119, 6, 0.15));
-  stroke: var(--span-btn-bottom-stroke, #d97706);
+  fill: var(--span-btn-bottom-fill, var(--color-edge-bottom-soft));
+  stroke: var(--span-btn-bottom-stroke, var(--color-edge-bottom));
   stroke-width: 1;
 }
 
 .span-ctrl__btn-group--bottom:hover .span-ctrl__btn--bottom {
-  fill: var(--span-btn-bottom-fill-hover, rgba(217, 119, 6, 0.3));
-  stroke: var(--span-btn-bottom-stroke-hover, #fbbf24);
+  fill: var(--span-btn-bottom-fill-hover, var(--color-edge-bottom-border));
+  stroke: var(--span-btn-bottom-stroke-hover, var(--color-warning));
 }
 
 .span-ctrl__btn--top {
-  fill: var(--span-btn-top-fill, rgba(2, 132, 199, 0.15));
-  stroke: var(--span-btn-top-stroke, #0284c7);
+  fill: var(--span-btn-top-fill, var(--color-edge-top-soft));
+  stroke: var(--span-btn-top-stroke, var(--color-edge-top));
   stroke-width: 1;
 }
 
 .span-ctrl__btn-group--top:hover .span-ctrl__btn--top {
-  fill: var(--span-btn-top-fill-hover, rgba(2, 132, 199, 0.3));
-  stroke: var(--span-btn-top-stroke-hover, #22d3ee);
+  fill: var(--span-btn-top-fill-hover, var(--color-edge-top-border));
+  stroke: var(--span-btn-top-stroke-hover, var(--color-accent));
 }
 
 
 .span-ctrl__btn-text {
-  fill: var(--span-btn-text, #94a3b8);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
+  fill: var(--span-btn-text, var(--color-text-muted));
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
   font-weight: 700;
   pointer-events: none;
   user-select: none;
@@ -84,8 +93,8 @@
 }
 
 .span-ctrl__count {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
   font-weight: 600;
   pointer-events: none;
   user-select: none;
@@ -93,16 +102,16 @@
 }
 
 .span-ctrl__count--bottom {
-  fill: #d97706;
+  fill: var(--color-edge-bottom);
 }
 
 .span-ctrl__count--top {
-  fill: #0284c7;
+  fill: var(--color-edge-top);
 }
 
 /* Ряд с индивидуальным значением — ярче, общий цвет для обоих типов рядов */
 .span-ctrl__count--overridden {
-  fill: #fbbf24;
+  fill: var(--color-warning);
 }
 
 /* Весь столбик per-row ±/счётчиков (по одному на каждый зазор между рядами)

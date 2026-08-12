@@ -9,13 +9,15 @@
   padding: 24px;
   text-align: center;
   background-color: var(--color-page);
-  color: #e3f3ff;
+  color: var(--color-text);
 }
 
 .error-boundary__icon {
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
+/* 20px выше верхней ступени шкалы и остаётся литералом: экран краха — не
+   часть интерфейса редактора, у него один заголовок и своя типографика. */
 .error-boundary__title {
   margin: 0;
   font-size: 20px;
@@ -25,18 +27,25 @@
 .error-boundary__text {
   margin: 0;
   max-width: 360px;
-  font-size: 14px;
-  color: #e3f3ff;
+  font-size: var(--text-xl);
+  color: var(--color-text);
+}
+
+/* Что именно сотрёт сброс — текст появляется только на шаге подтверждения,
+   поэтому подсвечен, а не набран как обычный абзац. */
+.error-boundary__text--warning {
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
 }
 
 .error-boundary__button {
   margin-top: 8px;
   padding: 8px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background-color: var(--color-panel);
-  color: #e3f3ff;
-  font-size: 14px;
+  color: var(--color-text);
+  font-size: var(--text-xl);
   cursor: pointer;
 }
 
@@ -44,16 +53,30 @@
   filter: brightness(1.15);
 }
 
+/* Ссылка-подножие, пока сброс не запрошен. */
 .error-boundary__button--reset {
   margin-top: 0;
   padding: 4px 8px;
   background-color: transparent;
-  color: #94a3b8;
-  font-size: 12px;
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
 }
 
 .error-boundary__button--reset:hover {
   filter: none;
-  color: #e3f3ff;
+  color: var(--color-text);
   text-decoration: underline;
+}
+
+/* Подтверждение сброса — своя разметка вместо общего ConfirmDialog, чтобы
+   экран падения не зависел от Modal/Button (см. ErrorBoundary.tsx). */
+.error-boundary__confirm {
+  display: flex;
+  gap: 8px;
+}
+
+.error-boundary__button--danger {
+  background-color: var(--color-danger);
+  color: var(--color-page);
+  font-weight: 600;
 }

@@ -1,6 +1,8 @@
 import { RotateCcw } from 'lucide-react';
 import { ToothPlacement } from '../../types/pendant';
 import { SectionHelp } from '../common/SectionHelp';
+import { Button } from '../common/Button';
+import { IconButton } from '../common/IconButton';
 
 interface ToothSectionProps {
   teeth: ToothPlacement[];
@@ -26,16 +28,16 @@ export const ToothSection = ({
           <h3 className="sidebar__section-title">Teeth</h3>
           <SectionHelp text="Grow a tapering tooth from a strip of bottom-row beads. Pick a start node and an end node — the tooth converges to a point on its own, no length to set. Overlapping teeth aren't allowed." />
         </span>
-        <button
-          type="button"
-          className="sidebar__section-clear"
+        <IconButton
+          size="sm"
+          shape="square"
+          variant="ghost"
           onClick={onClearTeeth}
           disabled={teeth.length === 0}
           aria-label="Clear Teeth"
           title="Clear Teeth"
-        >
-          <RotateCcw size={13} />
-        </button>
+          icon={<RotateCcw size={13} />}
+        />
       </div>
       <p className="sidebar__section-desc">
         {toothToolActive
@@ -45,14 +47,17 @@ export const ToothSection = ({
           : 'Tap "Pick tooth range" to start'}
       </p>
     </header>
-    <button
-      type="button"
-      className={`sidebar__tool-toggle${toothToolActive ? ' sidebar__tool-toggle--active' : ''}`}
+    {/* Тот же CTA, что у Chains — разбор выбора виджета там же. */}
+    <Button
+      variant="primary"
+      size="md"
+      className="sidebar__action"
+      active={toothToolActive}
       onClick={onToggleToothTool}
       aria-pressed={toothToolActive}
     >
       {toothToolActive ? 'Picking nodes…' : 'Pick tooth range'}
-    </button>
+    </Button>
 
     {teeth.length > 0 && (
       <div className="decor-bands-list">

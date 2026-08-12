@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Palette } from 'lucide-react';
+import './PaletteWidget.css';
 import { ColorPicker } from './ColorPicker';
 import { EyedropperIcon } from './icons';
 import { BEAD_THEME } from '../../../config/theme';
@@ -19,7 +20,7 @@ interface PaletteWidgetProps {
   commitRecentColor: (color: string) => void;
 }
 
-// Палитра + кастомный цвет + пипетка. На ≤479.98px прячется под
+// Палитра + кастомный цвет + пипетка. На ≤599.98px прячется под
 // иконку-триггер и раскрывается попапом (см. .palette-widget в Header.css).
 export const PaletteWidget = ({
   palette, onPaletteChange, colorSources, activeColor, setActiveColor, activeTool, setActiveTool,
@@ -60,7 +61,7 @@ export const PaletteWidget = ({
 
   return (
     <div className={`palette-widget${paletteOpen ? ' palette-widget--open' : ''}`} ref={paletteWidgetRef}>
-      {/* Виден только на ≤479.98px — на более широких экранах палитра
+      {/* Виден только на ≤599.98px — на более широких экранах палитра
           и так помещается в строку хедера (см. .palette-widget__trigger
           в Header.css). */}
       <button

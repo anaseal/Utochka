@@ -2,13 +2,13 @@
 
 .editor__viewport {
   position: fixed;
-  top: var(--palette-height);
+  top: var(--header-height);
   left: 0;
   right: var(--sidebar-width);
   bottom: 0;
   overflow: hidden;
   display: flex;
-  background-color: #0f172a;
+  background-color: var(--color-page);
   transition: right var(--transition-speed) ease;
 }
 
@@ -16,7 +16,7 @@
    чтобы снизить контраст со светлой карточкой. Атрибут дублируется на
    viewport (ancestor карточки) — отсюда фон рамы. */
 .editor__viewport[data-canvas-theme="light"] {
-  background-color: #0e1b33;
+  background-color: var(--color-canvas);
 }
 
 .canvas {
@@ -30,7 +30,16 @@
 /* Канвас: визуальное окно фиксированного размера со скроллом внутри, если SVG больше */
 .canvas__svg {
   /* Токены темы холста. Дефолт — тёмная тема; светлая переопределяет их
-     через [data-canvas-theme="light"] ниже. Область — только карточка холста. */
+     через [data-canvas-theme="light"] ниже. Область — только карточка холста.
+
+     Значения — литералы, а не ссылки на палитру UI, хотя в тёмной теме три
+     из них совпадают с ней численно (#0f172a = --color-page,
+     #1e293b = --color-panel, rgba(255,255,255,.05) = --color-border-faint).
+     Тема холста переключается своей кнопкой в хедере, отдельно от интерфейса,
+     и в светлой теме от совпадений не остаётся ничего: там --canvas-surface
+     равен --color-text, и связь «фон холста = цвет текста UI» была бы ложной.
+     Производные токены дали бы ровно её — правку палитры интерфейса, молча
+     перекрашивающую полотно. */
   --canvas-surface: #0f172a;
   --canvas-border: rgba(255, 255, 255, 0.05);
   --canvas-scrollbar-thumb: #1e293b;
@@ -45,6 +54,9 @@
   display: block;
   background-color: var(--canvas-surface);
   border-radius: 24px;
+  /* Вне шкалы --shadow-* оставлено намеренно: отрицательный разброс (-12px)
+     поджимает тень под карточку, у обеих ступеней шкалы его нет — подставить
+     токен не меняя вида нельзя. */
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border: 1px solid var(--canvas-border);
 
@@ -80,7 +92,9 @@
 }
 
 /* Светлая тема холста (slate-50). Переключается кнопкой в хедере,
-   область — только карточка .canvas__svg и её содержимое. */
+   область — только карточка .canvas__svg и её содержимое.
+   Литералы по той же причине, что в тёмном блоке выше: #e3f3ff и #94a3b8
+   совпадают с --color-text и --color-text-muted числом, но не смыслом. */
 .canvas__svg[data-canvas-theme="light"] {
   --canvas-surface: #e3f3ff;
   --canvas-border: rgba(15, 23, 42, 0.08);
@@ -115,7 +129,7 @@
   /* Адаптивный размер: до var(--canvas-frame-max-w/-h) (1200x650 в обычном
      режиме, index.css), но сжимается чтобы влезать в viewport (учитываем
      padding-left 50px у .canvas + правый отступ ~30px, и сверху
-     var(--palette-height) + padding-top 50px + место под .stats снизу).
+     var(--header-height) + padding-top 50px + место под .stats снизу).
      Потолок сознательно поднят в полноэкранном режиме (`:fullscreen` в
      index.css, режим плетения — см. useFullscreen) — там реальным лимитом
      остаётся только calc() по фактическому viewport, без вырезанной браузером
@@ -125,17 +139,17 @@
      цветов .stats__list переносится на несколько строк и вырастает выше
      140px, наезжая на нижние ряды бисера — особенно на мобильном.
      Финальные -50px — это padding-top у .canvas (см. выше): он лежит МЕЖДУ
-     var(--palette-height) и самой карточкой .canvas__svg, но раньше не
+     var(--header-height) и самой карточкой .canvas__svg, но раньше не
      вычитался из высоты — карточка была ровно на padding-top длиннее
      доступного места и своим нижним краем наезжала на .stats. */
   width: min(var(--canvas-frame-max-w), calc(100vw - 80px - var(--sidebar-width)));
-  height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
+  height: min(var(--canvas-frame-max-h), calc(100vh - var(--header-height) - var(--stats-reserve, 140px) - 50px));
   /* dvh вместо vh — см. index.css: на мобильном 100vh игнорирует
      показ/скрытие адресной строки, а .stats (position:fixed) считается от
      реального видимого viewport, отсюда наезд total count на холст, даже
      когда --stats-reserve уже верно посчитан. Вторая строка переопределяет
      первую там, где dvh поддерживается, иначе браузер её просто отбрасывает. */
-  height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - var(--stats-reserve, 140px) - 50px));
+  height: min(var(--canvas-frame-max-h), calc(100dvh - var(--header-height) - var(--stats-reserve, 140px) - 50px));
 }
 
 .editor__viewport--flood-fill .canvas__svg,
@@ -147,74 +161,54 @@
 }
 
 .canvas__stamp-rect {
-  fill: rgba(34, 211, 238, 0.15);
-  stroke: #22d3ee;
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent);
   stroke-width: 1;
   pointer-events: none;
 }
 
-/* Кнопка экспорта схемы в PNG — стиль консистентен с .color-picker__confirm */
+/* Кнопка экспорта схемы в PNG — <Button variant="secondary" size="md">
+   в CanvasChrome.tsx. Здесь только место в плавающем стеке у правого края
+   холста; рамка, цвета и состояния приходят из common/Button.css.
+
+   Двойной класс .btn.export-btn — у одинарного специфичность с .btn/.btn--md
+   равная, и спор решал бы порядок файлов в бандле (та же оговорка, что
+   у .btn.sidebar__action в Sidebar.css).
+
+   height задана явно, хотя .btn считает высоту из паддингов: 32px — шаг всего
+   стека (.canvas-theme-toggle на 56px, .stats на 96px, интервал 40px, см.
+   CanvasStats.css) и слагаемое резерва ширины 56px в ландшафтных запросах
+   ниже (32px кнопки + 16px отступ + 8px зазор). transition повторяет переходы
+   .btn и добавляет right — кнопка едет вместе с открывающимся сайдбаром. */
 .export-btn {
   position: fixed;
   bottom: 16px;
   right: calc(var(--sidebar-width) + 16px);
   z-index: 50;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 16px;
+}
+
+.btn.export-btn {
   height: 32px;
-  background: #0f172a;
-  color: #64748b;
-  border: 1px solid #64748b;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s,
-    right var(--transition-speed) ease;
+  transition: color var(--transition-speed), border-color var(--transition-speed),
+    background var(--transition-speed), right var(--transition-speed) ease;
 }
 
-.export-btn:hover {
-  color: #22d3ee;
-  border-color: #22d3ee;
-}
-
-.export-btn:active {
-  transform: translateY(1px);
-}
-
-/* Переключатель темы холста — плавающая иконка над кнопкой экспорта,
-   рядом с холстом. Стиль консистентен с .export-btn. */
+/* Переключатель темы холста — <IconButton size="md" shape="square"
+   variant="secondary">, плавающая иконка над кнопкой экспорта. --icon-btn-size
+   переопределён на месте вызова: шкала компонента (22/26/36) мимо 32px, на
+   которых держится шаг стека, а переменная ровно для таких исключений и
+   заведена (см. IconButton.css). */
 .canvas-theme-toggle {
   position: fixed;
   bottom: 56px;
   right: calc(var(--sidebar-width) + 16px);
   z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: #0f172a;
-  color: #64748b;
-  border: 1px solid #64748b;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s,
-    right var(--transition-speed) ease;
 }
 
-.canvas-theme-toggle:hover {
-  color: #22d3ee;
-  border-color: #22d3ee;
-}
-
-.canvas-theme-toggle:active {
-  transform: translateY(1px);
+.icon-btn.canvas-theme-toggle {
+  --icon-btn-size: 2rem;
+  transition: color var(--transition-speed), border-color var(--transition-speed),
+    background var(--transition-speed), right var(--transition-speed) ease;
 }
 
 /* Тач-панель управления незавершённой трассировкой нитки (см.
@@ -231,32 +225,12 @@
   gap: 8px;
 }
 
-.thread-trace-controls__btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: #0f172a;
-  color: #64748b;
-  border: 1px solid #64748b;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.thread-trace-controls__btn:hover {
-  color: #22d3ee;
-  border-color: #22d3ee;
-}
-
-.thread-trace-controls__btn:active {
-  transform: translateY(1px);
-}
-
-.thread-trace-controls__btn--cancel:hover {
-  color: #f87171;
-  border-color: #f87171;
+/* Обе кнопки — <IconButton size="md" shape="square">, различаются только
+   вариантом (secondary у отмены последней точки, danger у сброса нитки).
+   Размер — те же 32px, что у стека справа; right в transition тут не нужен,
+   эта панель к ширине сайдбара не привязана. */
+.icon-btn.thread-trace-controls__btn {
+  --icon-btn-size: 2rem;
 }
 
 /* Ручка выдвижной панели редактора количества бисерин (per-row span controls
@@ -281,9 +255,9 @@
   justify-content: center;
   width: 28px;
   height: 48px;
-  background: #0f172a;
-  color: #64748b;
-  border: 1px solid #64748b;
+  background: var(--color-page);
+  color: var(--color-text-dim);
+  border: 1px solid var(--color-text-dim);
   border-left: none;
   border-radius: 0 10px 10px 0;
   cursor: pointer;
@@ -291,8 +265,8 @@
 }
 
 .span-controls-toggle:hover {
-  color: #22d3ee;
-  border-color: #22d3ee;
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 /* Скрыт, пока .canvas__svg проскроллен вправо от левого края (см.
@@ -303,7 +277,16 @@
   pointer-events: none;
 }
 
-/* Webkit Scrollbar */
+/* Webkit Scrollbar. Осознанное исключение из утилиты .u-scroll (index.css),
+   на которую переведены все остальные прокручиваемые места интерфейса:
+   1) у холста своя пара токенов --canvas-scrollbar-thumb/-track, и её
+      переопределяет светлая тема холста ([data-canvas-theme="light"] выше) —
+      утилита красится токенами UI и о теме полотна не знает;
+   2) на touch этот родной скроллбар гасится целиком (display: none в
+      @media (pointer: coarse) ниже) в пользу перетаскиваемого пальцем
+      .canvas-scrollbar — у панелей такой замены нет.
+   Научить .u-scroll и тому, и другому значило бы протащить тему холста
+   в общий слой UI ради одного потребителя. Работы по этому пункту нет. */
 .canvas__svg::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -360,7 +343,7 @@
 }
 .canvas-scrollbar__thumb:active {
   cursor: grabbing;
-  background: rgba(34, 211, 238, 0.55);
+  background: var(--color-accent-strong);
 }
 /* Толщина бегунка (10px) тоньше трека (var(--canvas-scrollbar-gutter)) —
    отцентрирована внутри него margin-ом в половину толщины. Длина и сдвиг
@@ -406,8 +389,8 @@
     width: min(var(--canvas-frame-max-w), calc(100vw - 60px));
     /* -24px = padding-top у .canvas на этом брейкпоинте (см. ниже) — та же
        поправка, что и в базовой формуле выше. */
-    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
-    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 24px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--header-height) - var(--stats-reserve, 110px) - 24px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--header-height) - var(--stats-reserve, 110px) - 24px));
   }
   .canvas__svg {
     padding: 20px;
@@ -427,8 +410,8 @@
   }
   .canvas__svg-frame {
     width: min(var(--canvas-frame-max-w), calc(100vw - 40px));
-    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
-    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - var(--stats-reserve, 110px) - 14px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--header-height) - var(--stats-reserve, 110px) - 14px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--header-height) - var(--stats-reserve, 110px) - 14px));
   }
   .canvas__svg {
     padding: 14px;
@@ -443,14 +426,16 @@
      остаётся прежней (bottom-right, как на десктопе) — вместо переноса
      сжимаем .export-btn до иконки (текстовый label скрыт), как у соседней
      .canvas-theme-toggle: это убирает основной источник наложения без
-     изменения расположения. */
-  .export-btn {
+     изменения расположения. Скрывается .btn__label — обёртка, которую <Button>
+     ставит вокруг подписи как раз ради этого запроса; height и border-radius
+     не повторяются, они уже заданы выше и в .btn--md. Паддинг снимается двойным
+     классом: медиа-запрос специфичности не добавляет, и одинарный .export-btn
+     не перебил бы .btn--md. */
+  .btn.export-btn {
     width: 32px;
-    height: 32px;
     padding: 0;
-    border-radius: 8px;
   }
-  .export-btn__label {
+  .export-btn .btn__label {
     display: none;
   }
 }
@@ -511,20 +496,20 @@
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - 50px - 16px));
-    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - 50px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--header-height) - 50px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--header-height) - 50px - 16px));
   }
 }
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 500px) {
   .canvas__svg-frame {
-    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - 24px - 16px));
-    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - 24px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--header-height) - 24px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--header-height) - 24px - 16px));
   }
 }
 @media (max-width: 767.98px) and (orientation: landscape) and (max-height: 500px), (max-width: 720px) {
   .canvas__svg-frame {
-    height: min(var(--canvas-frame-max-h), calc(100vh - var(--palette-height) - 14px - 16px));
-    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--palette-height) - 14px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100vh - var(--header-height) - 14px - 16px));
+    height: min(var(--canvas-frame-max-h), calc(100dvh - var(--header-height) - 14px - 16px));
   }
 }
 

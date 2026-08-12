@@ -1,4 +1,6 @@
-import { useEffect, useId } from 'react';
+import { Button } from '../common/Button';
+import { Modal } from '../common/Modal';
+import { TextField } from '../common/TextField';
 import './ConfirmDialog.css';
 
 export interface ConfirmOptions {
@@ -27,9 +29,13 @@ interface ConfirmDialogProps extends ConfirmOptions {
 // держит своё состояние локально — он рендерится вместо рухнувшего дерева, и
 // общего хука там уже нет.
 //
-// useDismissablePopup здесь не подходит: тот сам владеет флагом open и
-// закрывается по клику снаружи, а у модалки «снаружи» — собственное
-// затемнение, и открытость задаёт ожидающий промис, а не сам компонент.
+// Затемнение, панель, Escape и клик по фону — общие для всех модалок проекта,
+// они в <Modal> (layout="alert": шапки-полосы с крестиком у диалога нет,
+// заголовок стоит первой строкой содержимого). Собственного флага open у
+// диалога нет: его открытость и есть факт того, что он отрендерен ожидающим
+// промисом. Esc = отмена — нативный confirm так умел, без этого диалог
+// ощущается сломанным; Enter отдельно не ловим, фокус и так стоит на кнопке
+// подтверждения (autoFocus ниже), браузер нажимает её сам.
 export function ConfirmDialog({
   title,
   message,
@@ -40,67 +46,36 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const titleId = useId();
-
-  // Esc = отмена: нативный confirm так умел, без этого диалог ощущается
-  // сломанным. Enter отдельно не ловим — фокус и так стоит на кнопке
-  // подтверждения (autoFocus ниже), браузер нажимает её сам.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onCancel]);
-
-  // Клик по затемнению гасится, а не только отменяет: диалог вызывается в том
-  // числе изнутри галереи проектов, и без этого тот же клик всплыл бы на её
-  // затемнение и закрыл заодно и её.
   return (
-    <div
-      className="confirm-dialog__backdrop"
-      onClick={(e) => {
-        e.stopPropagation();
-        onCancel();
-      }}
-    >
-      <div
-        className="confirm-dialog"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="confirm-dialog__title" id={titleId}>{title}</h2>
-        {message && <p className="confirm-dialog__message">{message}</p>}
+    <Modal open onClose={onCancel} title={title} size="sm" layout="alert">
+      {message && <p className="confirm-dialog__message">{message}</p>}
 
-        {copyText !== undefined && (
-          <input
-            type="text"
-            className="confirm-dialog__copy"
-            value={copyText}
-            readOnly
-            autoFocus
-            onFocus={(e) => e.target.select()}
-          />
+      {copyText !== undefined && (
+        <TextField
+          className="confirm-dialog__copy"
+          mono
+          value={copyText}
+          readOnly
+          autoFocus
+          onFocus={(e) => e.target.select()}
+        />
+      )}
+
+      <div className="confirm-dialog__actions">
+        {cancelLabel !== null && (
+          <Button variant="secondary" size="md" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
         )}
-
-        <div className="confirm-dialog__actions">
-          {cancelLabel !== null && (
-            <button type="button" className="confirm-dialog__button" onClick={onCancel}>
-              {cancelLabel}
-            </button>
-          )}
-          <button
-            type="button"
-            className={`confirm-dialog__button confirm-dialog__button--confirm${danger ? ' confirm-dialog__button--danger' : ''}`}
-            onClick={onConfirm}
-            autoFocus={copyText === undefined}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+        <Button
+          variant={danger ? 'danger' : 'primary'}
+          size="md"
+          onClick={onConfirm}
+          autoFocus={copyText === undefined}
+        >
+          {confirmLabel}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

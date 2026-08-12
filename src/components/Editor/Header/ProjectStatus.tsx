@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ProjectLibrary } from '../../../hooks/useProjectLibrary';
+import './ProjectStatus.css';
+import { ProjectLibrary, STORAGE_ERROR_HINT } from '../../../hooks/useProjectLibrary';
 import { isAutosaveEnabled } from '../../../utils/projectLibrary';
 import { formatDate, formatRelativeTime, RELATIVE_TIME_TICK_MS } from '../../../utils/relativeTime';
 
@@ -28,7 +29,10 @@ type StatusKind = 'draft' | 'saved' | 'saving' | 'unsaved' | 'failed' | 'pending
 //   failed  — хранилище отказало (переполнено/недоступно, см. guarded в
 //             useProjectLibrary.ts). Текст ошибки целиком показывает галерея,
 //             здесь — короткая метка и та же кнопка для повтора: клик по
-//             «Save» не должен молча ничего не делать.
+//             «Save» не должен молча ничего не делать. Одного повтора мало —
+//             при переполненной квоте он вернёт ту же ошибку, поэтому в title
+//             к тексту ошибки добавлен STORAGE_ERROR_HINT («что делать»);
+//             галерея, которую открывает этот же клик, показывает его строкой.
 //   pending — первые миллисекунды после загрузки страницы, пока список ещё
 //             читается из IndexedDB: активный проект есть, но какой — ещё не
 //             известно. Показывать в этот момент «Draft» нельзя, мигнёт ложью.
@@ -76,8 +80,8 @@ export const ProjectStatus = ({ library, onOpenGallery }: ProjectStatusProps) =>
     : kind === 'pending' ? ''
     : 'Not in a project';
 
-  // Полный текст в title и aria-label: на узких экранах подпись статуса
-  // скрыта, а на самых узких от блока остаётся одна точка-индикатор.
+  // Полный текст в title и aria-label: имя в строке ужимается многоточием тем
+  // сильнее, чем уже экран (см. .project-status в Header.css).
   const fullText = `${name}${status ? ` — ${status}` : ''}`;
 
   return (
@@ -87,7 +91,7 @@ export const ProjectStatus = ({ library, onOpenGallery }: ProjectStatusProps) =>
         className="project-status__open"
         onClick={onOpenGallery}
         title={
-          kind === 'failed' && error ? `${name} — ${error}`
+          kind === 'failed' && error ? `${name} — ${error}\n${STORAGE_ERROR_HINT}`
             : activeProject && kind === 'saved' ? `${fullText}\n${formatDate(activeProject.updatedAt)}`
             : fullText
         }

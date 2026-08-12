@@ -22,6 +22,16 @@ const AUTOSAVE_INTERVAL_MS = 8000;
 // автосейва и стоят 8с.
 const DIRTY_POLL_INTERVAL_MS = 4000;
 
+// Подсказка «что делать», которая идёт рядом с текстом отказа хранилища (см.
+// guarded ниже) — в шапке галереи и в title статуса проекта в хедере. Без неё
+// состояние failed остаётся тупиком: единственная кнопка на экране («Save»)
+// при переполненной квоте упрётся в ту же ошибку сколько ни жми. Оба выхода
+// реальны и рядом: удаление старых проектов — в самой галерее, выгрузка
+// файлом (↓ «Save project to file» в хедере) вообще не трогает IndexedDB и
+// потому работает даже при переполненном хранилище.
+export const STORAGE_ERROR_HINT =
+  'Free up space by deleting old projects — or keep this work right now with Save project to file (↓ in the header), which does not need storage.';
+
 // Хук библиотеки проектов активной техники (см. src/utils/projectLibrary.ts).
 // Вызывается РОВНО ОДИН РАЗ, в App.tsx, и раздаётся пропом двум потребителям
 // (статус проекта в хедере и сама галерея) через XxxEditor — как settings и

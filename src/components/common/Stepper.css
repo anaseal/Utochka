@@ -14,52 +14,51 @@
 }
 
 .grid-controls__group { display: flex; align-items: center; gap: 0.375rem; }
-.grid-controls__label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
-.grid-controls__label-stacked { line-height: 1.05; text-align: right; display: inline-block; }
+.grid-controls__label { font-size: var(--text-xs); font-weight: 700; color: var(--color-text-dim); text-transform: uppercase; }
+.grid-controls__label-stacked { line-height: 1; text-align: right; display: inline-block; }
 .grid-controls__actions {
   display: flex;
   align-items: center;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-overlay);
   border-radius: 8px;
   padding: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border-faint);
 }
 
+/* Кнопка-иконка внутри «таблетки» — <IconButton size="md" shape="square"
+   variant="ghost"> (Stepper.tsx). Класс общий у трёх мест: −/+ степпера,
+   тулбары хедера (Undo/Redo/Save/Load/Share и Undo/Locate/Fullscreen/Reset
+   режима плетения) и их дубли в панели «⋯». Оформления он больше не несёт и
+   остаётся раскладочной зацепкой, как .tool-btn в хедере: размер там, где он
+   отличается, задаётся одной строкой --icon-btn-size (Header.css,
+   GridSidebar.css), а не парой width/height, которую приходилось перебивать
+   в каждом брейкпоинте.
+
+   ghost, а не secondary: рамка вокруг кнопки внутри уже нарисованной подложки
+   (.grid-controls__actions / .grid-controls__toolbar) читалась бы как двойная.
+   От ghost отличается только покой — тот приглушает глиф до --color-text-muted,
+   а здесь кнопки лежат на своей подложке и всегда были в полный цвет; ховер
+   (--color-text + --color-border-subtle подложкой) совпадает с вариантом
+   один в один.
+
+   Бокс 24px — между ступенями sm (22) и md (26), поэтому переменной, а не
+   пропом. Селектор одноклассовый и спорит с .icon-btn--md той же
+   специфичности (0,1,0) — выигрывает порядком: IconButton.css попадает в
+   бандл раньше Stepper.css, его импортирует сам Stepper.tsx строкой выше. */
 .grid-controls__btn {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: #e3f3ff;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
+  --icon-btn-size: 24px;
+  --ctl-fg: var(--color-text);
 }
-.grid-controls__btn:hover { background: rgba(255, 255, 255, 0.1); }
-.grid-controls__btn:disabled { opacity: 0.3; cursor: default; }
-.grid-controls__btn:disabled:hover { background: transparent; }
-.grid-controls__reset {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
-}
-.grid-controls__reset:hover { color: #e3f3ff; background: rgba(255, 255, 255, 0.08); }
+/* Кнопка сброса — <IconButton size="sm" shape="square" variant="ghost">
+   (Stepper.tsx): те же 22px, скругление 6px и подложка на ховере, что были
+   здесь описаны руками. Класс .grid-controls__reset за ней сохранён, но
+   оформления в нём больше нет — только раскладка в GridSidebar.css. */
 .grid-controls__value {
   min-width: 30px;
   text-align: center;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  color: #22d3ee;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--color-accent);
 }
 .grid-controls__value--editable {
   cursor: text;
@@ -67,25 +66,25 @@
   transition: border-color 0.15s;
 }
 .grid-controls__value--editable:hover {
-  border-bottom-color: rgba(34, 211, 238, 0.5);
+  border-bottom-color: var(--color-accent-strong);
 }
+/* Поле правки значения — <TextField mono inline> (Stepper.tsx): моношрифт,
+   12px, прозрачный фон, подчёркивание вместо рамки и нулевые поля описаны
+   там. Здесь остаётся то, чего дизайн-система не задаёт: ширина, выключка
+   по центру и акцентный цвет самих цифр (у span рядом он такой же).
+   Правила -moz-appearance и ::-webkit-*-spin-button удалены как мёртвые:
+   стрелок у type="text" не бывает, а поле всегда было текстовым. */
 .grid-controls__input {
   width: 36px;
   text-align: center;
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  color: #22d3ee;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #22d3ee;
-  outline: none;
-  padding: 0;
-  -moz-appearance: textfield;
 }
-.grid-controls__input::-webkit-outer-spin-button,
-.grid-controls__input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+/* Цвет — двойным классом, тем же приёмом, что у .btn.export-btn: у
+   .text-field { color: var(--color-text) } ровно тот же вес, и с одинарным
+   классом спор решал бы порядок файлов в бандле. Ширину при этом двойным
+   писать нельзя — её переопределяет .grid-sidebar__steppers .grid-controls__input
+   на узкой панели, и вес там тоже (0,2,0). */
+.text-field.grid-controls__input {
+  color: var(--color-accent);
 }
 
 /* Степпер параметра, который сейчас ни на что не влияет (Stepper disabled):
@@ -97,9 +96,13 @@
 .grid-controls--disabled .grid-controls__value {
   cursor: default;
 }
-.grid-controls--disabled .grid-controls__reset:disabled:hover {
-  color: #64748b;
-  background: transparent;
+/* Собственное затемнение кнопок внутри уже погашенной строки не нужно: две
+   прозрачности перемножаются (0.45 × 0.4), и иконки почти исчезают — при том
+   что вся строка и так читается как выключенная. Правило написано под кнопку
+   сброса, но с переездом −/+ на <IconButton> накрывает и их (раньше у них был
+   свой opacity: 0.3, дававший 0.45 × 0.3 — ещё бледнее). */
+.grid-controls--disabled .icon-btn:disabled {
+  opacity: 1;
 }
 
 .header__overflow-row {
@@ -113,8 +116,8 @@
   align-items: center;
   gap: 6px;
   flex: 1;
-  font-size: 10px;
-  font-weight: 800;
-  color: #64748b;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-dim);
   text-transform: uppercase;
 }

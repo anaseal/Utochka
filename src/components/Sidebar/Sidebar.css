@@ -4,12 +4,15 @@
    разъезжались по ширине/паддингам/скроллбару. */
 .sidebar {
   position: fixed;
-  top: var(--palette-height);
+  top: var(--header-height);
   right: 0;
   bottom: 0;
-  width: 260px;
+  /* Собственная ширина панели — постоянная на всех состояниях: панель
+     выезжает через transform, а не разворачивается по ширине. Брейкпоинты
+     у переменной, в index.css, рядом с резервом --sidebar-width. */
+  width: var(--sidebar-panel-width);
   background: var(--color-panel);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
@@ -24,14 +27,14 @@
 .sidebar__header {
   flex-shrink: 0;
   padding: 14px 14px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .sidebar__title {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-lg);
   font-weight: 700;
-  color: #e3f3ff;
+  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -51,8 +54,8 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
-  color: #64748b;
-  font-size: 11px;
+  color: var(--color-text-dim);
+  font-size: var(--text-sm);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -61,29 +64,30 @@
 }
 
 .sidebar__tab:hover {
-  color: #e3f3ff;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  background: var(--color-border-subtle);
 }
 
-/* Тот же язык подсветки, что у .tool-btn--active в хедере и у
-   .sidebar__tool-picker__btn--active ниже: бирюзовая рамка + подложка. */
+/* Тот же язык подсветки, что у активной кнопки хедера (.icon-btn--active,
+   вариант chip) и у .sidebar__tool-picker__btn--active ниже: бирюзовая
+   рамка + подложка. */
 .sidebar__tab--active {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22d3ee;
-  color: #22d3ee;
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* :hover и --active бьют по одним и тем же свойствам с равной
    специфичностью — без этого правила наведение на активную вкладку гасило бы
-   её подсветку (та же оговорка, что у .sidebar__tool-toggle--active:hover). */
+   её подсветку (та же оговорка, что у .btn--active в common/Button.css). */
 .sidebar__tab--active:hover {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22d3ee;
-  color: #22d3ee;
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .sidebar__section + .sidebar__section {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .sidebar__section-heading {
@@ -110,158 +114,78 @@
 
 .sidebar__section-title {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .sidebar__section-desc {
   margin: 3px 0 0;
-  font-size: 10px;
+  font-size: var(--text-xs);
   line-height: 1.4;
-  color: #64748b;
+  color: var(--color-text-dim);
 }
 
-.sidebar__section-clear {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #64748b;
-  cursor: pointer;
-  transition: color var(--transition-speed) ease, background var(--transition-speed) ease;
-}
+/* Кнопка-сброс справа от заголовка секции — теперь
+   <IconButton size="sm" shape="square" variant="ghost"> (см. common/), своего
+   класса у неё не осталось: 22px, скругление 6px, прозрачный фон и подложка
+   на ховере — ровно то, что даёт этот вариант. flex-shrink: 0, ради которого
+   класс держали в ряду заголовка, встроен в .icon-btn. */
 
-.sidebar__section-clear:hover:not(:disabled) {
-  color: #e3f3ff;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.sidebar__section-clear:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
+/* Оформление скроллбара — .u-scroll в index.css */
 .sidebar__body {
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
-}
-
-.sidebar__body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.sidebar__body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar__body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background var(--transition-speed) ease;
-}
-
-.sidebar__body::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.55);
-  background-clip: padding-box;
 }
 
 .sidebar__footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
-.sidebar__clear {
-  display: block;
+/* Полноширинная кнопка-действие панели — только место, оформление целиком в
+   <Button> (см. common/Button.tsx). Один класс на все три такие кнопки: они и
+   раньше были одной геометрии, просто описаны тремя копиями
+   (.sidebar__tool-toggle, .sidebar__confirm-delete, .sidebar__clear).
+   fullWidth здесь не годится: боковые поля панели — margin на самой кнопке
+   (так же, как у .sidebar__tool-picker ниже), а width: 100% поверх этих
+   margin'ов вылезло бы за правый край на все 28px. */
+.sidebar__action {
   width: calc(100% - 28px);
+  margin: 0 14px 8px;
+}
+
+/* Кнопка лежит прямо в потоке секции (не во flex-контейнере, как в подвале
+   модалок), а .btn — inline-flex: под инлайновым боксом остаётся полоска
+   высоты строки, и под каждой такой кнопкой появлялся лишний зазор ~4px.
+   Двойной класс, а не просто .sidebar__action: специфичность с .btn иначе
+   равная, и спор решал бы порядок файлов в бандле (та же оговорка, что у
+   .grid-controls__btn--reset в Header.css). */
+.btn.sidebar__action {
+  display: flex;
+}
+
+/* Та же кнопка в подвале панели («Reset all») — отступ сверху вместо отступа
+   снизу: под ней либо край панели, либо подсказка .sidebar__hint со своим
+   паддингом. */
+.sidebar__action--footer {
   margin: 14px 14px 0;
-  padding: 8px 12px;
-  background: var(--color-panel);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease, color var(--transition-speed) ease;
-}
-
-.sidebar__clear:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.06);
-  color: #e3f3ff;
-}
-
-.sidebar__clear:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .sidebar__hint {
   padding: 12px 16px;
-  font-size: 11px;
-  color: #64748b;
-}
-
-/* Активация инструмента рисования из боковой панели (не из HeaderToolGroup) —
-   текстовая кнопка с явным call-to-action вместо iOS-тоггла: тоггл читается
-   как независимая persistent-настройка, а выбор инструмента (activeTool)
-   молча снимает выделение с карандаша/ластика — это поведение выбора, а не
-   переключателя. Используется Chains (chainToolActive) и Holes (holeToolActive). */
-.sidebar__tool-toggle {
-  display: block;
-  width: calc(100% - 28px);
-  margin: 0 14px 8px;
-  padding: 7px 12px;
-  background: var(--color-panel);
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  border-radius: 8px;
-  color: #22d3ee;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
-}
-
-.sidebar__tool-toggle:hover {
-  border-color: #22d3ee;
-  background: rgba(34, 211, 238, 0.15);
-}
-
-.sidebar__tool-toggle--active {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22d3ee;
-  color: #e3f3ff;
-}
-
-/* :hover и --active бьют по одному и тому же background/border-color с
-   одинаковой специфичностью (один класс + один псевдокласс против одного
-   класса) — без этого правила наведение на УЖЕ активную кнопку перебивало
-   бы её подсветку соседним :hover, и активная кнопка при наведении на
-   секунду выглядела бы неактивной. */
-.sidebar__tool-toggle--active:hover {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22d3ee;
+  font-size: var(--text-sm);
+  color: var(--color-text-dim);
 }
 
 /* Сегментированная пара переключателей между несколькими инструментами одной
-   секции (Holes: Bead / Segment) — в отличие от .sidebar__tool-toggle выше
+   секции (Holes: Bead / Segment) — в отличие от .sidebar__action выше
    (один инструмент, текст-CTA) здесь несколько взаимоисключающих режимов, и
    пара CTA-кнопок подряд читалась бы как две независимые команды, а не как
-   один выбор. Визуальный язык подсветки — тот же, что у .tool-btn--active в
-   хедере (иконка + подпись вместо круглой кнопки — здесь ширина колонки, а не
-   ряда, диктует форму). */
+   один выбор. Визуальный язык подсветки — тот же, что у активной кнопки
+   хедера (.icon-btn--active; иконка + подпись вместо круглой кнопки — здесь
+   ширина колонки, а не ряда, диктует форму). */
 .sidebar__tool-picker {
   display: flex;
   gap: 6px;
@@ -271,7 +195,7 @@
 /* Неактивная кнопка — нейтральный серый (#94a3b8), как .tool-btn в хедере
    (карандаш/ластик/заливка/штамп): бирюзовый — сигнал «выбрано», а не цвет
    кнопки по умолчанию. Раньше здесь был бирюзовый и в покое, и в активном
-   состоянии (унаследовано от .sidebar__tool-toggle, CTA-кнопки, которая
+   состоянии (унаследовано от CTA-кнопки секции — .sidebar__action, которая
    специально ярче в состоянии покоя) — для набора из нескольких
    равноправных иконок-режимов это читалось так, будто обе выбраны разом. */
 .sidebar__tool-picker__btn {
@@ -282,67 +206,36 @@
   gap: 2px;
   padding: 6px 4px;
   background: var(--color-panel);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  color: #94a3b8;
-  font-size: 10px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
   font-weight: 600;
   cursor: pointer;
   transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
 .sidebar__tool-picker__btn:hover {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.06);
-  color: #e3f3ff;
+  border-color: var(--color-border-strong);
+  background: var(--color-border-subtle);
+  color: var(--color-text);
 }
 
 .sidebar__tool-picker__btn--active {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22d3ee;
-  color: #22d3ee;
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
-/* Та же оговорка, что у .sidebar__tool-toggle--active:hover выше: :hover и
+/* Та же оговорка, что у .btn--active в common/Button.css: :hover и
    --active делят background/border-color/color с одинаковой специфичностью,
    без явного правила наведение на активную кнопку перебивало бы её цвет
    соседним :hover (была именно эта жалоба — активная Segment на наведении
    выглядела как обычная неактивная кнопка). */
 .sidebar__tool-picker__btn--active:hover {
-  background: rgba(34, 211, 238, 0.15);
-  border-color: #22d3ee;
-  color: #22d3ee;
-}
-
-/* Подтверждение удаления помеченных (пунктиром) бисерин — Bead/Segment
-   только помечают, это единственное действие, которое реально пишет в
-   deletedBeads. Тот же нейтральный CTA-стиль, что у .sidebar__tool-toggle
-   (не красный — красный читался как что-то опасное/пугающее, хотя это
-   обычная кнопка подтверждения набранного, а не необратимый снос без
-   предупреждения). Задизейблена, пока список пометок пуст. */
-.sidebar__confirm-delete {
-  display: block;
-  width: calc(100% - 28px);
-  margin: 0 14px 8px;
-  padding: 7px 12px;
-  background: var(--color-panel);
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  border-radius: 8px;
-  color: #22d3ee;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color var(--transition-speed) ease, background var(--transition-speed) ease;
-}
-
-.sidebar__confirm-delete:hover:not(:disabled) {
-  border-color: #22d3ee;
-  background: rgba(34, 211, 238, 0.15);
-}
-
-.sidebar__confirm-delete:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* Разделитель ВНУТРИ секции (не между секциями — те уже разделены
@@ -352,18 +245,5 @@
 .sidebar__section-divider {
   height: 1px;
   margin: 4px 14px 8px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-@media (max-width: 1024px) {
-  .sidebar {
-    width: 220px;
-  }
-}
-
-/* 480–768px: 220px отъедает почти половину узкого экрана — сужаем дальше. */
-@media (max-width: 767.98px) {
-  .sidebar {
-    width: 170px;
-  }
+  background: var(--color-border-subtle);
 }

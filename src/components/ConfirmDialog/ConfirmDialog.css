@@ -1,60 +1,23 @@
-/* Оболочка и панель повторяют язык галереи проектов (ProjectGallery.css) —
-   это те же модальные окна. z-index выше галереи (170), потому что диалог
-   вызывается из неё и должен лечь поверх; вся тройка модалок выше хедера
-   (100) и его попапов (110–140), см. WelcomeDialog.css; тост (1000) остаётся
-   выше всех. */
-.confirm-dialog__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 190;
-  padding: 24px;
-}
-
-.confirm-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: min(400px, 100%);
-  padding: 20px;
-  background: var(--color-panel);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-}
-
-.confirm-dialog__title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #e3f3ff;
-}
+/* Затемнение, панель и заголовок — общие для всех модалок проекта, они в
+   common/Modal.css (layout="alert": колонка с полями 20px, без шапки-полосы
+   и крестика). Здесь остаётся только начинка диалога. */
 
 .confirm-dialog__message {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: #94a3b8;
+  font-size: var(--text-lg);
+  line-height: 1.4;
+  color: var(--color-text-muted);
 }
 
 /* Поле с текстом для ручного копирования (Share-ссылка, когда клипборд
-   отказал) — readonly, выделяется целиком по фокусу. */
+   отказал) — readonly, выделяется целиком по фокусу. Само поле —
+   <TextField mono> (common/TextField.css): рамка, фон, моношрифт и радиус
+   оттуда, здесь остаётся только ширина во всю панель. Высота стала 28px
+   вместо прежних ~31px (padding 7/10 против 0/8), рамка в покое — токен
+   --color-border (.12 вместо .15), в фокусе — сплошной акцент вместо
+   акцента с альфой .6. */
 .confirm-dialog__copy {
   width: 100%;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  background: var(--color-page);
-  color: #e3f3ff;
-  font-size: 12px;
-  font-family: monospace;
-  outline: none;
-}
-.confirm-dialog__copy:focus {
-  border-color: rgba(34, 211, 238, 0.6);
 }
 
 .confirm-dialog__actions {
@@ -64,47 +27,7 @@
   margin-top: 4px;
 }
 
-.confirm-dialog__button {
-  padding: 7px 14px;
-  border: 1px solid #64748b;
-  border-radius: 8px;
-  background: var(--color-page);
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: color var(--transition-speed), border-color var(--transition-speed);
-}
-.confirm-dialog__button:hover {
-  color: #e3f3ff;
-  border-color: #e3f3ff;
-}
-.confirm-dialog__button:active {
-  transform: translateY(1px);
-}
-.confirm-dialog__button:focus-visible {
-  outline: 2px solid #22d3ee;
-  outline-offset: 2px;
-}
-
-.confirm-dialog__button--confirm {
-  color: #22d3ee;
-  border-color: #22d3ee;
-}
-.confirm-dialog__button--confirm:hover {
-  color: #67e8f9;
-  border-color: #67e8f9;
-}
-
-/* Необратимое действие (Delete, Reset data) — красным, чтобы кнопка не
-   читалась как обычное «продолжить». */
-.confirm-dialog__button--danger {
-  color: #f87171;
-  border-color: #f87171;
-}
-.confirm-dialog__button--danger:hover {
-  color: #fca5a5;
-  border-color: #fca5a5;
-}
+/* Собственных стилей у кнопок диалога больше нет: отмена — <Button
+   variant="secondary">, подтверждение — "primary", а необратимое действие
+   (Delete, Reset data) — "danger". Все три варианта живут в
+   common/controlVariants.css. */

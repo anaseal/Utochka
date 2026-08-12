@@ -1,0 +1,91 @@
+/* Палитра вариантов кнопок — одна на <Button> и <IconButton>.
+   Варианты у них общие по смыслу (primary / secondary / danger / ghost),
+   различается только геометрия: текстовая кнопка с паддингами против
+   квадратика или кружка фиксированного размера. Поэтому цвета объявлены
+   здесь один раз, а оба блока читают их через var(--ctl-*) — иначе четыре
+   варианта разошлись бы двумя копиями и «серая рамка» у Button и у
+   IconButton со временем перестала бы совпадать.
+
+   Набор переменных: базовые --ctl-fg / --ctl-border / --ctl-bg обязательны,
+   состояния -hover и -active объявляются только там, где отличаются от
+   базового, а в самих блоках читаются с фолбэком на него:
+   var(--ctl-fg-hover, var(--ctl-fg)).
+
+   Безрамочных кнопок в проекте оказалось два вида, поэтому вариантов пять,
+   а не четыре: ghost прозрачный в покое, chip — с подложкой. Разница не
+   стилистическая: chip сидит поверх чужого содержимого (превью проекта,
+   картинка референса, полотно за хедером), и без подложки иконка теряется
+   на светлом снимке. Ghost же лежит на уже оформленной панели, где фон
+   и так свой. */
+
+/* Главное действие: акцентная рамка и акцентный текст (Start designing,
+   Confirm). Активное состояние — как у прежней .sidebar__tool-toggle--active
+   (кнопка «Pick chain nodes» в сайдбаре, теперь этот же вариант):
+   заливка акцентом, текст белеет, рамка остаётся акцентной. */
+.btn--primary,
+.icon-btn--primary {
+  --ctl-fg: var(--color-accent);
+  --ctl-border: var(--color-accent);
+  --ctl-bg: var(--color-page);
+  --ctl-fg-hover: var(--color-accent-hover);
+  --ctl-border-hover: var(--color-accent-hover);
+  --ctl-fg-active: var(--color-text);
+  --ctl-bg-active: var(--color-accent-soft);
+}
+
+/* Второстепенное действие: серая рамка, под курсором уходит в акцент
+   (Export, Cancel). */
+.btn--secondary,
+.icon-btn--secondary {
+  --ctl-fg: var(--color-text-muted);
+  --ctl-border: var(--color-text-dim);
+  --ctl-bg: var(--color-page);
+  --ctl-fg-hover: var(--color-accent);
+  --ctl-border-hover: var(--color-accent);
+  --ctl-fg-active: var(--color-accent);
+  --ctl-border-active: var(--color-accent);
+  --ctl-bg-active: var(--color-accent-soft);
+}
+
+/* Необратимое действие (Delete, Reset) — красным, чтобы кнопка не читалась
+   как обычное «продолжить». */
+.btn--danger,
+.icon-btn--danger {
+  --ctl-fg: var(--color-danger);
+  --ctl-border: var(--color-danger);
+  --ctl-bg: var(--color-page);
+  --ctl-fg-hover: var(--color-danger-hover);
+  --ctl-border-hover: var(--color-danger-hover);
+  --ctl-bg-active: var(--color-danger-soft);
+}
+
+/* Кнопка внутри уже оформленной поверхности (пункт меню, угол карточки):
+   рамки нет, в покое не видно ничего, кроме иконки. */
+.btn--ghost,
+.icon-btn--ghost {
+  --ctl-fg: var(--color-text-muted);
+  --ctl-border: transparent;
+  --ctl-bg: transparent;
+  --ctl-fg-hover: var(--color-text);
+  --ctl-bg-hover: var(--color-border-subtle);
+  --ctl-fg-active: var(--color-accent);
+  --ctl-bg-active: var(--color-accent-soft);
+}
+
+/* Кнопка поверх чужого содержимого (крестик модалки, действия на карточке
+   проекта, инструменты хедера над полотном): рамки нет, но есть подложка.
+   Значения сняты с четырёх мест, где этот вид был написан копиями и совпадал
+   до последней альфы, — .welcome__icon-btn, .project-gallery__icon-btn,
+   .reference-window__icon-btn и .tool-btn. Ховер уходит в --color-border-strong
+   (.20), а не в --color-border-subtle (.08) как у ghost: с непрозрачного покоя
+   слабая подложка не читалась бы как отклик. */
+.btn--chip,
+.icon-btn--chip {
+  --ctl-fg: var(--color-text-muted);
+  --ctl-border: transparent;
+  --ctl-bg: var(--color-overlay);
+  --ctl-fg-hover: var(--color-text);
+  --ctl-bg-hover: var(--color-border-strong);
+  --ctl-fg-active: var(--color-accent);
+  --ctl-bg-active: var(--color-accent-soft);
+}

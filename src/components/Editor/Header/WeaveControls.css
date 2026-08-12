@@ -1,0 +1,126 @@
+/* --- Режим плетения (WeaveControls.tsx) --------------------------------------
+   Контролы стоят в хедере на месте скрытых палитры/инструментов и целиком
+   собраны из существующих блоков (tool-group, grid-controls) — их описывает
+   Header.css. Здесь только то, чего у тех блоков нет: компактный прогресс в
+   стиле блока Zoom и раскладка режима на узких экранах. Цвета — та же пара,
+   что во всём хедере: слейт-текст + циановый акцент.
+
+   Подсветки Fullscreen своего правила больше нет — это проп active у
+   <IconButton>. Ховер Reset (.grid-controls__btn--danger) остался в Header.css:
+   это перебивка .grid-controls__btn из common/Stepper.css, и переезд в этот
+   файл поменял бы победителя в каскаде — Stepper.css лежит в бандле позже
+   Header.css, но раньше этого файла. */
+.weave-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+/* Своя, более узкая рамка вместо унаследованной от Zoom (.grid-controls--vertical-zoom
+   .grid-controls__group, padding: 4px 8px, см. Header.css) — там паддинг рассчитан
+   на короткое "100%", здесь же раньше был ещё и min-width: 84px "про запас"
+   под большие схемы ("9999 / 9999"-подобные значения), из-за чего блок
+   держал эту ширину всегда, даже при "10 / 1823" — content-based ширина уже
+   сама растёт под длинные числа (min-width был полом, а не потолком, поэтому
+   уборка его безопасна и для крупных схем). */
+.grid-controls--vertical-zoom .weave-progress {
+  padding: 4px 6px;
+}
+
+.weave-progress__value {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.weave-progress__total {
+  color: var(--color-text-dim);
+  font-weight: 600;
+}
+
+.weave-progress__bar {
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.weave-progress__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-accent);
+  transition: width var(--transition-speed) ease;
+}
+
+@media (max-width: 767.98px) {
+  /* Fullscreen/Reset/«?» режима плетения — дубли живут в overflow-меню "⋯"
+     (см. .header__overflow-mobile-extra в HeaderOverflowMenu.css), тем же
+     приёмом, что Zoom/Save-Load-Share.
+     Префикс .header__nav обязателен: цель — .grid-controls__btn (Stepper.css)
+     и .weave-help (WeaveHelp.css), у обоих display задан одним классом, и оба
+     файла попадают в бандл ПОЗЖЕ Header.css — при равной специфичности они
+     побеждали, и эти три кнопки на мобильном не прятались, а уезжали за край
+     строки вместе с остатком хедера. */
+  .header__nav .header__weave-desktop-only {
+    display: none;
+  }
+}
+
+/* Двухрядная сетка узкого экрана — сама сетка объявлена в Header.css
+   (.header__nav), здесь режим плетения только занимает в ней свои ячейки.
+   :not(--vertical-zoom) обязателен: иначе правило перекрыло бы display: none
+   у блока Zoom (у него оба класса) и вернуло бы его в строку. */
+@media (max-width: 599.98px) {
+  .header--weave .grid-controls:not(.grid-controls--vertical-zoom) {
+    display: contents;
+  }
+
+  /* Размер кнопок тулбара (30px), их цвет и место в сетке (grid-row: 2 /
+     order: 11) задаёт Header.css одним правилом на оба тулбара — этот и
+     рисования: раньше здесь и в HeaderEndGroup.css лежали две одинаковые
+     копии. Здесь остаётся только то, чего у рисования нет, — прогресс и «?». */
+
+  /* Первый ряд — то, чем работаешь (здесь прогресс), второй — действия и меню. */
+  .header--weave .grid-controls--vertical-zoom { grid-row: 1; }
+
+  /* Нумерация order общая на оба режима — поэтому первые колонки второго ряда
+     у рисования и плетения совпадают (см. Header.css). */
+  .header--weave .weave-help { grid-row: 2; order: 13; }
+
+  /* Прогресс — две колонки: его ширина зависит от содержимого («0 / 1057»
+     против «1234 / 9999»), в одну 30px-ячейку он не влезает, а span 2 держит
+     его на сетке при любом числе. */
+  .header--weave .grid-controls--vertical-zoom {
+    grid-column: span 2;
+    justify-self: stretch;
+  }
+
+  /* «?» плетения возвращается в строку: в рисовании «?» тоже снаружи, и
+     держать одну и ту же по смыслу кнопку то в строке, то в меню в
+     зависимости от режима — ровно то расхождение, из-за которого непонятно,
+     где что искать. Fullscreen/Reset остаются в «⋯»: места на них в строке
+     нет, а в рисовании у них и нет пары. Дубль «?» в панели при этом гасит
+     HeaderOverflowMenu.css — две одинаковые кнопки помощи на одном экране
+     читаются как разные. Тот файл лежит в бандле позже этого, поэтому при
+     равной специфичности (0,3,0) побеждает он, как и задумано. */
+  .header--weave .header__nav .weave-help { display: inline-flex; }
+
+  /* Прогресс — в одну строку высотой 30px: подпись DONE уходит, дробь и полоса
+     остаются (дробь и так читается как «сделано из всего»). В прежних 54px он
+     не помещался во второй ряд и пробивал 74px хедера — это и была причина,
+     по которой плетение оставалось одноярусным. Свою рамку блок сохраняет:
+     это показание, а не кнопка. */
+  .header__nav .weave-progress .grid-controls__label { display: none; }
+  .header__nav .grid-controls--vertical-zoom .weave-progress {
+    height: 30px;
+    box-sizing: border-box;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px 6px;
+  }
+}

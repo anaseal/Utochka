@@ -70,13 +70,32 @@ export const clampTaperSide = (side: TaperSide, height: number): TaperSide => ({
 export const clampTaperDepth = (depth: number, width: number): number =>
   Math.max(0, Math.min(depth, taperDepthMax(width)));
 
+// Значения — те же спаны, что и общие topSpan/bottomSpan: per-row override
+// подставляется вместо них в resolveSpanCount и больше нигде не
+// ограничивается (clampSpan в useGridConfig держит только шаг степпера, не
+// то, что пришло из localStorage/файла/Share-ссылки). Без диапазона сюда
+// протекали два разных сбоя: большое число раздувало getInternalCount, и
+// дуга спана уходила в цикл на миллиард итераций — вкладку вешало намертво,
+// ErrorBoundary такое не ловит; NaN делал getYStep нечисловым, и на холсте
+// не оставалось ни одной бисерины (тот же итог, что описан у isCount).
+// Ключи не проверяем — это номера рядов, включая -1/-2 горизонтальных
+// цепочек, и лишний ряд мимо resolveSpanCount безвреден.
 export const isRowSpanOverrides = (v: unknown): v is Record<number, number> => {
   if (typeof v !== 'object' || v === null) return false;
-  return Object.values(v).every(n => typeof n === 'number');
+  const { minSpan, maxSpan } = BEAD_THEME.constraints;
+  return Object.values(v).every(n => isIntInRange(n, minSpan, maxSpan));
 };
 
-// decorBands имеет ту же форму, что и rowSpanOverrides: Record<row, count>.
-export const isDecorBands = isRowSpanOverrides;
+// Форма та же, что у rowSpanOverrides (Record<row, count>), но диапазон свой
+// — число рядов декор-полосы, а не спан, поэтому отдельная функция, а не
+// псевдоним. getDecorRows в generator.ts уже отбивает NaN, отрицательные и
+// дробные; незакрытым оставалось большое число — оно так же уводит сборку
+// полосы в бесконечный цикл.
+export const isDecorBands = (v: unknown): v is Record<number, number> => {
+  if (typeof v !== 'object' || v === null) return false;
+  const { minRows, maxRows } = BEAD_THEME.decorDefaults;
+  return Object.values(v).every(n => isIntInRange(n, minRows, maxRows));
+};
 
 // Убирает per-row override'ы, совпавшие с глобальным дефолтом.
 // Иначе такой override «протухает»: resolveSpanCount отдаёт ему приоритет

@@ -1,5 +1,7 @@
 import { Circle, RotateCcw, Waypoints } from 'lucide-react';
 import { SectionHelp } from '../common/SectionHelp';
+import { Button } from '../common/Button';
+import { IconButton } from '../common/IconButton';
 
 interface HolesSectionProps {
   holeToolActive: boolean;
@@ -33,16 +35,16 @@ export const HolesSection = ({
           <h3 className="sidebar__section-title">Holes</h3>
           <SectionHelp text="Removes beads from the weave. Bead marks one clicked bead; Segment marks a node and every span attached to it — hover a node to preview what will go. With Mirror Mode on, the mirrored bead or segment is marked too. Marked beads are dashed until you confirm with Delete below. Deleted beads are not covered by Undo — use Restore all (↺ above) to bring them all back." />
         </span>
-        <button
-          type="button"
-          className="sidebar__section-clear"
+        <IconButton
+          size="sm"
+          shape="square"
+          variant="ghost"
           onClick={onClearDeletedBeads}
           disabled={!hasDeletedBeads}
           aria-label="Restore all beads"
           title="Restore all beads"
-        >
-          <RotateCcw size={13} />
-        </button>
+          icon={<RotateCcw size={13} />}
+        />
       </div>
     </header>
     <div className="sidebar__tool-picker">
@@ -67,16 +69,21 @@ export const HolesSection = ({
         <span>Segment</span>
       </button>
     </div>
-    <button
-      type="button"
-      className="sidebar__confirm-delete"
+    {/* primary, а не danger: Bead/Segment уже показали пунктиром, что уйдёт, и
+        это кнопка «применить набранное», а не последний рубеж перед
+        необратимым сносом — красный читался как что-то опасное и отпугивал
+        от нажатия. */}
+    <Button
+      variant="primary"
+      size="md"
+      className="sidebar__action"
       onClick={onConfirmPendingDelete}
       disabled={pendingDeleteCount === 0}
     >
       {pendingDeleteCount > 0
         ? `Delete ${pendingDeleteCount} bead${pendingDeleteCount === 1 ? '' : 's'}`
         : 'Delete marked beads'}
-    </button>
+    </Button>
     <div className="sidebar__section-divider" />
   </section>
 );

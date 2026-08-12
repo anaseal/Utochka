@@ -1,0 +1,64 @@
+/* Поле ввода дизайн-системы. Высота 28px — нижняя граница вилки 28–32px из
+   задачи: поля проекта живут в тесных местах (строка карточки в галерее,
+   строка степпера), и 32px там растянули бы строку.
+
+   Ширину поле не задаёт: в галерее это flex: 1, в степпере — фиксированные
+   36px. Здесь только min-width: 0, без него flex-ребёнок не даёт строке
+   сжиматься ниже своей ширины по содержимому. */
+.text-field {
+  height: 28px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-md);
+  outline: none;
+  transition: border-color var(--transition-speed) ease;
+}
+
+.text-field:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+/* Фокус показывает рамка, а не общий для раздела 3 outline: у поля ввода
+   рамка и так на месте, и кольцо поверх неё читалось бы как двойная.
+
+   :not(:disabled) здесь не ради disabled (тот и не сфокусируется), а ради
+   специфичности: без него правило слабее ховера выше и курсор над полем,
+   в котором сейчас печатают, гасил бы акцентную рамку до серой. Тот же
+   приём, что у --active в Button.css: правило стоит после :hover и
+   уравнено с ним по весу. */
+.text-field:focus:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.text-field--invalid:not(:disabled),
+.text-field--invalid:focus:not(:disabled) {
+  border-color: var(--color-danger);
+}
+
+.text-field--mono {
+  font-family: var(--font-mono);
+}
+
+/* Только подчёркивание. border-color из :focus и --invalid попадает на все
+   стороны, но видна из них одна нижняя — отдельных правил не нужно. */
+.text-field--inline {
+  height: auto;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.text-field:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* readOnly намеренно не гасим: единственное такое поле — Share-ссылка в
+   ConfirmDialog, её нужно видеть и выделять, а не читать как выключенную. */

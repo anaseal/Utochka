@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
 import { ThreadIcon } from './icons';
 import { ThreadStyleFields } from './ThreadStyleFields';
+import { IconButton } from '../../common/IconButton';
+import { MenuPanel } from '../../common/Menu';
 import { DrawingTool } from '../../../hooks/useDrawing';
 import { Thread } from '../../../types/thread';
 import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
@@ -9,6 +11,13 @@ import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
 // crossWeave — там уже попап на выбор нити) — добавляем второй маленький
 // бейдж-триггер (цветной кружок, противоположный угол от «очистить все»),
 // открывающий тот же ThreadStyleFields, что и у crossWeave.
+//
+// Единственное из шести меню хедера, которое взяло у <Menu> только плашку
+// (<MenuPanel>), а закрытие оставило на useDismissablePopup: попап здесь
+// открывает не первая кнопка блока, а бейдж третьим по счёту, и правило
+// «триггер — первый фокусируемый узел корня» из <Menu> вернуло бы фокус
+// после Escape на кнопку инструмента. Пунктов у этого меню нет вовсе —
+// в панели только поля цвета и прозрачности.
 export const ThreadStyleButton = ({
   activeTool, setActiveTool, threads, onClearAllThreads,
   activeThreadColor, activeThreadOpacity, onThreadColorChange, onThreadOpacityChange,
@@ -26,14 +35,15 @@ export const ThreadStyleButton = ({
 
   return (
     <div className="tool-btn-group" ref={ref}>
-      <button
+      <IconButton
+        variant="chip"
+        className="tool-btn"
+        active={activeTool === 'thread'}
         onClick={() => setActiveTool(activeTool === 'thread' ? 'pencil' : 'thread')}
-        className={`tool-btn ${activeTool === 'thread' ? 'tool-btn--active' : ''}`}
         title="Thread (T)"
         aria-pressed={activeTool === 'thread'}
-      >
-        <ThreadIcon size={14} />
-      </button>
+        icon={<ThreadIcon size={14} />}
+      />
 
       {activeTool === 'thread' && threads.length > 0 && (
         <button
@@ -58,14 +68,14 @@ export const ThreadStyleButton = ({
       )}
 
       {open && (
-        <div className="mirror-menu__panel" role="menu">
+        <MenuPanel>
           <ThreadStyleFields
             color={activeThreadColor}
             opacity={activeThreadOpacity}
             onColorChange={onThreadColorChange}
             onOpacityChange={onThreadOpacityChange}
           />
-        </div>
+        </MenuPanel>
       )}
     </div>
   );

@@ -16,15 +16,15 @@
 }
 
 .decor-tail-drop-target {
-  fill: rgba(34, 211, 238, 0.15);
-  stroke: #22d3ee;
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent);
   stroke-width: 2;
   stroke-dasharray: 5 3;
 }
 
 .decor-tail-drop-target--replace {
   fill: rgba(251, 191, 36, 0.2);
-  stroke: #fbbf24;
+  stroke: var(--color-warning);
 }
 
 .decor-tail-remove-btn {
@@ -41,16 +41,16 @@
 
 .decor-tail-remove-btn__bg {
   fill: #ff4757;
-  stroke: #0f172a;
+  stroke: var(--color-page);
   stroke-width: 1.5;
 }
 
 .decor-tail-remove-btn:hover .decor-tail-remove-btn__bg {
-  fill: #f87171;
+  fill: var(--color-danger);
 }
 
 .decor-tail-remove-btn__icon {
-  stroke: #e3f3ff;
+  stroke: var(--color-text);
   stroke-width: 2;
   stroke-linecap: round;
   pointer-events: none;

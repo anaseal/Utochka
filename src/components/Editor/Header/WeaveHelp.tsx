@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   HelpCircle, Diamond, MousePointerClick, Eraser, Crosshair, Undo2, RotateCcw, Percent, Maximize2,
 } from 'lucide-react';
+import { IconButton } from '../../common/IconButton';
 import { Technique } from './Header.types';
 import './WeaveHelp.css';
 
@@ -37,19 +38,20 @@ export const WeaveHelp = ({ technique, className }: { technique: Technique; clas
 
   return (
     <div className={`weave-help${className ? ` ${className}` : ''}`} ref={ref}>
-      <button
+      <IconButton
         ref={triggerRef}
+        variant="chip"
+        className="tool-btn"
+        active={open}
         onClick={() => setOpen(o => !o)}
-        className={`tool-btn ${open ? 'tool-btn--active' : ''}`}
         title="How this mode works"
         aria-haspopup="dialog"
         aria-expanded={open}
-      >
-        <HelpCircle size={14} />
-      </button>
+        icon={<HelpCircle size={14} />}
+      />
 
       {open && (
-        <div className="weave-help__bubble" role="dialog" aria-label="How weaving mode works">
+        <div className="weave-help__bubble u-scroll" role="dialog" aria-label="How weaving mode works">
           <p className="weave-help__lead">
             Mark what you have already woven. The app never tells you what to weave next —
             you follow your own pattern, it only remembers where you stopped.

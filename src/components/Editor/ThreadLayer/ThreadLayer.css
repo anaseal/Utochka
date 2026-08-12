@@ -49,16 +49,16 @@
 
 .thread-group__remove-btn-bg {
   fill: #ff4757;
-  stroke: #0f172a;
+  stroke: var(--color-page);
   stroke-width: 1.5;
 }
 
 .thread-group__remove-btn:hover .thread-group__remove-btn-bg {
-  fill: #f87171;
+  fill: var(--color-danger);
 }
 
 .thread-group__remove-btn-icon {
-  stroke: #e3f3ff;
+  stroke: var(--color-text);
   stroke-width: 2;
   stroke-linecap: round;
   pointer-events: none;

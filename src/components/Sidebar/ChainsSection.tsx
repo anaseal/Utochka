@@ -1,6 +1,8 @@
 import { RotateCcw } from 'lucide-react';
 import { PendantChain, ChainEndpoint, ToothPlacement } from '../../types/pendant';
 import { SectionHelp } from '../common/SectionHelp';
+import { Button } from '../common/Button';
+import { IconButton } from '../common/IconButton';
 
 interface ChainsSectionProps {
   pendantChains: PendantChain[];
@@ -36,16 +38,16 @@ export const ChainsSection = ({
           <h3 className="sidebar__section-title">Chains</h3>
           <SectionHelp text="Link two beads with a chain — bottom-row nodes or tooth edge nodes. Two nodes on the same tooth must be on the same side." />
         </span>
-        <button
-          type="button"
-          className="sidebar__section-clear"
+        <IconButton
+          size="sm"
+          shape="square"
+          variant="ghost"
           onClick={onClearChains}
           disabled={pendantChains.length === 0}
           aria-label="Clear Chains"
           title="Clear Chains"
-        >
-          <RotateCcw size={13} />
-        </button>
+          icon={<RotateCcw size={13} />}
+        />
       </div>
       <p className="sidebar__section-desc">
         {chainToolActive
@@ -55,14 +57,21 @@ export const ChainsSection = ({
           : 'Tap "Pick chain nodes" to start'}
       </p>
     </header>
-    <button
-      type="button"
-      className={`sidebar__tool-toggle${chainToolActive ? ' sidebar__tool-toggle--active' : ''}`}
+    {/* Активация инструмента рисования из панели (не из HeaderToolGroup) —
+        текстовая кнопка с явным call-to-action вместо iOS-тоггла: тоггл
+        читается как независимая persistent-настройка, а выбор инструмента
+        (activeTool) молча снимает выделение с карандаша/ластика. Включённый
+        режим — проп active, класс остаётся только ради места в панели. */}
+    <Button
+      variant="primary"
+      size="md"
+      className="sidebar__action"
+      active={chainToolActive}
       onClick={onToggleChainTool}
       aria-pressed={chainToolActive}
     >
       {chainToolActive ? 'Picking nodes…' : 'Pick chain nodes'}
-    </button>
+    </Button>
 
     {pendantChains.length > 0 && (
       <div className="decor-bands-list">

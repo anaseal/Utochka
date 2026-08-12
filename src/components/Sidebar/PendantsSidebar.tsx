@@ -6,6 +6,7 @@ import {
 } from '../../types/pendant';
 import { BEAD_THEME } from '../../config/theme';
 import { useBeadCoords } from '../../hooks/useBeadCoords';
+import { Button } from '../common/Button';
 import { ToothMesh, isColumnInAnyTooth } from '../../utils/tooth';
 import { PendantsCatalogSection } from './PendantsCatalogSection';
 import { ChainsSection } from './ChainsSection';
@@ -231,7 +232,7 @@ export const PendantsSidebar = ({
 
   return (
     <>
-      <div className="sidebar__body">
+      <div className="sidebar__body u-scroll">
         <PendantsCatalogSection
           templates={templates}
           placements={placements}
@@ -292,9 +293,10 @@ export const PendantsSidebar = ({
       </div>
 
       <div className="sidebar__footer">
-        <button
-          type="button"
-          className="sidebar__clear"
+        <Button
+          variant="secondary"
+          size="md"
+          className="sidebar__action sidebar__action--footer"
           onClick={handleClearAll}
           disabled={
             !hasPendants && !hasActiveBands && pendantChains.length === 0 &&
@@ -302,7 +304,7 @@ export const PendantsSidebar = ({
           }
         >
           Reset all
-        </button>
+        </Button>
         <p className="sidebar__hint">
           {bottomEdgeEnabled
             ? 'Drag a band onto a row gap (pendants and tails unavailable while Bottom Chain is on)'

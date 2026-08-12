@@ -11,9 +11,9 @@
   display: flex;
   flex-direction: column;
   background: var(--color-panel);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-md);
   overflow: auto;
   /* Было `resize: both` — нативный resize управляется только мышью и не
      откликается на тач ни на Android, ни на iOS (окно нельзя было уменьшить
@@ -41,7 +41,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 8px 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-border-subtle);
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -49,9 +49,9 @@
 .reference-window__header:active { cursor: grabbing; }
 
 .reference-window__title {
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 700;
-  color: #e3f3ff;
+  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   flex: 1;
@@ -64,34 +64,24 @@
 }
 
 .reference-window__zoom-value {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   min-width: 34px;
   text-align: center;
 }
 
-.reference-window__icon-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background-color: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-.reference-window__icon-btn:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.2); color: #e3f3ff; }
+/* Четыре кнопки шапки (зум −/+, свернуть, закрыть) — <IconButton size="sm"
+   variant="chip">, оформление в common/IconButton.css и controlVariants.css.
+   22px попали в ступень sm точно, подгонки размера не потребовалось.
+   Своих правил у них здесь не осталось. */
 
 .reference-window__warning {
   flex-shrink: 0;
   padding: 6px 12px;
-  font-size: 11px;
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: var(--text-sm);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .reference-window__file-input {
@@ -103,8 +93,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
-  font-size: 13px;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
 }
 
 .reference-window__dropzone {
@@ -115,41 +105,21 @@
   justify-content: center;
   gap: 10px;
   margin: 10px;
-  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border: 2px dashed var(--color-border);
   border-radius: 6px;
-  color: #94a3b8;
-  font-size: 12px;
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
   transition: all 0.2s;
 }
 .reference-window__dropzone--active {
-  border-color: #22d3ee;
-  background: rgba(34, 211, 238, 0.15);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 .reference-window__viewport {
   flex: 1;
   overflow: auto;
-  background: repeating-conic-gradient(#0f172a 0% 25%, #17223a 0% 50%) 50% / 16px 16px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
-}
-
-.reference-window__viewport::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.reference-window__viewport::-webkit-scrollbar-track {
-  background: transparent;
-}
-.reference-window__viewport::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-.reference-window__viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.55);
-  background-clip: padding-box;
+  /* Фон — .u-checkerboard, оформление скроллбара — .u-scroll (оба в index.css) */
 }
 
 .reference-window__image {
@@ -163,23 +133,13 @@
   display: flex;
   gap: 6px;
   padding: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
-.reference-window__text-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  background-color: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
-  font-size: 11px;
-  transition: all 0.2s;
-}
-.reference-window__text-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: #e3f3ff; }
+/* Replace / Remove / Choose file — <Button variant="chip" size="sm">.
+   Именно chip, а не secondary: покой был rgba(15,23,42,.6) + #94a3b8, ховер
+   rgba(255,255,255,.2) + #e3f3ff, рамки нет — то же, что у кнопок шапки,
+   только в текстовой геометрии. Оформление в common/Button.css. */
 
 /* Собственный resize-хэндл (заменяет нативный `resize: both`, см. выше) —
    уголок внизу справа, диагональные полоски нарисованы градиентом (тот же

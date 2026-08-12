@@ -1,7 +1,9 @@
 import {
   Undo2, RotateCcw, Crosshair, MousePointerClick, Eraser, Diamond, Maximize2, Minimize2,
 } from 'lucide-react';
+import './WeaveControls.css';
 import { WeaveHelp } from './WeaveHelp';
+import { IconButton } from '../../common/IconButton';
 import { Technique } from './Header.types';
 
 export type WeaveTool = 'segment' | 'bead' | 'erase';
@@ -24,11 +26,12 @@ interface WeaveControlsProps {
 }
 
 // Контролы режима плетения. Живут в хедере на месте скрытых палитры и
-// инструментов рисования — те же классы (tool-btn / grid-controls), что и у
-// остального хедера, никакого собственного оформления поверх холста.
-// Размеры иконок тоже общие с хедером: 14 в .tool-btn (как Pencil/Eraser/
-// Stamp) и 14 в .grid-controls__btn (как Save/Load/Share) — своих размеров
-// режим не заводит.
+// инструментов рисования — те же кнопки, что и у остального хедера: круглые
+// <IconButton variant="chip"> с раскладочным классом tool-btn и квадратные
+// <IconButton variant="ghost"> с классом grid-controls__btn внутри «таблетки»
+// (см. common/Stepper.css), никакого собственного оформления поверх холста.
+// Размеры иконок тоже общие с хедером: 14 и там, и там (как Pencil/Eraser/
+// Stamp и как Save/Load/Share) — своих размеров режим не заводит.
 export const WeaveControls = ({
   technique,
   tool,
@@ -48,36 +51,39 @@ export const WeaveControls = ({
   return (
     <>
       <div className="tool-group tool-group--weave">
-        <button
+        <IconButton
+          variant="chip"
+          className="tool-btn"
+          active={tool === 'segment'}
           onClick={() => onToolChange('segment')}
-          className={`tool-btn ${tool === 'segment' ? 'tool-btn--active' : ''}`}
           title="Segment: node with its two edges, whole span, chain link or decor column"
           aria-pressed={tool === 'segment'}
-        >
-          <Diamond size={14} />
-        </button>
-        <button
+          icon={<Diamond size={14} />}
+        />
+        <IconButton
+          variant="chip"
+          className="tool-btn"
+          active={tool === 'bead'}
           onClick={() => onToolChange('bead')}
-          className={`tool-btn ${tool === 'bead' ? 'tool-btn--active' : ''}`}
           title="Single bead"
           aria-pressed={tool === 'bead'}
-        >
-          <MousePointerClick size={14} />
-        </button>
-        <button
+          icon={<MousePointerClick size={14} />}
+        />
+        <IconButton
+          variant="chip"
+          className="tool-btn"
+          active={tool === 'erase'}
           onClick={() => onToolChange('erase')}
-          className={`tool-btn ${tool === 'erase' ? 'tool-btn--active' : ''}`}
           title="Erase marks"
           aria-pressed={tool === 'erase'}
-        >
-          <Eraser size={14} />
-        </button>
+          icon={<Eraser size={14} />}
+        />
       </div>
 
       <div className="header__divider" />
 
       {/* Прогресс — как блок Zoom: подпись сверху, значение под ней; на
-          ≤479.98px подпись убирается и блок ужимается в одну строку в две
+          ≤599.98px подпись убирается и блок ужимается в одну строку в две
           колонки сетки хедера (Header.css). */}
       <div className="grid-controls grid-controls--vertical-zoom">
         <div className="grid-controls__group weave-progress">
@@ -110,22 +116,26 @@ export const WeaveControls = ({
               (Header.tsx) — контрол общий для рисования и режима плетения,
               копии здесь больше нет. */}
           <div className="grid-controls__actions-row">
-            <button
+            <IconButton
+              className="grid-controls__btn"
+              size="md"
+              shape="square"
+              variant="ghost"
               onClick={onUndo}
               disabled={!canUndo}
-              className="grid-controls__btn"
               title="Undo last mark"
-            >
-              <Undo2 size={14} />
-            </button>
-            <button
+              icon={<Undo2 size={14} />}
+            />
+            <IconButton
+              className="grid-controls__btn"
+              size="md"
+              shape="square"
+              variant="ghost"
               onClick={onLocate}
               disabled={!canLocate}
-              className="grid-controls__btn"
               title="Show where I stopped"
-            >
-              <Crosshair size={14} />
-            </button>
+              icon={<Crosshair size={14} />}
+            />
           </div>
           <span className="grid-controls__toolbar-divider" aria-hidden="true" />
           <div className="grid-controls__actions-row">
@@ -136,29 +146,35 @@ export const WeaveControls = ({
                 toggleWeaveMode). header__weave-desktop-only — тот же приём,
                 что у Reset ниже: на ≤767.98px строка не помещается, дубль
                 живёт в overflow-меню "⋯" (Header.tsx). */}
-            <button
+            <IconButton
+              className="grid-controls__btn header__weave-desktop-only"
+              size="md"
+              shape="square"
+              variant="ghost"
+              active={isFullscreen}
               onClick={onToggleFullscreen}
-              className={`grid-controls__btn header__weave-desktop-only ${isFullscreen ? 'grid-controls__btn--on' : ''}`}
               title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               aria-pressed={isFullscreen}
-            >
-              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            </button>
-            {/* --danger, а не --reset: последний рассчитан на текстовую кнопку
-                CLEAR (width: auto + padding + border-left) и здесь делал
-                иконочный Reset шире соседей и с лишней разделительной чертой.
+              icon={isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            />
+            {/* Модификатор --danger, а не variant="danger": вариант красит
+                иконку красным всегда, а здесь разрушающее действие одно из
+                шести в ряду и в покое не должно тянуть взгляд — красный только
+                под курсором (см. Header.css).
                 header__weave-desktop-only: на ≤767.98px строка контролов не
                 помещается даже после разбивки на 2 ряда (см. Header.css) — Reset
                 прячется отсюда, дубль живёт в overflow-меню "⋯" (Header.tsx),
                 том же, где уже дублируются Zoom/Save/Load/Share. */}
-            <button
+            <IconButton
+              className="grid-controls__btn grid-controls__btn--danger header__weave-desktop-only"
+              size="md"
+              shape="square"
+              variant="ghost"
               onClick={onReset}
               disabled={markedCount === 0}
-              className="grid-controls__btn grid-controls__btn--danger header__weave-desktop-only"
               title="Reset all progress"
-            >
-              <RotateCcw size={14} />
-            </button>
+              icon={<RotateCcw size={14} />}
+            />
           </div>
         </div>
       </div>

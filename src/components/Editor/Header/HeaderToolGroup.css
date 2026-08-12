@@ -1,0 +1,117 @@
+/* Тулбар рисования (HeaderToolGroup.tsx) — то, что рендерит только он:
+   меню «Инструменты» и бейджи на углу кнопки штампа/нитки.
+
+   Обёртку .tool-group здесь не ищите: её рендерит ещё и WeaveControls
+   (`tool-group tool-group--weave`), поэтому она осталась в Header.css рядом
+   с .tool-btn — обе зацепки общие для всего ряда, а не собственность одного
+   компонента. */
+
+/* Меню «Инструменты» (нитка/заливка/штамп/зеркало, см. HeaderToolGroup.tsx).
+   На десктопе/планшете и обёртка, и панель — просто разметочные узлы:
+   display: contents "растворяет" их, кнопки остаются прямыми flex-детьми
+   .header__nav, как раньше, а триггер скрыт. Панелью и кнопкой это становится
+   только на ≤599.98px — тот же приём, каким .palette-widget уже прячет
+   палитру под иконку (см. PaletteWidget.css). У триггера префикс
+   .header: спорит он теперь не с .tool-btn, а с
+   .icon-btn { display: inline-flex } из другого файла, и при равной
+   специфичности (0,1,0) исход решал бы порядок файлов в бандле — на десктопе
+   лишняя кнопка «Инструменты» вылезла бы в строку. */
+.tool-extras { display: contents; }
+.tool-extras__panel { display: contents; }
+.header .tool-extras__trigger { display: none; }
+
+/* Тоггл точки привязки штампа: не отдельная кнопка в ряду, а бейдж на углу
+   Stamp — визуально читается как его дочерняя настройка, а не соседний инструмент.
+   Бейджи вешают на себя и ThreadMenu/ThreadStyleButton, но оба рендерятся
+   только изнутри этой панели, поэтому класс живёт здесь. */
+.tool-btn-group {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.tool-btn-group__badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--color-page);
+  background-color: var(--color-accent);
+  color: var(--color-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.tool-btn-group__badge:hover { transform: scale(1.15); }
+
+/* Невидимая зона побольше визуального круга (14px) — на тач-экране в 14px
+   сложно точно попасть пальцем. -5px с каждой стороны даёт ~24px, тот же
+   масштаб, что и hitboxRadius бисерин (BEAD_THEME/CROSS_WEAVE_THEME) —
+   не выбираем рекомендуемые ~40-44px намеренно: бейджи сидят на углу 26px
+   кнопки инструмента (.tool-btn), больший отступ перекрыл бы половину её
+   собственной кликабельной области. */
+.tool-btn-group__badge::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
+/* Второй бейдж (сброс узора) — противоположный угол, чтобы не перекрываться
+   с бейджем точки привязки. */
+.tool-btn-group__badge--cancel {
+  right: auto;
+  bottom: auto;
+  left: -5px;
+  top: -5px;
+  background-color: var(--color-danger);
+}
+
+/* Триггер попапа цвета/прозрачности нитки (ThreadStyleButton/ThreadMenu) —
+   дефолтный угол (right/bottom), background красится текущим activeThreadColor
+   через CSS-переменную, как и другие динамические swatch (см. --color-value
+   у .palette__color в PaletteWidget.css). */
+.tool-btn-group__badge--swatch {
+  background-color: var(--color-value);
+}
+
+@media (max-width: 599.98px) {
+  /* Меню «Инструменты»: обёртка перестаёт быть «растворённой» и становится
+     кнопкой, панель — попапом. Якорь у панели к viewport, а не к кнопке, по
+     той же причине, что у .header__overflow-panel (HeaderOverflowMenu.css):
+     кнопка стоит где-то в середине узкой строки, и панель от неё уезжала бы
+     за край экрана. */
+  .tool-extras {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+  .header .tool-extras__trigger { display: flex; }
+  .tool-extras__panel {
+    display: none;
+    position: fixed;
+    top: calc(var(--header-height) + 8px);
+    right: 8px;
+    left: auto;
+    max-width: calc(100vw - 16px);
+    z-index: 110;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-page);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: var(--shadow-md);
+  }
+  .tool-extras--open .tool-extras__panel { display: flex; }
+  /* Вложенные попапы (нитка, зеркало) центрируются под своей кнопкой
+     (left: 50% + translateX) — у правого края экрана они уезжали бы за него.
+     Внутри этой панели прижимаем их к правому краю кнопки. */
+  .tool-extras__panel .menu__panel {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}

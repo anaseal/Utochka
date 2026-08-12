@@ -1,0 +1,79 @@
+/* Правый край строки (HeaderEndGroup.tsx): тулбар Undo/Redo/Clear +
+   Save/Load/Share и иконки «?»/образец/панель.
+
+   Здесь только раскладка самой группы. «Таблетка» тулбара
+   (.grid-controls__toolbar), кнопка CLEAR (.grid-controls__clear) и
+   ряд файлов (.grid-controls__actions-row--files) остались в Header.css:
+   это перебивки .grid-controls__* из common/Stepper.css, а он лежит в бандле
+   между Header.css и этим файлом — переезд поменял бы победителя в каскаде.
+   Разделители (.header__divider--end-adjacent, --before-end) там же: их
+   рендерит эта группа, но семейство разделителей целиком принадлежит раме. */
+
+/* Обёртка тулбара Undo/Redo/Clear + иконок Reference/Pendant/Grid Settings:
+   на десктопе/планшете — просто разметочная обёртка (display: contents
+   "растворяет" её и .header__end-icons, все элементы — прямые flex-дети
+   .header__nav, как раньше). На ≤767.98px сворачивается в 2 ряда — см.
+   брейкпоинт ниже. */
+.header__end-group { display: contents; }
+.header__end-icons { display: contents; }
+
+@media (max-width: 767.98px) {
+  /* В режиме плетения (.header--weave) на этой ширине тулбар Undo/Redo/Clear/
+     Save/Load/Share убран целиком: Undo/Redo/Clear уже скрыты в разметке
+     (см. !weaveMode в HeaderEndGroup.tsx) как не относящиеся к плетению, а
+     оставшийся Save/Load/Share задизейблен этим же брейкпоинтом в Header.css
+     (.grid-controls__actions-row--files) — без этого правила здесь оставалась
+     бы пустая "таблетка" без единой кнопки. Save/Load/Share по-прежнему
+     доступны через overflow "⋯" (дублируются туда независимо от режима).
+     Парный разделитель гасит Header.css, там же, где живут все остальные. */
+  .header--weave .header__end-group {
+    display: none;
+  }
+
+  /* Undo/Redo/Clear в один ряд, «?»/Reference/панель — во второй под ним
+     (тот же приём двухрядности, что у .tool-group). Вертикальный
+     .header__divider между ними в столбик не годится — его скрывает
+     Header.css, ряды и так разделены отступом. */
+  .header__end-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .header__end-icons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+/* Двухрядная сетка узкого экрана — сама сетка объявлена в Header.css
+   (.header__nav), здесь группа только растворяется в неё и занимает ячейки
+   второго ряда. */
+@media (max-width: 599.98px) {
+  .header__end-group,
+  .header__end-group .grid-controls,
+  .header__end-icons {
+    display: contents;
+  }
+
+  /* Размер кнопок тулбара (30px), их цвет и место в сетке (grid-row/order)
+     задаёт Header.css одним правилом на оба тулбара — рисования и плетения:
+     раньше здесь и в WeaveControls.css лежали две одинаковые копии. */
+}
+
+/* Ландшафтный телефон (мало высоты, ширины хватает, см. --header-height в
+   index.css) — .header__end-group на ≤767.98px (см. выше) складывает
+   grid-controls__toolbar (уже 2 ряда, ~59px) и header__end-icons (~36px) в
+   ОДНУ колонку высотой под 100px, что рассчитано на портретный мобильный, где
+   вертикали в избытке. В landscape ширины достаточно, чтобы вернуть их в один
+   ряд бок о бок — тот же приём, что desktop-вариант этих же классов
+   (display: contents), только header__end-icons остаётся компактным блоком
+   (не рассыпается на 3 отдельных элемента с зазорами между ними, как на
+   десктопе) — это дешевле по ширине на телефоне. Парный разделитель
+   возвращает Header.css. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .header__end-group {
+    display: contents;
+  }
+}

@@ -1,8 +1,11 @@
 import { ChangeEvent, RefObject } from 'react';
 import {
-  Trash2, Download, Upload, Share2, FolderOpen, Image, HelpCircle, Undo2, Redo2,
+  Trash2, Download, Upload, Share2, Image, HelpCircle, Undo2, Redo2,
 } from 'lucide-react';
+import './HeaderEndGroup.css';
 import { SettingsPanelIcon } from './icons';
+import { Button } from '../../common/Button';
+import { IconButton } from '../../common/IconButton';
 import { Technique } from './Header.types';
 
 interface HeaderEndGroupProps {
@@ -14,7 +17,6 @@ interface HeaderEndGroupProps {
   onClearAll: () => void;
   onSaveProject: () => void;
   onShareProject: () => void;
-  onOpenProjectGallery: () => void;
   loadInputRef: RefObject<HTMLInputElement | null>;
   onLoadInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   referenceWindowOpen: boolean;
@@ -41,7 +43,7 @@ interface HeaderEndGroupProps {
 // (уже дублируются туда на этой ширине независимо от режима).
 export const HeaderEndGroup = ({
   weaveMode, onUndo, onRedo, canUndo, canRedo, onClearAll,
-  onSaveProject, onShareProject, onOpenProjectGallery, loadInputRef, onLoadInputChange,
+  onSaveProject, onShareProject, loadInputRef, onLoadInputChange,
   referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome,
   technique, sidebarOpen, onToggleSidebar,
 }: HeaderEndGroupProps) => {
@@ -59,16 +61,41 @@ export const HeaderEndGroup = ({
                     глифы невозможно привести к одной оптике с иконками рядом —
                     другая насыщенность и базовая линия, — а весь остальной
                     хедер уже на lucide. */}
-                <button onClick={onUndo} disabled={!canUndo} className="grid-controls__btn" title="Undo (Ctrl+Z)">
-                  <Undo2 size={14} />
-                </button>
-                <button onClick={onRedo} disabled={!canRedo} className="grid-controls__btn" title="Redo (Ctrl+Y)">
-                  <Redo2 size={14} />
-                </button>
-                <button onClick={onClearAll} className="grid-controls__btn grid-controls__btn--reset" title="Clear All">
-                  <Trash2 size={12} className="grid-controls__btn-reset-icon" />
-                  <span className="grid-controls__btn-reset-label">CLEAR</span>
-                </button>
+                <IconButton
+                  className="grid-controls__btn"
+                  size="md"
+                  shape="square"
+                  variant="ghost"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                  title="Undo (Ctrl+Z)"
+                  icon={<Undo2 size={14} />}
+                />
+                <IconButton
+                  className="grid-controls__btn"
+                  size="md"
+                  shape="square"
+                  variant="ghost"
+                  onClick={onRedo}
+                  disabled={!canRedo}
+                  title="Redo (Ctrl+Y)"
+                  icon={<Redo2 size={14} />}
+                />
+                {/* Единственная кнопка таблетки с подписью, поэтому <Button>,
+                    а не <IconButton>: тот children не рендерит вовсе. Подпись
+                    сворачивается в иконку на ≤767.98px — ровно тот случай, под
+                    который у <Button> есть .btn__label (см. Button.tsx), своей
+                    пары классов для этого больше не нужно. */}
+                <Button
+                  className="grid-controls__clear"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClearAll}
+                  title="Clear All"
+                  icon={<Trash2 size={14} className="grid-controls__clear-icon" />}
+                >
+                  CLEAR
+                </Button>
               </div>
               {/* Полноразмерный разделитель (как .header__divider), а не border
                   на кнопке Save — border-left внутри маленькой 24px-кнопки
@@ -80,18 +107,38 @@ export const HeaderEndGroup = ({
             </>
           )}
           <div className="grid-controls__actions-row grid-controls__actions-row--files">
-            <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
-              <Download size={14} />
-            </button>
-            <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
-              <Upload size={14} />
-            </button>
-            <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
-              <Share2 size={14} />
-            </button>
-            <button onClick={onOpenProjectGallery} className="grid-controls__btn" title="Saved projects">
-              <FolderOpen size={14} />
-            </button>
+            <IconButton
+              className="grid-controls__btn"
+              size="md"
+              shape="square"
+              variant="ghost"
+              onClick={onSaveProject}
+              title="Save project to file"
+              icon={<Download size={14} />}
+            />
+            <IconButton
+              className="grid-controls__btn"
+              size="md"
+              shape="square"
+              variant="ghost"
+              onClick={() => loadInputRef.current?.click()}
+              title="Load project from file"
+              icon={<Upload size={14} />}
+            />
+            {/* Кнопки «Saved projects» (FolderOpen) здесь нет: галерею на всех
+                ширинах открывает клик по блоку статуса проекта слева
+                (ProjectStatus.tsx). Вторая кнопка на другом краю хедера вела в
+                то же окно и только съедала дефицитную ширину; в overflow-меню
+                «⋯» её дубль убран по той же причине. */}
+            <IconButton
+              className="grid-controls__btn"
+              size="md"
+              shape="square"
+              variant="ghost"
+              onClick={onShareProject}
+              title="Copy share link"
+              icon={<Share2 size={14} />}
+            />
           </div>
           <input
             ref={loadInputRef}
@@ -123,42 +170,45 @@ export const HeaderEndGroup = ({
               В режиме плетения не показывается вместе со всей группой — там
               своя «?» рядом с WeaveControls (WeaveHelp.tsx), и две кнопки
               помощи в одной строке читались бы как одна и та же. */}
-          {/* tool-btn--help: на ≤479.98px строка разложена в два ряда, и «?» —
-              единственное, что в DOM стоит раньше своего места в раскладке
-              (перед образцом и панелью, а нужно последним) — уводится
-              туда через order, см. Header.css. */}
-          <button
-            onClick={onOpenWelcome}
+          {/* tool-btn--help: на ≤599.98px из строки убрана в меню «Функции»
+              (HeaderOverflowMenu) — двухрядная сетка даёт 12 ячеек на 13 кнопок,
+              и уступает та, которую читают один раз. */}
+          <IconButton
+            variant="chip"
             className="tool-btn tool-btn--help"
+            onClick={onOpenWelcome}
             title="What this app is"
-          >
-            <HelpCircle size={14} />
-          </button>
+            icon={<HelpCircle size={14} />}
+          />
 
-          {/* Две кнопки ниже на ≤479.98px из строки убраны: образец уехал в
-              меню «Функции» (HeaderOverflowMenu), панель — в меню «Изделие»
-              (TechniqueMenu). Классы-модификаторы нужны как зацепки: по
+          {/* Образец из строки убирается на ≤1024px — в меню «Функции»
+              (HeaderOverflowMenu), вместе с Zoom и видом полотна ради имени
+              проекта. Панель (ниже) на всех ширинах остаётся в строке: на
+              ≤599.98px она встаёт шестой ячейкой первого ряда сетки
+              (см. Header.css). Классы-модификаторы нужны как зацепки: по
               одному .tool-btn их от соседей не отличить. */}
-          <button
+          <IconButton
+            variant="chip"
+            className="tool-btn tool-btn--reference"
+            active={referenceWindowOpen}
             onClick={onToggleReferenceWindow}
-            className={`tool-btn tool-btn--reference ${referenceWindowOpen ? 'tool-btn--active' : ''}`}
             title="Reference image"
             aria-pressed={referenceWindowOpen}
-          >
-            <Image size={14} />
-          </button>
+            icon={<Image size={14} />}
+          />
 
           {/* Одна кнопка на всю правую панель, а не по одной на вкладку:
               панель и слот справа одни, и вторая кнопка означала бы «открыть
               то же самое, но на другой вкладке» — вкладки для этого и есть. */}
-          <button
+          <IconButton
+            variant="chip"
+            className="tool-btn tool-btn--panel"
+            active={sidebarOpen}
             onClick={onToggleSidebar}
-            className={`tool-btn tool-btn--lg tool-btn--panel ${sidebarOpen ? 'tool-btn--active' : ''}`}
             title={technique === 'silyanka' ? 'Decor and grid settings' : 'Grid settings'}
             aria-pressed={sidebarOpen}
-          >
-            <SettingsPanelIcon size={20} />
-          </button>
+            icon={<SettingsPanelIcon size={14} />}
+          />
         </div>
       )}
     </div>

@@ -11,14 +11,14 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--color-text-dim);
   cursor: pointer;
   transition: color var(--transition-speed) ease;
 }
 
 .section-help__icon:hover,
 .section-help__icon:focus-visible {
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 /* Портализован в document.body (см. SectionHelp.tsx) — position:fixed и
@@ -29,14 +29,17 @@
    (клэмп на этот случай — тоже в JS). */
 .section-help__bubble {
   position: fixed;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-popover);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 8px;
+  /* Вне шкалы --shadow-* оставлено намеренно: у ближайшего --shadow-md
+     размытие 40px, а плашка всего 220px шириной — тень весила бы больше
+     самой подсказки. */
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   padding: 8px 10px;
-  color: #e3f3ff;
-  font-size: 11px;
-  line-height: 1.45;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.4;
   text-align: left;
   z-index: 1000;
 }
@@ -48,8 +51,8 @@
   left: 12px;
   width: 8px;
   height: 8px;
-  background: #0f172a;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-popover);
+  border-left: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-border-subtle);
   transform: rotate(45deg);
 }

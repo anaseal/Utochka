@@ -1,7 +1,9 @@
 import {
   PaintBucket, Stamp, Pencil, ArrowUpToLine, ArrowDownToLine, X, Wrench,
 } from 'lucide-react';
+import './HeaderToolGroup.css';
 import { EraserIcon, ThreadIcon } from './icons';
+import { IconButton } from '../../common/IconButton';
 import { MirrorMenu } from './MirrorMenu';
 import { ThreadMenu } from './ThreadMenu';
 import { ThreadStyleButton } from './ThreadStyleButton';
@@ -33,7 +35,7 @@ export const HeaderToolGroup = ({
   // использует для crossWeave/Peyote (basicProps = crossWeaveProps ?? peyoteProps).
   const stampMirrorProps = peyoteProps ?? loomProps;
 
-  // Меню «Инструменты» (.tool-extras): на ≤479.98px всё, что после карандаша
+  // Меню «Инструменты» (.tool-extras): на ≤599.98px всё, что после карандаша
   // и ластика, уезжает под одну кнопку — иначе строка хедера не укладывается
   // в два ровных ряда (см. Header.css). На более широких экранах и обёртка, и
   // панель «растворяются» (display: contents), и ветки ниже стоят в строке как
@@ -47,38 +49,40 @@ export const HeaderToolGroup = ({
 
   return (
     <div className="tool-group">
-      <button
+      <IconButton
+        variant="chip"
+        className="tool-btn"
+        active={activeTool === 'pencil'}
         onClick={() => setActiveTool('pencil')}
-        className={`tool-btn ${activeTool === 'pencil' ? 'tool-btn--active' : ''}`}
         title="Pencil (B)"
         aria-pressed={activeTool === 'pencil'}
-      >
-        <Pencil size={14} />
-      </button>
+        icon={<Pencil size={14} />}
+      />
 
-      <button
+      <IconButton
+        variant="chip"
+        className="tool-btn"
+        active={activeTool === 'eraser'}
         onClick={() => setActiveTool(activeTool === 'eraser' ? 'pencil' : 'eraser')}
-        className={`tool-btn ${activeTool === 'eraser' ? 'tool-btn--active' : ''}`}
         title="Eraser (E)"
-      >
-        <EraserIcon size={14} />
-      </button>
+        icon={<EraserIcon size={14} />}
+      />
 
       <div className={`tool-extras${open ? ' tool-extras--open' : ''}`} ref={ref}>
-        <button
+        <IconButton
           ref={triggerRef}
-          type="button"
-          className={`tool-btn tool-extras__trigger ${hiddenToolActive ? 'tool-btn--active' : ''}`}
+          variant="chip"
+          className="tool-btn tool-extras__trigger"
+          active={hiddenToolActive}
           onClick={() => setOpen(o => !o)}
           title="More tools"
           aria-haspopup="menu"
           aria-expanded={open}
-        >
-          {activeTool === 'thread' ? <ThreadIcon size={14} />
+          icon={activeTool === 'thread' ? <ThreadIcon size={14} />
             : activeTool === 'flood-fill' ? <PaintBucket size={14} />
             : activeTool === 'stamp' ? <Stamp size={14} />
             : <Wrench size={14} />}
-        </button>
+        />
 
         <div className="tool-extras__panel">
           {silyankaProps && (
@@ -111,14 +115,15 @@ export const HeaderToolGroup = ({
 
           {crossWeaveProps && (
             <>
-              <button
+              <IconButton
+                variant="chip"
+                className="tool-btn"
+                active={activeTool === 'flood-fill'}
                 onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
-                className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
                 title="Flood Fill (G)"
                 aria-pressed={activeTool === 'flood-fill'}
-              >
-                <PaintBucket size={14} />
-              </button>
+                icon={<PaintBucket size={14} />}
+              />
 
               <MirrorMenu
                 mirrorMode={crossWeaveProps.mirrorMode}
@@ -131,24 +136,26 @@ export const HeaderToolGroup = ({
 
           {silyankaProps && (
             <>
-              <button
+              <IconButton
+                variant="chip"
+                className="tool-btn"
+                active={activeTool === 'flood-fill'}
                 onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
-                className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
                 title="Flood Fill (G)"
                 aria-pressed={activeTool === 'flood-fill'}
-              >
-                <PaintBucket size={14} />
-              </button>
+                icon={<PaintBucket size={14} />}
+              />
 
               <div className="tool-btn-group">
-                <button
+                <IconButton
+                  variant="chip"
+                  className="tool-btn"
+                  active={activeTool === 'stamp'}
                   onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
-                  className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
                   title="Stamp (S)"
                   aria-pressed={activeTool === 'stamp'}
-                >
-                  <Stamp size={14} />
-                </button>
+                  icon={<Stamp size={14} />}
+                />
 
                 {activeTool === 'stamp' && silyankaProps.hasStampPattern && (
                   <>
@@ -189,14 +196,15 @@ export const HeaderToolGroup = ({
 
           {stampMirrorProps && (
             <>
-              <button
+              <IconButton
+                variant="chip"
+                className="tool-btn"
+                active={activeTool === 'flood-fill'}
                 onClick={() => setActiveTool(activeTool === 'flood-fill' ? 'pencil' : 'flood-fill')}
-                className={`tool-btn ${activeTool === 'flood-fill' ? 'tool-btn--active' : ''}`}
                 title="Flood Fill (G)"
                 aria-pressed={activeTool === 'flood-fill'}
-              >
-                <PaintBucket size={14} />
-              </button>
+                icon={<PaintBucket size={14} />}
+              />
 
               {/* Штамп есть у Peyote и Loom (в отличие от crossWeave), но без
                   бейджа anchor-edge — ни та ни другая техника не различает
@@ -204,14 +212,15 @@ export const HeaderToolGroup = ({
                   выделения (см. peyoteStamp.ts/loomStamp.ts). Только X-бейдж
                   сброса, как у силянки. */}
               <div className="tool-btn-group">
-                <button
+                <IconButton
+                  variant="chip"
+                  className="tool-btn"
+                  active={activeTool === 'stamp'}
                   onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
-                  className={`tool-btn ${activeTool === 'stamp' ? 'tool-btn--active' : ''}`}
                   title="Stamp (S)"
                   aria-pressed={activeTool === 'stamp'}
-                >
-                  <Stamp size={14} />
-                </button>
+                  icon={<Stamp size={14} />}
+                />
 
                 {activeTool === 'stamp' && stampMirrorProps.hasStampPattern && (
                   <button

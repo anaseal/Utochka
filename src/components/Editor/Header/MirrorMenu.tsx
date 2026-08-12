@@ -1,10 +1,15 @@
-import { FlipHorizontal, Check } from 'lucide-react';
+import { useState } from 'react';
+import { FlipHorizontal } from 'lucide-react';
 import { MakeSymmetricIcon } from './icons';
-import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
+import { IconButton } from '../../common/IconButton';
+import { Menu } from '../../common/Menu';
 
 // Единая кнопка Mirror Mode раскрывает мини-попап с двумя связанными
 // зеркальными операциями — переключателем режима и одноразовым действием
 // "Сделать симметричным" — вместо отдельной иконки для второго действия.
+// Закрытие после клика — только у второго: режим щёлкают и оставляют меню
+// открытым, чтобы сразу же нажать «Сделать симметричным» (см. Menu.tsx,
+// флагом open владеет место вызова).
 export const MirrorMenu = ({
   mirrorMode, setMirrorMode, onMakeSymmetric, canMakeSymmetric,
 }: {
@@ -13,44 +18,42 @@ export const MirrorMenu = ({
   onMakeSymmetric: () => void;
   canMakeSymmetric: boolean;
 }) => {
-  const { open, setOpen, ref, triggerRef } = useDismissablePopup();
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="mirror-menu" ref={ref}>
-      <button
-        ref={triggerRef}
-        onClick={() => setOpen(o => !o)}
-        className={`tool-btn ${mirrorMode ? 'tool-btn--active' : ''}`}
-        title="Mirror Mode (M)"
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        <FlipHorizontal size={14} />
-      </button>
-
-      {open && (
-        <div className="mirror-menu__panel" role="menu">
-          <button
-            onClick={() => setMirrorMode(!mirrorMode)}
-            className={`mirror-menu__item ${mirrorMode ? 'mirror-menu__item--active' : ''}`}
-            role="menuitemcheckbox"
-            aria-checked={mirrorMode}
-          >
-            <FlipHorizontal size={12} className="mirror-menu__item-icon" />
-            <span className="mirror-menu__item-label">Mirror Mode</span>
-            {mirrorMode && <Check size={12} className="mirror-menu__item-check" />}
-          </button>
-          <button
-            onClick={() => { onMakeSymmetric(); setOpen(false); }}
-            className="mirror-menu__item"
-            disabled={!canMakeSymmetric}
-            title="Fills the missing mirrored half of the current design"
-          >
-            <MakeSymmetricIcon size={12} className="mirror-menu__item-icon" />
-            <span className="mirror-menu__item-label">Make symmetric</span>
-          </button>
-        </div>
-      )}
-    </div>
+    <Menu
+      open={open}
+      onClose={() => setOpen(false)}
+      trigger={
+        <IconButton
+          variant="chip"
+          className="tool-btn"
+          active={mirrorMode}
+          onClick={() => setOpen(o => !o)}
+          title="Mirror Mode (M)"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          icon={<FlipHorizontal size={14} />}
+        />
+      }
+      items={[
+        {
+          icon: <FlipHorizontal size={12} />,
+          label: 'Mirror Mode',
+          active: mirrorMode,
+          // Независимый тумблер, а не «один из списка» — из вида пункта это
+          // не следует, роль задаём явно.
+          role: 'menuitemcheckbox',
+          onClick: () => setMirrorMode(!mirrorMode),
+        },
+        {
+          icon: <MakeSymmetricIcon size={12} />,
+          label: 'Make symmetric',
+          disabled: !canMakeSymmetric,
+          title: 'Fills the missing mirrored half of the current design',
+          onClick: () => { onMakeSymmetric(); setOpen(false); },
+        },
+      ]}
+    />
   );
 };

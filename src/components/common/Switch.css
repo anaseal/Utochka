@@ -1,0 +1,78 @@
+/* Тумблер дизайн-системы. Геометрия снята с .bottom-chain-control__toggle
+   (GridSidebar) — 32×18 с бегунком 12px, — она же записана в задаче 5.5.
+   Второй тумблер проекта (автосохранение в галерее) был 28×16 с белым
+   бегунком; он приводится к этой форме в 5.6, а не наоборот: в сайдбаре
+   тумблеров четыре против одного, и там же живёт disabled-состояние.
+
+   Бегунок — ::after, а не отдельный <span>: у переключателя внутри нет
+   содержимого, и лишний узел в разметке места вызова ни на что не нужен.
+
+   Состояние читается из [aria-checked], а не из класса-модификатора: атрибут
+   всё равно обязателен для role="switch", и вторая запись того же самого
+   (.switch--active) разошлась бы с ним при первой же правке. */
+.switch {
+  position: relative;
+  /* Прямой ребёнок flex-строки сжимается по главной оси, не трогая
+     кросс-ось: без этого на узкой панели тумблер съезжает в овал. */
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  padding: 0;
+  /* Пилюля: на высоте 18px --radius-full (999px) даёт ровно тот же контур,
+     что 9px из задачи, но переживёт смену высоты. */
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+/* 14px — это вся дорожка бегунка: 30px внутри рамки минус 12px самого
+   бегунка минус по 2px отступа с краёв (box-sizing: border-box приходит
+   из Tailwind preflight, поэтому 32px — внешний размер вместе с рамкой). */
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-dim);
+  transition: transform var(--transition-speed) ease, background var(--transition-speed) ease;
+}
+
+.switch[aria-checked='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.switch[aria-checked='true']::after {
+  transform: translateX(14px);
+  background: var(--color-accent);
+}
+
+/* Ховера у тумблера сайдбара не было, у галереи был — оставлен, иначе после
+   миграции 5.6 переключатель перестал бы отзываться на курсор. Меняется
+   только рамка и бегунок: заливка дорожки и так несёт состояние. */
+.switch:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.switch[aria-checked='true']:hover:not(:disabled) {
+  border-color: var(--color-accent-hover);
+}
+
+.switch[aria-checked='true']:hover:not(:disabled)::after {
+  background: var(--color-accent-hover);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.switch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

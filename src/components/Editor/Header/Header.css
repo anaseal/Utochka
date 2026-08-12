@@ -1,11 +1,36 @@
-/* src/components/Editor/Header.css */
+/* src/components/Editor/Header/Header.css — рама строки хедера.
+
+   Оформление отдельных блоков разъехалось по файлам рядом с их компонентами:
+   ProjectStatus.css, TechniqueMenu.css, PaletteWidget.css, HeaderToolGroup.css,
+   WeaveControls.css, HeaderOverflowMenu.css, HeaderEndGroup.css.
+
+   Здесь остаётся три вещи, и все три — по одной и той же причине: у них нет
+   единственного владельца.
+
+   1. Сама рама: .header, .header__nav (включая двухрядную сетку на ≤599.98px,
+      в которую блоки только расставляют свои ячейки), разделители,
+      .header__file-input.
+   2. Общие зацепки ряда: .tool-btn (кнопки десяти компонентов) и .tool-group
+      (её рендерят и HeaderToolGroup, и WeaveControls). Прежний общий набор
+      классов шести попапов-меню отсюда ушёл — все шесть переведены на <Menu>,
+      оформление лежит в common/Menu.css.
+   3. Перебивки .grid-controls__* из common/Stepper.css. Это не вопрос вкуса:
+      в бандле Stepper.css лежит ПОЗЖЕ Header.css, но РАНЬШЕ остальных файлов
+      хедера, а специфичность у одноклассовых правил одинаковая — переезд
+      такого правила в файл компонента меняет победителя в каскаде и вид
+      кнопки. Проверено по собранному бандлу, порядок: index.css →
+      controlVariants → Button → IconButton → Modal → TextField → Header.css →
+      Stepper.css → остальные файлы хедера. */
 .header {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--palette-height);
-  background-color: #0f172a;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  height: var(--header-height);
+  background-color: var(--color-page);
+  border-bottom: 1px solid var(--color-border-faint);
+  /* Вне шкалы --shadow-* оставлено намеренно: это не карточка над фоном,
+     а край фиксированной шапки во всю ширину — тень длинная и мягкая, чтобы
+     обозначить край полосы, а не оторвать её от страницы. */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   z-index: 100;
   position: fixed;
@@ -23,138 +48,18 @@
   box-sizing: border-box;
   background-color: rgba(30, 41, 59, 0.5);
   border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border-faint);
 }
 
 .header__divider {
   width: 1px;
   align-self: stretch;
   margin: 3px 0;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-border-subtle);
 }
 
 .header__file-input {
   display: none;
-}
-
-/* --- Имя активного проекта и статус сохранения (ProjectStatus.tsx) ----------
-   Самый левый блок хедера, левее переключателя техники — то же место, что
-   занимает имя файла в редакторах вообще, и одинаковое в обоих режимах
-   (рисование/плетение), как и остальной левый край. Двухэтажная подпись
-   (имя сверху, статус снизу) укладывается в существующую высоту хедера
-   (--palette-height) тем же приёмом, что блок ZOOM и .weave-progress. */
-.project-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.project-status__open {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 11rem;
-  padding: 4px 6px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-}
-.project-status__open:hover { background: rgba(255, 255, 255, 0.08); }
-
-/* Точка-индикатор: единственное, что остаётся от блока на ≤479.98px, поэтому
-   состояние читается по цвету, а не только по подписи. Цвета — те же три,
-   что уже несут этот смысл во всём приложении: циановый акцент = всё хорошо,
-   #fbbf24 = требует внимания (как .project-gallery__warning), слейт = никакой
-   информации (черновик вне библиотеки). */
-.project-status__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #64748b;
-  flex-shrink: 0;
-}
-.project-status__dot--saved { background: #22d3ee; }
-/* Полупрозрачный тот же циан, а не третий цвет: «сейчас догонит» — это
-   переходная фаза сохранённого состояния, а не отдельная тревога. */
-.project-status__dot--saving { background: #22d3ee; opacity: 0.45; }
-.project-status__dot--unsaved { background: #fbbf24; }
-/* Отказ хранилища — тот же красный, что у danger-действий хедера и тоста
-   ошибки (#f87171): это уже не «пока не сохранено», а «сохранить не вышло». */
-.project-status__dot--failed { background: #f87171; }
-
-.project-status__text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.project-status__name {
-  font-size: 11px;
-  font-weight: 700;
-  color: #e3f3ff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-status__state {
-  font-size: 9px;
-  font-weight: 600;
-  color: #64748b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Появляется только в состоянии unsaved (автосейв у проекта выключен —
-   состояние по умолчанию), поэтому красится в тот же янтарный, что и точка
-   рядом: кнопка и индикатор — одно сообщение, а не два соседних элемента. */
-.project-status__save {
-  padding: 4px 7px;
-  border: 1px solid rgba(251, 191, 36, 0.4);
-  border-radius: 7px;
-  background: rgba(251, 191, 36, 0.12);
-  color: #fbbf24;
-  font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.project-status__save:hover { background: rgba(251, 191, 36, 0.22); }
-.project-status__save:disabled { opacity: 0.5; cursor: default; }
-
-/* Ширина хедера — дефицитный ресурс на каждом брейкпоинте (см. комментарии к
-   медиа-запросам ниже: на ≤1024px сумма блоков упирается в ~727px, а на
-   ≤767.98px Zoom и Save/Load/Share уже уехали в overflow-меню). Поэтому блок
-   проекта отдаёт своё место ступенями, а не пытается уместить две строки
-   везде: сначала уходит подпись статуса, затем и имя. Точка-индикатор
-   остаётся всегда — состояние продолжает читаться по цвету, а имя и статус
-   лежат в title/aria-label и в самой галерее, которую открывает тот же клик. */
-@media (max-width: 1279.98px) {
-  .project-status__state { display: none; }
-  .project-status__open { max-width: 8rem; padding: 3px 5px; }
-}
-
-/* Ровно та же ширина, с которой .header__nav начинает сжимать всё остальное
-   (см. большой блок ниже) — на ней имя уже не окупает своих ~110px. Кнопка
-   держит 22px, как .grid-controls__btn на узких экранах: по 7px-точке
-   пальцем не попасть. */
-@media (max-width: 1024px) {
-  .project-status__text { display: none; }
-  .project-status__open {
-    max-width: none;
-    width: 22px;
-    height: 22px;
-    justify-content: center;
-    padding: 0;
-  }
 }
 
 /* Разделитель между палитрой и инструментами — нужен только на ≤767.98px,
@@ -164,118 +69,6 @@
   display: none;
 }
 
-/* Обёртка триггера + самой палитры. На десктопе/планшете — просто
-   позиционирующий контекст (position: relative), без визуального эффекта:
-   триггер скрыт (.palette-widget__trigger), палитра ведёт себя как раньше.
-   На ≤479.98px триггер становится видимой круглой кнопкой, а .palette —
-   абсолютно спозиционированным попапом под ней (см. брейкпоинт внизу файла). */
-.palette-widget { position: relative; display: flex; align-items: center; }
-
-.palette-widget__trigger {
-  display: none;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background-color: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  flex-shrink: 0;
-}
-.palette-widget__trigger:hover { color: #e3f3ff; background-color: rgba(255, 255, 255, 0.15); }
-
-.palette-widget__trigger-swatch {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--color-value);
-  border: 1.5px solid #0f172a;
-}
-
-.palette { display: flex; align-items: center; gap: 0.5rem; }
-
-/* Двухэтажная палитра: базовые цвета сверху, недавние снизу — ровно 2 строки,
-   без «сиротской» неполной строки, которая была при переносе по 4 в ряд. */
-.palette__grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.palette__row { display: flex; align-items: center; gap: 0.375rem; }
-
-.palette__divider {
-  width: 1px;
-  height: 18px;
-  background: rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
-  margin: 0 0.1rem;
-}
-
-/* Обёртка кастомного пикера + пипетки: на десктопе/планшете "растворяется"
-   (display:contents — оба элемента остаются прямыми flex-детьми .palette,
-   бок о бок, как раньше). На ≤767.98px становится колонкой — см. Header.css. */
-.palette__extra { display: contents; }
-
-.palette__custom {
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-}
-
-.palette__color {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background-color: var(--color-value);
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
-  /* opacity здесь не используется намеренно: затемнение смешивает свотч с фоном
-     и искажает реальный цвет — неактивное/активное состояние отличаем только
-     масштабом и кольцом (box-shadow), см. --active и :hover ниже. */
-  /* inset-кольцо вместо border — border вместе с border-radius и conic-gradient
-     (у кнопки кастомного цвета) даёт видимый шов на стыке 0deg/360deg градиента */
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.18), 0 2px 6px rgba(0, 0, 0, 0.35);
-  flex-shrink: 0;
-}
-.palette__color:hover {
-  transform: scale(1.15);
-}
-.palette__color--active {
-  transform: scale(1.2);
-  box-shadow: inset 0 0 0 1.5px #e3f3ff, 0 0 0 1px rgba(255, 255, 255, 0.25), 0 4px 14px rgba(0, 0, 0, 0.5);
-}
-
-.palette__eyedropper {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  background: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s, background 0.15s, color 0.15s;
-  opacity: 0.65;
-  flex-shrink: 0;
-}
-
-.palette__eyedropper:hover {
-  opacity: 1;
-  transform: scale(1.15);
-  background: rgba(34, 211, 238, 0.15);
-  color: #22d3ee;
-}
-
 /* .grid-controls (обёртка и Zoom, и этого тулбара, см. Header.tsx) — flex-
    дети .header__nav имеют flex-shrink:1 по умолчанию: когда сумма всех
    блоков хедера превышает доступную ширину, браузер сжимает КАЖДЫЙ
@@ -283,7 +76,7 @@
    (нерастягиваемый текст "CLEAR"/"100%") сжатую ширину не уменьшает,
    а просто вылезает за границы уже сжатой "таблетки". flex-shrink:0
    исключает эту обёртку из сжатия — тот же приём, что уже применён к
-   .tool-group/.mirror-menu/.palette-widget и другим блокам хедера. */
+   .tool-group/.menu/.palette-widget и другим блокам хедера. */
 .header__nav .grid-controls {
   flex-shrink: 0;
 }
@@ -291,15 +84,17 @@
 /* Undo/Redo/Clear/Save/Load/Share — визуально та же "таблетка", что и
    .grid-controls__actions, но под отдельным именем: .grid-controls__actions
    переиспользуется Stepper-ом (−/значение/+ у Width/Height/Zoom/...), и
-   правки только для этой группы задевали все степперы в хедере. */
+   правки только для этой группы задевали все степперы в хедере.
+   Тулбар рендерят двое — HeaderEndGroup (рисование) и WeaveControls
+   (плетение), поэтому класс общий и живёт здесь. */
 .grid-controls__toolbar {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-overlay);
   border-radius: 8px;
   padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border-faint);
 }
 /* Полноразмерный разделитель Undo/Redo/Clear | Save/Load/Share — та же
    геометрия, что у .header__divider (тонкая линия во всю высоту таблетки),
@@ -311,7 +106,7 @@
   width: 1px;
   align-self: stretch;
   margin: 1px 0;
-  background-color: rgba(255, 255, 255, 0.16);
+  background-color: var(--color-border);
   flex-shrink: 0;
 }
 /* На десктопе оба ряда — просто разметочная обёртка, не влияющая на layout
@@ -320,41 +115,51 @@
    Save/Load/Share снизу) включается только в брейкпоинте ≤1024px ниже —
    тот же приём, что уже используют .grid-controls--stacked для Width/Height. */
 .grid-controls__actions-row { display: contents; }
-/* Базовый .grid-controls__btn (иконка-кнопка внутри "таблетки") определён в
-   common/Stepper.css — Stepper использует его для −/+, здесь он же переиспользуется
-   для Undo/Redo/CLEAR/Save/Load/Share. */
-.grid-controls__btn--reset {
-  width: auto;
+/* Кнопки "таблетки" — <IconButton size="md" shape="square" variant="ghost">
+   с раскладочным классом .grid-controls__btn; базовое правило и разбор выбора
+   варианта лежат в common/Stepper.css, класс общий у степпера и обоих тулбаров
+   хедера. Здесь остаётся только то, чем хедер от базы отличается: размеры по
+   брейкпоинтам (одной строкой --icon-btn-size, см. ниже), модификатор --danger
+   в конце файла и текстовая CLEAR. Отсюда и правило «перебивки
+   .grid-controls__* не переезжают» (см. шапку файла): рендерят их
+   HeaderEndGroup/WeaveControls/HeaderOverflowMenu, но спорят они с общим
+   Stepper.css. */
+
+/* CLEAR — единственная кнопка таблетки с подписью, поэтому <Button
+   variant="ghost" size="sm">, а не <IconButton> (тот children не рендерит).
+   Своё имя, а не прежний модификатор .grid-controls__btn--reset: это уже не
+   «та же кнопка с поправкой», а другой компонент, и BEM-модификатор от блока,
+   которого на элементе нет, только путал бы.
+   От <Button size="sm"> отличается высотой под ряд таблетки (24px, как у
+   соседних иконок) и мелкой плотной подписью; цвета — переменными варианта:
+   покой dim → ховер акцентом БЕЗ подложки (ghost по умолчанию красит и её).
+   Двойной класс .btn.grid-controls__clear: с .btn--sm и .btn--ghost
+   специфичность иначе равная (0,1,0), и спор решал бы порядок файлов
+   в бандле — тот же приём, что у .btn.sidebar__action (Sidebar.css). */
+.btn.grid-controls__clear {
+  --ctl-fg: var(--color-text-dim);
+  --ctl-fg-hover: var(--color-accent);
+  --ctl-bg-hover: transparent;
+  height: 24px;
   padding: 0 8px;
-  font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-  color: #64748b;
-  border-left: 1px solid rgba(255,255,255,0.1);
-  transition: color 0.15s, background 0.15s;
-}
-/* Двойной класс-селектор, а не просто .grid-controls__btn--reset:hover —
-   иначе одинаковая специфичность с .grid-controls__btn:hover (Stepper.css)
-   решается порядком подключения CSS, а Header.css грузится раньше Stepper.css
-   (Header.tsx импортирует './Header.css' до 'Stepper'), и серая подложка
-   степпера побеждала, перебивая задуманный прозрачный фон + бирюзовый текст. */
-.grid-controls__btn.grid-controls__btn--reset:hover {
-  color: #22d3ee;
-  background: transparent;
+  font-size: var(--text-xs);
+  border-left: 1px solid var(--color-border-subtle);
 }
 /* На ≥720px CLEAR вплотную прилегает и к Redo, и к разделителю после неё —
    одного border-left мало. margin-left без margin-right давал перекос
    (большой зазор слева, ноль справа перед .grid-controls__toolbar-divider) —
    отступ должен быть с обеих сторон. */
 @media (min-width: 720px) {
-  .grid-controls__btn--reset {
+  .grid-controls__clear {
     margin: 0 6px;
   }
 }
-/* Иконка-версия CLEAR (см. Header.tsx) — видна только ≤767.98px, когда
+/* Иконка-версия CLEAR (см. HeaderEndGroup.tsx) — видна только ≤767.98px, когда
    текстовая кнопка не помещается в один ряд с Undo/Redo (см. брейкпоинт ниже).
-   На десктопе/планшете виден текстовый label, иконка скрыта. */
-.grid-controls__btn-reset-icon { display: none; }
+   На десктопе/планшете виден текстовый label, иконка скрыта. Сам label —
+   .btn__label компонента: <Button> оборачивает подпись именно для таких
+   медиа-запросов, своей пары классов кнопке больше не нужно. */
+.grid-controls__clear-icon { display: none; }
 
 /* ZOOM: подпись сверху, ряд −/значение/+ под ней — компактнее, чем бок о
    бок, и не завязано на .grid-controls--stacked (та рассчитана на
@@ -362,15 +167,16 @@
    Рамку/фон переносим с .grid-controls__actions на весь .grid-controls__group —
    иначе подпись повисает отдельно НАД рамкой, которая обрамляет только
    −/значение/+, и вся конструкция читается как два несвязанных элемента,
-   а не один контрол. */
+   а не один контрол. Тем же блоком пользуется прогресс плетения — свою,
+   более узкую рамку он задаёт в WeaveControls.css. */
 .grid-controls--vertical-zoom .grid-controls__group {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-overlay);
   border-radius: 8px;
   padding: 4px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border-faint);
 }
 .grid-controls--vertical-zoom .grid-controls__actions {
   background: transparent;
@@ -382,306 +188,47 @@
    разметочная обёртка (display: contents "растворяет" её, кнопки — прямые
    flex-дети .header__nav, как раньше). На ≤1024px сворачивается в 2 ряда
    по 3 — тот же приём, что уже даёт компактность
-   Undo/Redo/Clear/Save/Load/Share (.grid-controls__toolbar), см. блок ниже. */
+   Undo/Redo/Clear/Save/Load/Share (.grid-controls__toolbar), см. блок ниже.
+   Класс общий: ту же обёртку (с модификатором --weave) рендерит и
+   WeaveControls вокруг сегмент/бисерина/ластик. */
 .tool-group { display: contents; }
 
-/* Обёртка тулбара Undo/Redo/Clear + иконок Reference/Pendant/Grid Settings:
-   на десктопе/планшете — просто разметочная обёртка (display: contents
-   "растворяет" её и .header__end-icons, все элементы — прямые flex-дети
-   .header__nav, как раньше). На ≤767.98px сворачивается в 2 ряда — см.
-   брейкпоинт ниже, там же живёт .tool-group. */
-.header__end-group { display: contents; }
-.header__end-icons { display: contents; }
+/* Кнопки хедера — <IconButton variant="chip"> (26px, круг; --lg 36px), сам
+   класс .tool-btn оформления больше не несёт и остаётся зацепкой раскладки:
+   размеры по брейкпоинтам, ряды и порядок в сетке ≤599.98px, скрытие
+   отдельных кнопок. Геометрия и цвета — IconButton.css/controlVariants.css,
+   flex-shrink: 0 в том числе (без него круглая кнопка сжималась по главной
+   оси флекс-строки и превращалась в овал на узком экране).
 
-.tool-btn {
-  width: 1.625rem;
-  height: 1.625rem;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background-color:rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: all 0.2s;
-  opacity: 0.6;
-  /* Прямой flex-дитя .header__nav (сам или через display:contents у
-     .tool-group/.header__end-icons, см. .tool-group ниже) имеет
-     flex-shrink:1 по умолчанию — тот же эффект, что уже описан у
-     .grid-controls: браузер сжимает круглую кнопку по ширине (главная ось
-     флекс-строки), а высота (кросс-ось) не трогается, и на мобильном, где
-     сумма блоков хедера чуть шире экрана, иконки схлопывались в овал
-     вместо круга. Остальные круглые кнопки хедера (.palette__color,
-     .tool-btn-group, .mirror-menu, .technique-menu и т.д.) это уже имеют —
-     здесь был пропуск. */
-  flex-shrink: 0;
+   Здесь остаётся только то, чем ряд хедера отличается от такого же чипа в
+   галерее или окне референса, — ступень приглушения. Ряд висит над полотном
+   и не должен спорить с рисунком: раньше это делала opacity: 0.6 поверх
+   --color-text-muted, а это на фоне хедера ровно --color-text-dim (тем же
+   значением приглушение уже было переписано руками в брейкпоинте ≤599.98px,
+   см. ниже). Задаём ту же ступень явно, переменными варианта: покой — dim,
+   ховер — muted, активная — акцент. Через переменные, а не opacity: opacity
+   гасила заодно подложку и требовала отдельного `opacity: 1` там, где
+   приглушение задано цветом.
+
+   Кольцо активной кнопки — тоже переменной, а не прежним outline: рамка у
+   .icon-btn есть всегда (у chip прозрачная), покрасить её дешевле, чем
+   рисовать второй контур поверх, который к тому же спорил бы с
+   :focus-visible за то же свойство. Прежний transform: scale(1.1) не
+   вернулся: на ≤599.98px его и так гасили руками (кольца соседних активных
+   кнопок налезали друг на друга), а с :active { translateY(1px) } из
+   компонента он конфликтует за то же свойство. */
+.header .tool-btn {
+  --ctl-fg: var(--color-text-dim);
+  --ctl-fg-hover: var(--color-text-muted);
+  --ctl-border-active: var(--color-accent);
 }
 
-.tool-btn:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.2); }
-.tool-btn--lg { width: 2.25rem; height: 2.25rem; }
-.tool-btn--active {
-  opacity: 1;
-  color: #22d3ee;
-  transform: scale(1.1);
-  outline: 1px solid #22d3ee;
-  outline-offset: 1px;
-  background-color: rgba(34, 211, 238, 0.15);
-}
-
-/* Меню «Инструменты» (нитка/заливка/штамп/зеркало, см. HeaderToolGroup.tsx).
-   На десктопе/планшете и обёртка, и панель — просто разметочные узлы:
-   display: contents "растворяет" их, кнопки остаются прямыми flex-детьми
-   .header__nav, как раньше, а триггер скрыт. Панелью и кнопкой это становится
-   только на ≤479.98px — тот же приём, каким .palette-widget уже прячет
-   палитру под иконку (см. брейкпоинт внизу файла). Правила стоят ПОСЛЕ
-   .tool-btn: у .tool-extras__trigger та же специфичность (0,1,0), и порядок
-   здесь решает, кто победит по display. */
-.tool-extras { display: contents; }
-.tool-extras__panel { display: contents; }
-.tool-extras__trigger { display: none; }
-
-/* Тоггл точки привязки штампа: не отдельная кнопка в ряду, а бейдж на углу
-   Stamp — визуально читается как его дочерняя настройка, а не соседний инструмент. */
-.tool-btn-group {
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-}
-.tool-btn-group__badge {
-  position: absolute;
-  right: -5px;
-  bottom: -5px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid #0f172a;
-  background-color: #22d3ee;
-  color: #0f172a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-.tool-btn-group__badge:hover { transform: scale(1.15); }
-
-/* Невидимая зона побольше визуального круга (14px) — на тач-экране в 14px
-   сложно точно попасть пальцем. -5px с каждой стороны даёт ~24px, тот же
-   масштаб, что и hitboxRadius бисерин (BEAD_THEME/CROSS_WEAVE_THEME) —
-   не выбираем рекомендуемые ~40-44px намеренно: бейджи сидят на углу 26px
-   кнопки инструмента (.tool-btn), больший отступ перекрыл бы половину её
-   собственной кликабельной области. */
-.tool-btn-group__badge::before {
-  content: '';
-  position: absolute;
-  inset: -5px;
-}
-
-/* Второй бейдж (сброс узора) — противоположный угол, чтобы не перекрываться
-   с бейджем точки привязки. */
-.tool-btn-group__badge--cancel {
-  right: auto;
-  bottom: auto;
-  left: -5px;
-  top: -5px;
-  background-color: #f87171;
-}
-
-/* Триггер попапа цвета/прозрачности нитки (ThreadStyleButton/ThreadMenu) —
-   дефолтный угол (right/bottom), background красится текущим activeThreadColor
-   через CSS-переменную, как и другие динамические swatch (см. --color-value
-   у palette__color/trigger-swatch выше). */
-.tool-btn-group__badge--swatch {
-  background-color: var(--color-value);
-}
-
-/* Попап кнопки Mirror Mode: сама кнопка (.tool-btn) переключает режим по
-   тултипу, но клик открывает мини-меню с этим тумблером ещё раз + связанным
-   одноразовым действием "Сделать симметричным" — та же визуальная схема,
-   что и .header__overflow-panel (тёмная плашка-меню), но без брейкпоинтов,
-   т.к. .mirror-menu видна на всех шириндах. */
-.mirror-menu { position: relative; display: inline-flex; flex-shrink: 0; }
-.mirror-menu__panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 132px;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-  padding: 4px;
-  z-index: 110;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.mirror-menu__item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  color: #e3f3ff;
-  font-size: 11px;
-  text-align: left;
-  padding: 5px 6px;
-  border-radius: 7px;
-  cursor: pointer;
-}
-.mirror-menu__item-icon { flex-shrink: 0; opacity: 0.85; }
-.mirror-menu__item-label { flex: 1; white-space: nowrap; }
-.mirror-menu__item-check { flex-shrink: 0; }
-.mirror-menu__item:hover { background: rgba(255, 255, 255, 0.08); }
-.mirror-menu__item--active { color: #22d3ee; font-weight: 700; }
-.mirror-menu__item--active .mirror-menu__item-icon { opacity: 1; }
-.mirror-menu__item:disabled { opacity: 0.35; cursor: default; }
-.mirror-menu__item:disabled:hover { background: transparent; }
-
-/* Разделитель перед ThreadStyleFields в ThreadMenu (crossWeave) — цвет/
-   прозрачность применяются к другой сущности (кисти), чем пункты выше
-   (выбор нити), визуально отделяем. */
-.mirror-menu__divider {
-  height: 1px;
-  margin: 3px 2px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Переключатель техники: раньше сегментированный pill из 2 жёстко
-   закодированных кнопок (.technique-switch), с третьей техникой (Peyote)
-   не масштабируется дальше — заменён попап-меню того же приёма, что и
-   .mirror-menu (кнопка-триггер + попап-список). Триггер — обычная
-   круглая иконка-кнопка (.tool-btn.tool-btn--lg, задаётся в TechniqueMenu.tsx),
-   без отдельных стилей здесь: раньше был всегда-циановый жирный pill с
-   подписью техники, из-за чего выглядел "включённым" постоянно, в отличие
-   от остальных кнопок хедера — теперь ведёт себя как и другие триггеры
-   попапов (MirrorMenu, WeaveHelp): приглушён по умолчанию, подсветка
-   (.tool-btn--active) только пока меню открыто. */
-.technique-menu { position: relative; display: inline-flex; flex-shrink: 0; }
-.technique-menu__panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 168px;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-  padding: 4px;
-  z-index: 110;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-/* Метрики пунктов — как у .mirror-menu__item (font-size/padding/gap/вес),
-   тот же визуальный язык попап-меню во всём хедере. */
-.technique-menu__item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  color: #e3f3ff;
-  font-size: 11px;
-  text-align: left;
-  padding: 5px 6px;
-  border-radius: 7px;
-  cursor: pointer;
-}
-.technique-menu__item:hover { background: rgba(255, 255, 255, 0.08); }
-.technique-menu__item--active { color: #22d3ee; font-weight: 700; }
-.technique-menu__item:disabled { opacity: 0.35; cursor: default; }
-.technique-menu__item:disabled:hover { background: transparent; }
-
-/* Подвески и настройки сетки внутри того же меню — только на ≤479.98px, где
-   их собственные кнопки из строки хедера убраны (см. брейкпоинт внизу файла).
-   Отбиты чертой: это уже не "какой техникой плету", а "что открыть". */
-.technique-menu__narrow-extra { display: none; }
-
-/* Второй глиф триггера (SlidersHorizontal) — для той же узкой ширины, где
-   в панели появляется секция выше и "переплетение нитей" её уже не описывает.
-   Размер иконки в lucide задаётся пропом, а не CSS, поэтому два узла с
-   переключением видимости, а не один. */
-.technique-menu__icon--narrow { display: none; }
-
-.palette__recent-slot {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.palette__recent-slot--empty {
-  border: 1.5px dashed rgba(255, 255, 255, 0.18);
-  background: transparent;
-  box-shadow: none;
-  cursor: default;
-  pointer-events: none;
-}
-
-/* Триггер "⋯" — вся его панель существует только ради мобильного дубля
-   Zoom/Save-Load-Share (см. .header__overflow-mobile-extra и брейкпоинт
-   ≤767.98px ниже, где и оригиналы этой пары скрываются из основной строки).
-   Width/Height/Spacing/Edges переехали в панель «Сетка» (GridSidebar) и
-   больше не коллапсируют сюда — раньше триггер появлялся уже на ≤1279.98px
-   ради них, теперь в этом не было бы смысла. */
-.header__overflow { position: relative; display: none; }
-
-.header__overflow-mobile-extra { display: none; }
-
-/* Вид полотна / образец / очистка — те же дубли, но для ≤479.98px, где из
-   строки хедера убраны и они (см. брейкпоинт внизу файла). Отдельно от
-   -mobile-extra: на 480–767.98px эти три кнопки в строке ещё стоят, и дубль
-   тут был бы вторым способом сделать то же самое. */
-.header__overflow-narrow-extra { display: none; }
-
-/* Строка, где контрол не помещается справа от подписи (пункты вида полотна —
-   текстовые, а не иконки): подпись сверху, пункты под ней. */
-.header__overflow-panel .header__overflow-row--stacked {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-}
-.header__overflow-options {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.header__overflow-trigger {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  color: #e3f3ff;
-  cursor: pointer;
-}
-.header__overflow-trigger:hover { background: rgba(255, 255, 255, 0.1); }
-
-.header__overflow-panel {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  min-width: 220px;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-  padding: 8px;
-  z-index: 110;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-/* .header__overflow-row/.header__overflow-label — определены в common/Stepper.css
-   (используются только вариантом Stepper variant="overflow"). */
+/* Оформления попапов-меню здесь больше нет: прежний общий набор классов
+   (плашка, пункт, галочка, разделитель) обслуживал шесть меню ряда и потому
+   не мог лежать ни у кого из них — теперь все шестеро переведены на <Menu>
+   (components/common/Menu.tsx), и оформление уехало в Menu.css целиком.
+   Здесь остаются только зацепки брейкпоинтов, адресующие конкретное меню
+   ряда: .canvas-view-menu ниже. */
 
 /* Tablet и уже (≤1024px): чуть плотнее + крупнее тач-зоны кнопок.
    Раньше у правила была нижняя граница `min-width: 768px` — на 767px и уже
@@ -699,23 +246,56 @@
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
   }
-  .palette__divider { margin: 0 0.05rem; }
 
-  .palette { gap: 0.375rem; }
-  .palette__row { gap: 0.3rem; }
-  .palette__grid { gap: 0.2rem; }
-  .palette__color,
-  .palette__eyedropper,
-  .palette__recent-slot {
-    width: 1.25rem;
-    height: 1.25rem;
+  /* --- Что уезжает в меню «⋯» ради имени проекта --------------------------
+     Имя со статусом стоит ~130px, а свободного места в строке на 768px было
+     около 40px. Освобождают его три блока, которые в редактировании схемы
+     нажимают реже всего: Zoom (масштаб и так меняется колесом с Ctrl и
+     пинчем), вид полотна и образец. Все три доступны в панели «⋯» — она
+     появляется здесь же, на ≤1024px, а не на ≤767.98px, как раньше
+     (см. HeaderOverflowMenu.css).
+     Zoom прячется тем же двойным селектором .grid-controls.grid-controls--*,
+     что и на ≤767.98px: без второго .grid-controls специфичность совпадает с
+     .grid-controls { display: flex } из common/Stepper.css, который в бандле
+     физически позже, и display: none проигрывал бы — Zoom оставался в строке
+     и одновременно дублировался в панели. */
+  /* Два класса у последнего селектора, а не один: .canvas-view-menu — зацепка
+     на корне <Menu>, а у .menu { display: inline-flex } из Menu.css та же
+     специфичность (0,1,0), и при одноклассовом селекторе исход решал бы
+     порядок файлов в бандле — кнопка вида полотна осталась бы в строке и
+     одновременно дублировалась в панели «⋯». */
+  .grid-controls.grid-controls--collapsible-mobile,
+  .header__divider--zoom-adjacent,
+  .menu.canvas-view-menu {
+    display: none;
   }
+  /* Образца в режиме плетения в разметке и так нет (см. HeaderEndGroup) —
+     :not(--weave) здесь только чтобы правило не выглядело общим для обоих
+     режимов, как соседи выше. */
+  .header:not(.header--weave) .tool-btn--reference { display: none; }
 
-  .tool-btn { width: 1.375rem; height: 1.375rem; font-size: 12px; }
-  .tool-btn--lg { width: 2rem; height: 2rem; }
+  /* Ступень sm шкалы <IconButton> (та же 1.375rem, тот же --text-md = 12px),
+     но переменной, а не пропом: проп размера один на все ширины, а здесь
+     размер меняет брейкпоинт. Крупной ступени в ряду больше нет — техника,
+     режим плетения и правая панель были 36px с глифом 20 и выбивались из
+     ряда (см. .header .tool-btn выше), вместе с ними ушло и
+     правило про 32px мимо шкалы. */
+  .header .tool-btn { --icon-btn-size: 1.375rem; font-size: var(--text-md); }
 
-  .grid-controls__btn { width: 26px; height: 26px; font-size: 13px; }
-  .grid-controls__btn--reset { width: auto; padding: 0 8px; font-size: 8px; }
+  /* Кнопки таблетки крупнее базовых 24px — ради пальца. Префикс .header
+     обязателен: без него правило доставало и до степперов правой панели, а
+     та на этих же ширинах, наоборот, сужается (260 → 220 → 170px), и 26px
+     там вылезали за правый край — GridSidebar.css приходилось возвращать 24px
+     отдельным правилом. Панель «⋯» лежит внутри .header и правилом накрыта,
+     как и раньше. */
+  .header .grid-controls__btn { --icon-btn-size: 26px; }
+  /* Высота — вслед за соседями по ряду (иконки выше берут её из
+     --icon-btn-size, у текстовой кнопки своей переменной нет).
+     8px мимо шкалы --text-*: её нижняя ступень — 10px, а здесь надпись
+     ужимается ради того, чтобы ряд кнопок влез в узкий экран. Ставить ради
+     двух мобильных строк ступень ниже 10px не за чем — она бы больше нигде
+     не пригодилась. */
+  .btn.grid-controls__clear { height: 26px; font-size: 8px; }
   .grid-controls__label { font-size: 8px; }
 
   /* Undo/Redo/Clear/Save/Load/Share: тот же приём, что уже даёт компактность
@@ -725,7 +305,6 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0;
-    padding: 3px;
   }
   .grid-controls__actions-row {
     display: flex;
@@ -744,11 +323,11 @@
     margin-left: auto;
   }
   /* ~ (общий), а не + (соседний) — между двумя .grid-controls__actions-row
-     в разметке теперь лежит .grid-controls__toolbar-divider (см. Header.tsx),
+     в разметке теперь лежит .grid-controls__toolbar-divider (см. HeaderEndGroup.tsx),
      и он остаётся в DOM даже будучи скрытым ниже, так что второй ряд больше
      не идёт для + строго следом за первым. */
   .grid-controls__actions-row ~ .grid-controls__actions-row {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border-subtle);
   }
   /* На этой ширине ряды и так разделены border-top выше — вертикальная
      линия-разделитель (десктопный вариант, см. базовые стили) здесь не нужна. */
@@ -771,52 +350,39 @@
   }
 }
 
-/* Mobile (480–768px): дальше сжимать иконки некуда — .header__nav на ≤1024px
-   уже упирается в ~727px по сумме всех блоков, а тут доступно от ~465px.
-   Высота хедера (--palette-height, index.css) на этом брейкпоинте НЕ растёт —
+/* Mobile (600–768px): дальше сжимать иконки некуда — без имени проекта строка
+   здесь весит ~515px (техника 22 + режим 22 + палитра ~154 + tool-group 88 +
+   «⋯» 26 + тулбар Undo/Redo/Clear 92, плюс 11 зазоров по 8px, пять
+   разделителей и паддинги .header__nav), само имя добавляет до 128px.
+   Нижняя граница именно 600, а не 480: ниже неё в один ряд не влезает даже
+   строка без имени, и хедер обрезался за краем экрана — ни переноса, ни
+   скролла у .header__nav нет. С 599.98px и уже работает двухрядная сетка
+   (см. блок ниже). В самом диапазоне сжимается имя, а не хедер: у
+   .project-status единственного в строке разрешён flex-shrink
+   (см. ProjectStatus.css), поэтому на 600px оно показывает столько, сколько
+   влезло.
+   Высота хедера (--header-height, index.css) на этом брейкпоинте НЕ растёт —
    .header__nav переносить в 2 строки нельзя (пробовали: палитра, tool-group
    и Zoom и так уже двухрядные сами по себе, перенос nav поверх них
    даёт лишние визуальные ярусы и требует увеличения хедера). Вместо этого:
-   1) Zoom и Save/Load/Share уходят в overflow-меню (⋯);
+   1) Save/Load/Share уходят в overflow-меню (⋯), где Zoom, вид полотна и
+      образец лежат уже с ≤1024px;
    2) там, где элементы стояли бок о бок, — точечная 2-ярусная раскладка
-      (кастомный пикер+пипетка, Undo/Redo+CLEAR), которая остаётся внутри уже
-      существующей высоты строки, как у палитры/tool-group.
-   Undo/Redo/Clear и Reference остаются на виду в основной строке — часто
-   используемые команды. */
+      (кастомный пикер+пипетка в PaletteWidget.css, Undo/Redo+CLEAR здесь),
+      которая остаётся внутри уже существующей высоты строки.
+   Undo/Redo/Clear остаются на виду в основной строке — часто используемые
+   команды. */
 @media (max-width: 767.98px) {
-  /* .grid-controls.grid-controls--collapsible-mobile (а не просто класс) —
-     без второго .grid-controls специфичность совпадала бы с безусловным
-     .grid-controls { display: flex } из common/Stepper.css, и победитель
-     зависел бы от порядка импорта CSS (Stepper.css физически позже в бандле,
-     т.к. Header.tsx импортирует Stepper уже после './Header.css'), из-за
-     чего этот display:none проигрывал и Zoom дублировался и в строке, и в overflow. */
-  .grid-controls.grid-controls--collapsible-mobile,
-  .header__divider--zoom-adjacent,
+  /* Zoom и вид полотна уехали в «⋯» ещё на ≤1024px (см. блок выше), здесь к
+     ним добавляется ряд Save/Load/Share — его дубль живёт в той же панели
+     (.header__overflow-mobile-extra, HeaderOverflowMenu.css). */
   .grid-controls__actions-row--files {
     display: none;
   }
 
-  /* Fullscreen/Reset/«?» режима плетения (WeaveControls) — дубли живут в
-     overflow-меню "⋯" (см. .header__overflow-mobile-extra в Header.tsx), тем
-     же приёмом, что Zoom/Save-Load-Share выше.
-     Префикс .header__nav обязателен: цель — .grid-controls__btn (Stepper.css)
-     и .weave-help (WeaveHelp.css), у обоих display задан одним классом, и оба
-     файла попадают в бандл ПОЗЖЕ Header.css — при равной специфичности они
-     побеждали, и эти три кнопки на мобильном не прятались, а уезжали за край
-     строки вместе с остатком хедера. */
-  .header__nav .header__weave-desktop-only {
-    display: none;
-  }
-
-  /* В режиме плетения (.header--weave) на этой ширине тулбар Undo/Redo/Clear/
-     Save/Load/Share и его разделитель убраны целиком: Undo/Redo/Clear уже
-     скрыты в разметке (см. !weaveMode в Header.tsx) как не относящиеся к
-     плетению, а оставшийся Save/Load/Share задизейблен этим же ≤767.98px
-     блоком выше (.grid-controls__actions-row--files) — без этого правила
-     здесь оставалась бы пустая "таблетка" без единой кнопки. Save/Load/Share
-     по-прежнему доступны через overflow "⋯" (дублируются туда независимо
-     от режима). */
-  .header--weave .header__end-group,
+  /* Парный разделитель к .header--weave .header__end-group (HeaderEndGroup.css):
+     без класса он повисал бы одиноким штрихом в конце строки, ни от чего не
+     отделяя. */
   .header--weave .header__divider--before-end {
     display: none;
   }
@@ -825,82 +391,39 @@
     display: block;
   }
 
-  .header__overflow { display: block; }
-
-  .header__overflow-mobile-extra {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  /* Панель "⋯" была position:absolute с якорем right:0 относительно
-     .header__overflow (тонкая кнопка где-то в середине узкой шапки) — на
-     маленьких экранах при таком якоре панель (min-width 220px) вылезала
-     за левый край экрана и была не видна (html/body имеют overflow:hidden,
-     скроллить некуда). Фиксируем панель напрямую к viewport, а не к кнопке —
-     положение больше не зависит от того, где именно в сжатой шапке
-     оказалась сама кнопка. */
-  .header__overflow-panel {
-    position: fixed;
-    top: calc(var(--palette-height) + 8px);
-    right: 8px;
-    left: auto;
-    max-width: calc(100vw - 16px);
-  }
-
-  /* Точечная ручная 2-ярусность там, где раньше элементы стояли в один ряд
-     бок о бок — экономит ширину без переноса всего nav целиком (см. выше,
-     почему это плохая идея). Переключатель техники сюда не входит — это уже
-     одна кнопка-триггер (.tool-btn.tool-btn--lg), а не пара кнопок в
-     строку, дальше сжимать её отдельно не нужно (сжимается вместе с
-     остальными .tool-btn--lg общим правилом ниже). */
-
-  /* Кастомный пикер + пипетка: в столбик вместо строки (см. .palette__extra
-     в Header.tsx — обёртка display:contents на более широких экранах). */
-  .palette__extra {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
   /* CLEAR сворачивается в иконку (Trash2, см. .grid-controls__btn-reset-icon/
-     -label в Header.tsx) и остаётся в одном ряду с Undo/Redo — раньше
+     -label в HeaderEndGroup.tsx) и остаётся в одном ряду с Undo/Redo — раньше
      текстовая кнопка CLEAR не помещалась в ряд и уезжала на отдельную строку
      ниже (grid из 2 рядов), из-за чего весь тулбар вырастал до ~70px и
-     пробивал фиксированную высоту хедера (--palette-height: 84px, index.css)
+     пробивал фиксированную высоту хедера (--header-height: 84px, index.css)
      на узких экранах — то, из-за чего хедер выглядел «слишком высоким».
      Save/Load/Share по-прежнему скрыты выше как .grid-controls__actions-row--files. */
-  .grid-controls__btn--reset {
+  .btn.grid-controls__clear {
     width: 26px;
     padding: 0;
   }
-  .grid-controls__btn-reset-icon { display: inline-flex; }
-  .grid-controls__btn-reset-label { display: none; }
+  .grid-controls__clear-icon { display: inline-flex; }
+  .grid-controls__clear .btn__label { display: none; }
 
-  /* Undo/Redo/Clear в один ряд, «?»/Reference/панель — во второй
-     под ним (тот же приём двухрядности, что у .tool-group выше). Вертикальный
-     .header__divider между ними в столбик не годится — скрываем, ряды и так
-     разделены отступом. */
-  .header__end-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-  }
+  /* Вертикальный разделитель внутри .header__end-group, который на этой
+     ширине складывается в колонку (HeaderEndGroup.css): в столбик он не
+     годится, ряды и так разделены отступом. */
   .header__divider--end-adjacent { display: none; }
-  .header__end-icons {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
 }
 
-/* Small mobile (320–480px): всё, что уже сжато на ≤767.98px, всё ещё шире
-   доступных ~320–360px по факту (palette в развёрнутом виде — самый тяжёлый
-   блок, ~150–180px из-за двух рядов кружков). Вместо дальнейшего уменьшения
-   кружков до нечитаемого размера — палитра прячется под иконку-триггер
-   (.palette-widget__trigger) и раскрывается попапом, тем же паттерном, что
+/* Узкий экран (320–600px): всё, что уже сжато на ≤767.98px, всё ещё шире
+   доступной ширины (palette в развёрнутом виде — самый тяжёлый блок,
+   ~150–180px из-за двух рядов кружков). Вместо дальнейшего уменьшения
+   кружков до нечитаемого размера — палитра прячется под иконку-триггер и
+   раскрывается попапом (PaletteWidget.css), тем же паттерном, что
    .header__overflow уже использует для Zoom/Save-Load-Share.
+
+   Граница была 479.98px, а однорядная раскладка сходится только от ~567px
+   (арифметика — в комментарии к блоку ≤767.98px выше): на 480–567px хедер
+   обрезался за правым краем экрана — ни переноса, ни скролла у .header__nav
+   нет, и Undo/Redo с «?» просто уезжали за экран. Сетка ниже там помещается
+   с запасом: 6 колонок по 30px + зазоры + паддинг — это 228px, остальное
+   достаётся первой колонке (на 480px ей ещё 252px).
 
    Дальше — раскладка режима рисования на этой ширине: два ровных ряда кнопок
    одного размера вместо прежней россыпи. Раньше хедер уже был двухъярусным,
@@ -908,13 +431,20 @@
    складывался в колонку из трёх этажей (~81px при бюджете ~74px), рядом
    .tool-group держал свои два ряда через фиксированную ширину — отсюда и
    обрезание правого края, из-за которого панель изделия была физически
-   недоступна. Теперь внутренние ярусы растворяются (display:
-   contents), все кнопки становятся прямыми детьми .header__nav и ложатся в
-   два ряда общего ритма, а то, что нажимают редко, собрано в три меню по
-   смыслу: «Инструменты» (.tool-extras), «Изделие» (.technique-menu) и
-   «Функции» (.header__overflow). Правила помечены .header:not(.header--weave):
-   режим плетения в два ряда не переводится, см. его блок в конце. */
-@media (max-width: 479.98px) {
+   недоступна. Теперь внутренние ярусы растворяются (display: contents), все
+   кнопки становятся прямыми детьми .header__nav и ложатся в два ряда общего
+   ритма, а то, что нажимают редко, собрано в три меню по смыслу:
+   «Инструменты» (.tool-extras), «Изделие» (.menu--technique) и «Функции»
+   (.header__overflow).
+
+   Сетка объявлена здесь, а ячейки в ней каждый блок занимает у себя:
+   grid-row/order/размер 30px лежат в ProjectStatus.css, PaletteWidget.css,
+   TechniqueMenu.css, HeaderToolGroup.css, HeaderEndGroup.css,
+   HeaderOverflowMenu.css и WeaveControls.css. Нумерация order сквозная на оба
+   режима — поэтому первые колонки второго ряда у рисования и плетения
+   совпадают: 10 — «⋯», 11 — кнопки тулбара, 12 — техника, 13 — «?» плетения,
+   14 — Save. */
+@media (max-width: 599.98px) {
   /* Сетка, а не перенос флексом. Флекс здесь давал лесенку: блок проекта
      стоит в начале первого ряда, и иконки за ним начинались там, где кончился
      текст, а второй ряд — от левого края. Ряды не совпадали ни одной колонкой,
@@ -935,39 +465,10 @@
        весь бюджет высоты, и рамке со скруглением не остаётся полей — карточка
        упиралась бы в края экрана и читалась как сбой вёрстки, а не как
        карточка. Поверхностью становится сам .header, как в мобильных тулбарах.
-       На ≥480px таблетка остаётся: там содержимое ниже хедера и воздух есть. */
+       На ≥600px таблетка остаётся: там содержимое ниже хедера и воздух есть. */
     background: none;
     border: 0;
     border-radius: 0;
-  }
-
-  /* Палитра сворачивается в иконку; сама палитра становится попапом,
-     который перекрывает соседние элементы хедера, а не толкает их. */
-  .palette-widget__trigger { display: flex; }
-
-  .palette {
-    display: none;
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    z-index: 110;
-    flex-direction: column;
-    align-items: flex-start;
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-  }
-  .palette-widget--open .palette { display: flex; }
-
-  /* Внутри попапа кастомный пикер и пипетка возвращаются в один ряд —
-     колоночная раскладка (.palette__extra на ≤767.98px) имела смысл, когда
-     эта пара делила строку хедера с остальной палитрой; в попапе места
-     достаточно, а в столбик они только зря растягивали его по вертикали. */
-  .palette__extra {
-    flex-direction: row;
-    align-items: center;
   }
 
   /* --- Два ровных ряда (оба режима) ----------------------------------------
@@ -977,16 +478,11 @@
      группировку берут на себя два разделителя, по одному на ряд, и хедер
      читается как ровная загрузка иконками, а не смесь таблеток и голых кнопок.
      :not(--files) обязателен: ряд Save/Load/Share скрыт на ≤767.98px одним
-     классом (0,1,0), и display: contents отсюда его бы расскрыл. Так же
-     :not(--vertical-zoom) — иначе правило перекрыло бы display: none у блока
-     Zoom (у него оба класса) и вернуло бы его в строку. */
+     классом (0,1,0), и display: contents отсюда его бы расскрыл.
+     Свои обёртки растворяют у себя HeaderEndGroup.css и WeaveControls.css. */
   .tool-group,
-  .header__end-group,
-  .header__end-group .grid-controls,
-  .header--weave .grid-controls:not(.grid-controls--vertical-zoom),
   .grid-controls__toolbar,
-  .grid-controls__actions-row:not(.grid-controls__actions-row--files),
-  .header__end-icons {
+  .grid-controls__actions-row:not(.grid-controls__actions-row--files) {
     display: contents;
   }
   /* Наследие двухъярусного тулбара (см. ≤1024px): margin-left: auto прижимал
@@ -997,297 +493,116 @@
     margin-left: 0;
   }
 
-  /* Один бокс на все кнопки строки. Разнобой 20/22/24/26/28px был не выбором,
-     а суммой частных дожатий по блокам — с общими рядами он читается прямо
-     как сбой вёрстки. У .grid-controls__btn два адреса в строке (тулбар
-     рисования и тулбар плетения) и третий в панели «⋯» — там 30px раздували бы
-     пункты меню, поэтому селекторы адресные, а не по одному классу. */
-  .header__nav .tool-btn,
-  .header__end-group .grid-controls__btn,
-  .header--weave .grid-controls__toolbar .grid-controls__btn,
-  .header__nav .header__overflow-trigger,
-  .header__nav .palette-widget__trigger,
-  .header__nav .project-status__save {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-  }
-  /* Один вид у всех кнопок ряда, а не только один размер. Собственный фон
-     .tool-btn — rgba(15, 23, 42, 0.6) — это ровно цвет самого хедера, то есть
-     без таблетки под ним он невидим: ряд физически состоит из голых глифов.
-     Единственная кнопка со своей рамкой и скруглением («⋯») выбивалась из
-     него коробкой среди кружков, а Undo/Redo светились ярче соседей своим
-     #e3f3ff. Сводим к одному цвету и одной форме. */
-  .header__nav .header__overflow-trigger {
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-  }
-  .header__nav .tool-btn:not(.tool-btn--active),
-  .header__end-group .grid-controls__btn,
-  .header--weave .grid-controls__toolbar .grid-controls__btn,
-  .header__nav .header__overflow-trigger {
-    color: #64748b;
-    opacity: 1;
-  }
-
-  /* Активная кнопка не увеличивается: scale(1.1) ломает тот самый ритм, ради
-     которого ряд и сводили к одному размеру, а вместе с outline-offset кольцо
-     вылезало на 3.5px в каждую сторону — при зазоре в 4px две соседние
-     активные кнопки (в режиме плетения они соседи всегда) налезали кольцами
-     друг на друга. Состояния хватает кольца и подсветки фона. */
-  .header__nav .tool-btn--active { transform: none; }
+  /* Те же 30px, что у остальных кнопок ряда, но переменной компонента — и
+     обязательно ПОСЛЕ правила ≤1024px: у .header .tool-btn там та же
+     специфичность (0,2,0), и спор решает порядок в файле, иначе весь ряд
+     остался бы на ступени sm. */
+  .header__nav .tool-btn { --icon-btn-size: 30px; }
 
   /* Один размер глифа. Работает и для lucide, и для собственных иконок
      (icons.tsx): там width/height заданы атрибутами, CSS их перебивает.
      Селектор по прямому потомку — бейджи штампа (9px, намеренные микро-
      иконки) и содержимое попапов лежат не в самих кнопках ряда. */
-  .header__nav .tool-btn > svg,
-  .header__end-group .grid-controls__btn > svg,
-  .header--weave .grid-controls__toolbar .grid-controls__btn > svg,
-  .header__nav .header__overflow-trigger > svg,
-  .header__nav .palette-widget__trigger > svg {
+  .header__nav .tool-btn > svg {
     width: 18px;
     height: 18px;
   }
 
-  /* Имя проекта и статус возвращаются: два ряда освободили под них ширину, а
-     две строки по 11/9px укладываются в 30px ряда. Блок занимает всю левую
-     колонку и обе строки сразу — так он не участвует в ритме иконок и не
-     сдвигает первый ряд относительно второго.
-     .project-status «растворяется», чтобы кнопка «Save» стала отдельной
-     ячейкой сетки, а не съедала ширину у имени: она появляется в состоянии
-     unsaved (оно же по умолчанию), и внутри колонки от имени осталась бы
-     треть. Полный текст в любом случае остаётся в title/aria и в галерее,
-     которую открывает тот же клик. */
-  .header__nav .project-status { display: contents; }
-  .header__nav .project-status__open {
-    grid-column: 1;
-    grid-row: 1 / 3;
-    align-self: stretch;
-    width: auto;
-    max-width: none;
-    height: auto;
-    justify-content: flex-start;
-    padding: 0 4px;
-    border-radius: 8px;
+  /* Кнопки таблеток — в тот же бокс 30px с глифом 18px. Правило одно на оба
+     тулбара (рисования и плетения): раньше это было написано дважды —
+     копиями в HeaderEndGroup.css и WeaveControls.css, — и обе копии заново
+     перебивали width/height/цвет. Панель «⋯» под правило не попадает: её
+     кнопки лежат в .grid-controls__actions, а не в .grid-controls__toolbar,
+     и 30px раздували бы пункты меню. Прицел по .grid-controls__toolbar
+     работает и здесь, где сама таблетка — display: contents: бокса она не
+     создаёт, но из DOM никуда не девается.
+     --ctl-fg: Undo/Redo светились ярче соседей своим --color-text — сводим
+     ряд к одному цвету, тому же --color-text-dim, что у .tool-btn выше. */
+  .header__nav .grid-controls__toolbar .grid-controls__btn {
+    --icon-btn-size: 30px;
+    --ctl-fg: var(--color-text-dim);
   }
-  .header__nav .project-status__text { display: flex; }
-  .header__nav .project-status__state { display: block; }
+  .header__nav .grid-controls__toolbar .grid-controls__btn > svg,
+  .header__nav .grid-controls__clear > svg {
+    width: 18px;
+    height: 18px;
+  }
+  /* Своя строка у CLEAR: она текстовая (<Button>), --icon-btn-size ей нечего
+     читать. Свой border-left — тот же разделитель, только нарисованный на
+     самой кнопке (он отбивал её от Redo в «таблетке» тулбара): в ряду голых
+     глифов он остался бы единственным штрихом посреди сетки, как и
+     .header__divider ниже. */
+  .header__nav .grid-controls__clear {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-left: none;
+  }
+
+  /* Второй ряд — действия и меню; нумерация order общая на оба режима, поэтому
+     первые колонки второго ряда у рисования и плетения совпадают (см. ниже). */
+  .header__nav .grid-controls__toolbar .grid-controls__btn,
+  .header__nav .grid-controls__clear {
+    grid-row: 2;
+    order: 11;
+  }
 
   /* Раскладка по рядам задана явно, а не автопереносом: первый ряд — то, чем
-     работаешь (режим, палитра, инструменты; в плетении — прогресс), второй —
-     действия и меню. Иначе «⋯» проваливалось бы в первый ряд в плетении и в
-     второй в рисовании, потому что инструментов у режимов разное число. */
+     работаешь (режим, палитра, инструменты, правая панель; в плетении —
+     прогресс), второй — действия и меню. Иначе «⋯» проваливалось бы в первый
+     ряд в плетении и в второй в рисовании, потому что инструментов у режимов
+     разное число.
+     Кнопка правой панели (Decor/Grid) — в первом ряду, шестой ячейкой: это
+     «чем и по какой сетке плету», то есть настройка работы, а не действие над
+     ней, и во втором ряду ячейки для неё всё равно нет (там ровно шесть своих).
+     Отдельного order не нужно — в DOM она и так последняя из тех, что попадают
+     в первый ряд. */
   .header__nav .tool-btn--mode,
-  .header__nav .palette-widget,
   .header__nav .tool-group > *,
-  .header--weave .grid-controls--vertical-zoom { grid-row: 1; }
-
-  .header__nav .header__overflow,
-  .header__end-group .grid-controls__btn,
-  .header--weave .grid-controls__toolbar .grid-controls__btn,
-  .header__nav .technique-menu,
-  .header__nav .tool-btn--help,
-  .header--weave .weave-help,
-  .header__nav .project-status__save { grid-row: 2; }
-
-  /* Внутри ряда ячейки занимаются в порядке order, а DOM-порядок с целевым не
-     совпадает: меню «Изделие» стоит вторым в разметке, а нужно ближе к концу;
-     кнопка «Save» — сразу за именем проекта, а место ей в хвосте второго ряда.
-     Нумерация одна на оба режима — поэтому первые колонки второго ряда у них
-     совпадают. */
-  .header__nav .header__overflow { order: 10; }
-  .header__end-group .grid-controls__btn,
-  .header--weave .grid-controls__toolbar .grid-controls__btn { order: 11; }
-  .header__nav .technique-menu { order: 12; }
-  .header__nav .tool-btn--help,
-  .header--weave .weave-help { order: 13; }
-  .header__nav .project-status__save { order: 14; }
-
-  /* Прогресс — две колонки: его ширина зависит от содержимого («0 / 1057»
-     против «1234 / 9999»), в одну 30px-ячейку он не влезает, а span 2 держит
-     его на сетке при любом числе. */
-  .header--weave .grid-controls--vertical-zoom {
-    grid-column: span 2;
-    justify-self: stretch;
-  }
+  .header__nav .tool-btn--panel { grid-row: 1; }
 
   /* Разделители убраны все до одного: в сетке из ячеек по 30px вертикальный
      штрих либо занял бы целую ячейку, либо сдвинул бы с колонок всё, что
-     стоит после него. Группировку и так несёт сама сетка — по рядам. */
+     стоит после него. Группировку и так несёт сама сетка — по рядам.
+     Тот же счёт и у border-left на самой CLEAR — он снят выше, вместе с её
+     размером. */
   .header__nav .header__divider { display: none; }
 
-  /* «?» плетения возвращается в строку: в рисовании «?» тоже снаружи, и
-     держать одну и ту же по смыслу кнопку то в строке, то в меню в
-     зависимости от режима — ровно то расхождение, из-за которого непонятно,
-     где что искать. Fullscreen/Reset остаются в «⋯»: места на них в строке
-     нет, а в рисовании у них и нет пары. Дубль «?» в панели при этом гасим —
-     две одинаковые кнопки помощи на одном экране читаются как разные. */
-  .header--weave .header__nav .weave-help { display: inline-flex; }
-  .header__nav .header__overflow-panel .weave-help { display: none; }
-
-  /* Прогресс — в одну строку высотой 30px: подпись DONE уходит, дробь и полоса
-     остаются (дробь и так читается как «сделано из всего»). В прежних 54px он
-     не помещался во второй ряд и пробивал 74px хедера — это и была причина,
-     по которой плетение оставалось одноярусным. Свою рамку блок сохраняет:
-     это показание, а не кнопка. */
-  .header__nav .weave-progress .grid-controls__label { display: none; }
-  .header__nav .grid-controls--vertical-zoom .weave-progress {
-    height: 30px;
-    box-sizing: border-box;
-    justify-content: center;
-    gap: 2px;
-    padding: 3px 6px;
-  }
-
-  /* Вид полотна уезжает в меню «Функции» в обоих режимах: в плетении строка
-     ещё теснее, чем в рисовании, а сама настройка там такая же общая. */
-  .canvas-view-menu { display: none; }
-
-  /* Уехало в меню «Функции» (очистка, образец) и «Изделие» (правая панель
-     Decor/Grid) — всё это части только режима рисования. */
-  .header:not(.header--weave) .grid-controls__btn--reset,
-  .header:not(.header--weave) .tool-btn--reference,
-  .header:not(.header--weave) .tool-btn--panel {
+  /* Вид полотна и образец уехали в меню «Функции» ещё на ≤1024px (см. блок
+     ради имени проекта выше), здесь к ним добавляется «?» — и только оно.
+     CLEAR и правая панель (Decor/Grid) раньше уезжали отсюда тоже, и это была
+     ошибка: обе — то, за чем на телефоне тянутся чаще всего (стереть всё и
+     открыть подвески/сетку), а найти их можно было только вслепую, раскрыв
+     одно из двух меню. Кнопок на два ряда 13 при 12 ячейках, поэтому уступает
+     ровно одна — приветственное окно: его читают один раз, и место ему в «⋯».
+     Пара «⋯» + «?» соседями в строке к тому же читалась как две справки. */
+  .header:not(.header--weave) .tool-btn--help {
     display: none;
   }
-
-  /* Секции, которые видны только здесь (на широких экранах у их пунктов есть
-     собственные кнопки в строке). */
-  .technique-menu__narrow-extra {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    margin-top: 3px;
-    padding-top: 3px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  .header:not(.header--weave) .technique-menu__icon--wide { display: none; }
-  .header:not(.header--weave) .technique-menu__icon--narrow { display: block; }
-
-  .header__overflow-narrow-extra {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  /* Меню «Инструменты»: обёртка перестаёт быть «растворённой» и становится
-     кнопкой, панель — попапом. Якорь у панели к viewport, а не к кнопке, по
-     той же причине, что у .header__overflow-panel выше: кнопка стоит где-то в
-     середине узкой строки, и панель от неё уезжала бы за край экрана. */
-  .tool-extras {
-    display: inline-flex;
-    flex-shrink: 0;
-  }
-  .tool-extras__trigger { display: flex; }
-  .tool-extras__panel {
-    display: none;
-    position: fixed;
-    top: calc(var(--palette-height) + 8px);
-    right: 8px;
-    left: auto;
-    max-width: calc(100vw - 16px);
-    z-index: 110;
-    align-items: center;
-    gap: 8px;
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-  }
-  .tool-extras--open .tool-extras__panel { display: flex; }
-  /* Вложенные попапы (нитка, зеркало) центрируются под своей кнопкой
-     (left: 50% + translateX) — у правого края экрана они уезжали бы за него.
-     Внутри этой панели прижимаем их к правому краю кнопки. */
-  .tool-extras__panel .mirror-menu__panel {
-    left: auto;
-    right: 0;
-    transform: none;
-  }
-
-}
-/* --- Режим плетения (WeaveControls) -----------------------------------------
-   Контролы стоят в хедере на месте скрытых палитры/инструментов и целиком
-   собраны из существующих блоков (tool-group, grid-controls). Ниже — только
-   то, чего у тех блоков нет: компактный прогресс в стиле блока Zoom. Цвета —
-   та же пара, что во всём хедере: слейт-текст + циановый акцент. */
-.weave-progress {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
 }
 
-/* Своя, более узкая рамка вместо унаследованной от Zoom (.grid-controls--vertical-zoom
-   .grid-controls__group, padding: 4px 8px, см. выше) — там паддинг рассчитан
-   на короткое "100%", здесь же раньше был ещё и min-width: 84px "про запас"
-   под большие схемы ("9999 / 9999"-подобные значения), из-за чего блок
-   держал эту ширину всегда, даже при "10 / 1823" — content-based ширина уже
-   сама растёт под длинные числа (min-width был полом, а не потолком, поэтому
-   уборка его безопасна и для крупных схем). */
-.grid-controls--vertical-zoom .weave-progress {
-  padding: 4px 6px;
+/* Ховер разрушающего действия (Reset прогресса в WeaveControls и его дубль в
+   панели «⋯»). Модификатор, а не variant="danger": тот красит иконку красным
+   всегда, а Reset здесь — одна из шести одинаковых кнопок в ряду, и в покое
+   она такая же нейтральная, как соседи; красный включается под курсором.
+   Переписаны переменные варианта, а не color/background напрямую: так правило
+   не спорит с :hover самого компонента за одно свойство, а просто подставляет
+   ему другие значения. Двойной класс .icon-btn.grid-controls__btn--danger —
+   потому что те же переменные объявляет .icon-btn--ghost с той же
+   специфичностью (0,1,0), и спор решал бы порядок файлов в бандле.
+   Подсветки «включено» (Fullscreen) здесь больше нет — это проп active
+   у <IconButton>: акцентный глиф на акцентной подложке, тот же язык, что у
+   активных кнопок ряда (.tool-btn выше), вместо прежнего одного лишь
+   акцентного цвета глифа. */
+.icon-btn.grid-controls__btn--danger {
+  --ctl-fg-hover: var(--color-danger);
+  --ctl-bg-hover: var(--color-danger-soft);
 }
 
-.weave-progress__value {
-  font-size: 12px;
-  font-weight: 700;
-  color: #e3f3ff;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.weave-progress__total {
-  color: #64748b;
-  font-weight: 600;
-}
-
-.weave-progress__bar {
-  display: block;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-}
-
-.weave-progress__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: #22d3ee;
-  transition: width var(--transition-speed) ease;
-}
-
-.grid-controls__btn--on {
-  color: #22d3ee;
-}
-
-/* Разрушающее действие (Reset прогресса в режиме плетения) — та же геометрия,
-   что у соседних иконочных кнопок, отличается только цветом на ховере.
-   Отдельно от .grid-controls__btn--reset: та задаёт ширину и паддинги под
-   текстовую CLEAR и рядом с иконками ломает ряд. Двойной класс-селектор — по
-   той же причине, что и у --reset:hover выше (специфичность против
-   .grid-controls__btn:hover из Stepper.css). */
-.grid-controls__btn.grid-controls__btn--danger:hover {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.12);
-}
-
-/* Ландшафтный телефон (мало высоты, ширины хватает, см. --palette-height в
-   index.css) — .header__end-group на ≤767.98px (см. выше) складывает
-   grid-controls__toolbar (уже 2 ряда, ~59px) и header__end-icons (~36px) в
-   ОДНУ колонку высотой под 100px, что рассчитано на портретный мобильный, где
-   вертикали в избытке. В landscape ширины достаточно, чтобы вернуть их в один
-   ряд бок о бок — тот же приём, что desktop-вариант этих же классов
-   (display: contents), только header__end-icons остаётся компактным блоком
-   (не рассыпается на 3 отдельных элемента с зазорами между ними, как на
-   десктопе) — это дешевле по ширине на телефоне. */
+/* Ландшафтный телефон (мало высоты, ширины хватает, см. --header-height в
+   index.css): .header__end-group возвращается в один ряд (HeaderEndGroup.css),
+   а вместе с ним — и разделитель внутри него. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .header__end-group {
-    display: contents;
-  }
   .header__divider--end-adjacent {
     display: block;
   }

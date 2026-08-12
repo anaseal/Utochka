@@ -1,5 +1,6 @@
-/* Пузырёк-подсказка режима плетения. Оформление — как у .mirror-menu__panel
-   (тот же фон, рамка, тень и радиус), но шире и с хвостиком к кнопке. */
+/* Пузырёк-подсказка режима плетения. Оформление — как у .menu__panel
+   (common/Menu.css: тот же фон, рамка, тень и радиус), но шире и с хвостиком
+   к кнопке. */
 
 .weave-help {
   position: relative;
@@ -15,43 +16,19 @@
   max-height: min(70vh, 560px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-popover);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 12px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-md);
   padding: 12px 14px;
   z-index: 110;
-  color: #e3f3ff;
-  font-size: 11px;
-  line-height: 1.5;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.55;
   text-align: left;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
-}
-
-/* Тот же скролл, что у сайдбара и окна референса: прозрачная дорожка,
-   полупрозрачный палец с циановым ховером. Без этого блока в пузырьке
-   оставался дефолтный системный скролл — светлая широкая полоса поверх
-   тёмной плашки. */
-.weave-help__bubble::-webkit-scrollbar {
-  width: 8px;
-}
-
-.weave-help__bubble::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.weave-help__bubble::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background var(--transition-speed) ease;
-}
-
-.weave-help__bubble::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.55);
-  background-clip: padding-box;
+  /* Оформление скроллбара — .u-scroll в index.css. Без него в пузырьке
+     остаётся дефолтный системный скролл — светлая широкая полоса поверх
+     тёмной плашки. */
 }
 
 /* Хвостик — повёрнутый квадрат под кнопкой; верхние границы совпадают с
@@ -65,24 +42,24 @@
   right: 8px;
   width: 9px;
   height: 9px;
-  background: #0f172a;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-popover);
+  border-left: 1px solid var(--color-border-subtle);
+  border-top: 1px solid var(--color-border-subtle);
   transform: rotate(45deg);
 }
 
 .weave-help__lead {
   margin: 0 0 10px;
-  color: #e3f3ff;
+  color: var(--color-text);
 }
 
 .weave-help__title {
   margin: 12px 0 5px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #22d3ee;
+  color: var(--color-accent);
 }
 
 .weave-help__list {
@@ -107,11 +84,11 @@
 }
 
 .weave-help__bubble b {
-  color: #e3f3ff;
+  color: var(--color-text);
   font-weight: 600;
 }
 
 .weave-help__note {
   margin: 7px 0 0;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }

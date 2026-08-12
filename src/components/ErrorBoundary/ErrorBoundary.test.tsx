@@ -7,6 +7,22 @@ const Bomb = () => {
   throw new Error('boom');
 };
 
+// Обе кнопки экрана падения дёргают location.reload. Спаем не обойтись:
+// reload у jsdom живёт на прототипе Location и не всегда перезаписывается,
+// поэтому подменяется весь window.location — он configurable — и
+// возвращается на место после каждого теста.
+const originalLocation = window.location;
+
+const stubReload = () => {
+  const reload = vi.fn();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    writable: true,
+    value: { ...originalLocation, href: originalLocation.href, reload },
+  });
+  return reload;
+};
+
 beforeEach(() => {
   localStorage.clear();
 });
@@ -14,6 +30,11 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    writable: true,
+    value: originalLocation,
+  });
 });
 
 it('рендерит детей, пока ошибок не было', () => {
@@ -45,7 +66,7 @@ describe('после падения дочернего компонента', ()
 
   it('кнопка "Reload page" перезагружает страницу без очистки localStorage', () => {
     localStorage.setItem('silyanka:designMap', JSON.stringify({ 'node-0-0': '#ff0000' }));
-    const reload = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
+    const reload = stubReload();
     renderWithBomb();
 
     fireEvent.click(screen.getByText('Reload page'));
@@ -54,28 +75,44 @@ describe('после падения дочернего компонента', ()
     expect(localStorage.getItem('silyanka:designMap')).not.toBeNull();
   });
 
-  it('кнопка сброса без подтверждения ничего не стирает и не перезагружает', () => {
+  it('первый клик по сбросу только спрашивает — ничего не стирает и не перезагружает', () => {
     localStorage.setItem('silyanka:designMap', JSON.stringify({ 'node-0-0': '#ff0000' }));
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    const reload = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
+    const reload = stubReload();
     renderWithBomb();
 
     fireEvent.click(screen.getByText('Reset data and start over'));
 
+    expect(screen.getByText('Reset everything')).toBeTruthy();
     expect(reload).not.toHaveBeenCalled();
     expect(localStorage.getItem('silyanka:designMap')).not.toBeNull();
   });
 
-  it('кнопка сброса с подтверждением стирает свои ключи, чужие не трогает, и перезагружает', () => {
+  it('отмена подтверждения возвращает экран в исходный вид и данные не трогает', () => {
     localStorage.setItem('silyanka:designMap', JSON.stringify({ 'node-0-0': '#ff0000' }));
-    localStorage.setItem('some-other-app:token', 'secret');
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const reload = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
+    const reload = stubReload();
     renderWithBomb();
 
     fireEvent.click(screen.getByText('Reset data and start over'));
+    fireEvent.click(screen.getByText('Cancel'));
+
+    expect(screen.queryByText('Reset everything')).toBeNull();
+    expect(screen.getByText('Reset data and start over')).toBeTruthy();
+    expect(reload).not.toHaveBeenCalled();
+    expect(localStorage.getItem('silyanka:designMap')).not.toBeNull();
+  });
+
+  it('подтверждение стирает свои ключи, чужие не трогает, и перезагружает', () => {
+    localStorage.setItem('silyanka:designMap', JSON.stringify({ 'node-0-0': '#ff0000' }));
+    localStorage.setItem('app:welcomeSeen', 'true');
+    localStorage.setItem('some-other-app:token', 'secret');
+    const reload = stubReload();
+    renderWithBomb();
+
+    fireEvent.click(screen.getByText('Reset data and start over'));
+    fireEvent.click(screen.getByText('Reset everything'));
 
     expect(localStorage.getItem('silyanka:designMap')).toBeNull();
+    expect(localStorage.getItem('app:welcomeSeen')).toBeNull();
     expect(localStorage.getItem('some-other-app:token')).toBe('secret');
     expect(reload).toHaveBeenCalledTimes(1);
   });

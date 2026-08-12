@@ -1,6 +1,9 @@
 import { Link2, Unlink2 } from 'lucide-react';
 import { Stepper } from '../common/Stepper';
 import { SectionHelp } from '../common/SectionHelp';
+import { Button } from '../common/Button';
+import { IconButton } from '../common/IconButton';
+import { Switch } from '../common/Switch';
 import { APP_CONSTRAINTS, BEAD_THEME } from '../../config/theme';
 import { CROSS_WEAVE_THEME } from '../../config/crossWeaveTheme';
 import { PEYOTE_THEME } from '../../config/peyoteTheme';
@@ -113,7 +116,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
 
   return (
     <>
-      <div className="sidebar__body">
+      <div className="sidebar__body u-scroll">
         <section className="sidebar__section">
           <header className="sidebar__section-heading">
             <div className="sidebar__section-heading-row">
@@ -198,16 +201,20 @@ export const GridSidebar = (props: GridSidebarProps) => {
               <div className="grid-sidebar__subsection">
                 <div className="sidebar__section-heading-row grid-sidebar__subheading">
                   <h4 className="sidebar__section-title">Rows</h4>
-                  <button
-                    type="button"
-                    className="grid-sidebar__link-btn"
+                  {/* Залипающее состояние — проп active, а не селектор по
+                      aria-pressed: у дизайн-системы это один и тот же вид
+                      подсветки на всех кнопках. */}
+                  <IconButton
+                    size="sm"
+                    shape="square"
+                    variant="ghost"
+                    active={silyankaProps.taperRowsLinked}
                     onClick={silyankaProps.onToggleTaperRowsLinked}
                     aria-pressed={silyankaProps.taperRowsLinked}
                     aria-label={silyankaProps.taperRowsLinked ? 'Unlink top/bottom rows' : 'Link top/bottom rows'}
                     title={silyankaProps.taperRowsLinked ? 'Top and bottom change together — click to unlink' : 'Link top and bottom to change together (both take the larger value)'}
-                  >
-                    {silyankaProps.taperRowsLinked ? <Link2 size={13} /> : <Unlink2 size={13} />}
-                  </button>
+                    icon={silyankaProps.taperRowsLinked ? <Link2 size={13} /> : <Unlink2 size={13} />}
+                  />
                 </div>
                 <p className="grid-sidebar__hint">
                   How many rows that end takes to slope in. 0 leaves the end straight.
@@ -276,11 +283,9 @@ export const GridSidebar = (props: GridSidebarProps) => {
                 </div>
               </header>
               <div className="bottom-chain-control">
-                <button
-                  type="button"
-                  className={`bottom-chain-control__toggle${silyankaProps.topEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
-                  onClick={silyankaProps.onTopEdgeToggle}
-                  aria-pressed={silyankaProps.topEdgeEnabled}
+                <Switch
+                  checked={silyankaProps.topEdgeEnabled}
+                  onChange={() => silyankaProps.onTopEdgeToggle()}
                   aria-label="Toggle Top Chain"
                 />
               </div>
@@ -294,11 +299,9 @@ export const GridSidebar = (props: GridSidebarProps) => {
                 </div>
               </header>
               <div className="bottom-chain-control">
-                <button
-                  type="button"
-                  className={`bottom-chain-control__toggle${silyankaProps.bottomEdgeEnabled ? ' bottom-chain-control__toggle--active' : ''}`}
-                  onClick={silyankaProps.onBottomEdgeToggle}
-                  aria-pressed={silyankaProps.bottomEdgeEnabled}
+                <Switch
+                  checked={silyankaProps.bottomEdgeEnabled}
+                  onChange={() => silyankaProps.onBottomEdgeToggle()}
                   aria-label="Toggle Bottom Chain"
                   disabled={!silyankaProps.bottomEdgeEnabled && (silyankaProps.hasPendants || silyankaProps.hasDecorTails)}
                   title={!silyankaProps.bottomEdgeEnabled && (silyankaProps.hasPendants || silyankaProps.hasDecorTails) ? 'Clear pendants and tails to enable Bottom Chain' : undefined}
@@ -321,21 +324,17 @@ export const GridSidebar = (props: GridSidebarProps) => {
               <div className="edge-extension-control">
                 <div className="edge-extension-control__row">
                   <span className="edge-extension-control__label">Left</span>
-                  <button
-                    type="button"
-                    className={`bottom-chain-control__toggle${silyankaProps.extendLeftEdge ? ' bottom-chain-control__toggle--active' : ''}`}
-                    onClick={silyankaProps.onToggleExtendLeftEdge}
-                    aria-pressed={silyankaProps.extendLeftEdge}
+                  <Switch
+                    checked={silyankaProps.extendLeftEdge}
+                    onChange={() => silyankaProps.onToggleExtendLeftEdge()}
                     aria-label="Toggle left edge extension"
                   />
                 </div>
                 <div className="edge-extension-control__row">
                   <span className="edge-extension-control__label">Right</span>
-                  <button
-                    type="button"
-                    className={`bottom-chain-control__toggle${silyankaProps.extendRightEdge ? ' bottom-chain-control__toggle--active' : ''}`}
-                    onClick={silyankaProps.onToggleExtendRightEdge}
-                    aria-pressed={silyankaProps.extendRightEdge}
+                  <Switch
+                    checked={silyankaProps.extendRightEdge}
+                    onChange={() => silyankaProps.onToggleExtendRightEdge()}
                     aria-label="Toggle right edge extension"
                   />
                 </div>
@@ -346,14 +345,15 @@ export const GridSidebar = (props: GridSidebarProps) => {
       </div>
 
       <div className="sidebar__footer">
-        <button
-          type="button"
-          className="sidebar__clear"
+        <Button
+          variant="secondary"
+          size="md"
+          className="sidebar__action sidebar__action--footer"
           onClick={silyankaProps ? silyankaProps.onResetAll : basicProps!.onResetAll}
           disabled={silyankaProps ? silyankaProps.resetAllDisabled : basicProps!.resetAllDisabled}
         >
           Reset all
-        </button>
+        </Button>
       </div>
     </>
   );

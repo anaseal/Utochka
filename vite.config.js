@@ -12,6 +12,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // .tsx обязателен: тесты компонентов лежат рядом с ними и называются
+    // *.test.tsx — под шаблоном без него они молча не запускались, и
+    // протухший тест ErrorBoundary не краснел.
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })

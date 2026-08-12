@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useRef, useState } from 'react';
-import { Palette, Replace } from 'lucide-react';
+import { ChartPie, Replace } from 'lucide-react';
 import './CanvasStats.css';
 
 const HEX_RE = /^#[0-9a-f]{6}$/i;
@@ -61,6 +61,10 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
   return (
     <aside className={`stats${listOpen ? ' stats--list-open' : ''}`} ref={ref}>
       <div className="stats__list-toggle" ref={popupRef}>
+        {/* Иконка — диаграмма, а не палитра: панель про расход бисера по
+            цветам, а палитра в шапке (PaletteWidget) — про выбор цвета. На
+            ≤479.98px оба триггера видны одновременно, и одинаковый значок
+            читался как две кнопки одного и того же. */}
         <button
           type="button"
           ref={toggleRef}
@@ -70,7 +74,7 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
           aria-expanded={listOpen}
           title="Material stats"
         >
-          <Palette size={14} />
+          <ChartPie size={14} />
         </button>
 
         <div className="stats__panel">
@@ -81,7 +85,7 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
 
           <span className="stats__divider" aria-hidden="true" />
 
-          <ul className="stats__list">
+          <ul className="stats__list u-scroll u-scroll--thin">
             {colorStats.map(([color, count]) => {
               const isReplaceable = HEX_RE.test(color);
               // Единственная не-hex строка сводки — 'transparent': и

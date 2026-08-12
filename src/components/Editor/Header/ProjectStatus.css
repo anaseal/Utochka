@@ -1,0 +1,158 @@
+/* --- Имя активного проекта и статус сохранения (ProjectStatus.tsx) ----------
+   Самый левый блок хедера, левее переключателя техники — то же место, что
+   занимает имя файла в редакторах вообще, и одинаковое в обоих режимах
+   (рисование/плетение), как и остальной левый край. Двухэтажная подпись
+   (имя сверху, статус снизу) укладывается в существующую высоту хедера
+   (--header-height) тем же приёмом, что блок ZOOM и .weave-progress.
+
+   Раму строки (.header/.header__nav, разделители, сетку двух рядов) задаёт
+   Header.css — здесь только сам блок и его ячейки в этой сетке. */
+
+/* Единственный сжимаемый блок строки: у всех остальных flex-shrink: 0 (иначе
+   круглые кнопки превращаются в овалы, а текст вылезает за сжатую таблетку),
+   поэтому нехватку ширины поглощает именно имя проекта — многоточием, а не
+   обрезанием хедера за краем экрана. Так брейкпоинты отвечают только за то,
+   ЧТО показано, а точная подгонка ширины остаётся на флексе. */
+.project-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.project-status__open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 11rem;
+  /* min-width: auto у flex-элемента = min-content, то есть кнопка не ужалась
+     бы ниже самого длинного слова в имени и вытолкнула бы соседей. */
+  min-width: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.project-status__open:hover { background: var(--color-border-subtle); }
+
+/* Точка-индикатор: состояние читается по цвету раньше, чем по подписи, и
+   переживает любое сжатие имени рядом. Цвета — те же три,
+   что уже несут этот смысл во всём приложении: циановый акцент = всё хорошо,
+   --color-warning = требует внимания (как .project-gallery__warning), слейт = никакой
+   информации (черновик вне библиотеки). */
+.project-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-dim);
+  flex-shrink: 0;
+}
+.project-status__dot--saved { background: var(--color-accent); }
+/* Полупрозрачный тот же циан, а не третий цвет: «сейчас догонит» — это
+   переходная фаза сохранённого состояния, а не отдельная тревога. */
+.project-status__dot--saving { background: var(--color-accent); opacity: 0.45; }
+.project-status__dot--unsaved { background: var(--color-warning); }
+/* Отказ хранилища — тот же красный, что у danger-действий хедера и тоста
+   ошибки (--color-danger): это уже не «пока не сохранено», а «сохранить не вышло». */
+.project-status__dot--failed { background: var(--color-danger); }
+
+.project-status__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.project-status__name {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-status__state {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Появляется только в состоянии unsaved (автосейв у проекта выключен —
+   состояние по умолчанию), поэтому красится в тот же янтарный, что и точка
+   рядом: кнопка и индикатор — одно сообщение, а не два соседних элемента. */
+.project-status__save {
+  padding: 4px 7px;
+  border: 1px solid var(--color-warning-border);
+  border-radius: 7px;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.project-status__save:hover { background: var(--color-warning-muted); }
+.project-status__save:disabled { opacity: 0.5; cursor: default; }
+
+/* Имя и статус видны на всех ширинах: раньше блок отдавал своё место
+   ступенями (на ≤1279.98px уходила подпись статуса, на ≤1024px и имя, от
+   блока оставалась точка-индикатор), но точка называет только состояние
+   сохранения, а не проект — понять, что открыто, на планшете было нельзя.
+   Ширину под имя на ≤1024px освобождает переезд Zoom, вида полотна и образца
+   в меню «⋯» (см. Header.css и HeaderOverflowMenu.css), а остаток разницы
+   добирает сжатие самого блока (flex-shrink выше): на узком краю диапазона
+   имя укорачивается многоточием, полное остаётся в title/aria-label и в
+   галерее. Здесь блок только чуть плотнее десктопного. */
+@media (max-width: 1279.98px) {
+  .project-status__open { max-width: 8rem; padding: 3px 5px; }
+}
+
+/* Двухрядная сетка узкого экрана — сама сетка объявлена в Header.css
+   (.header__nav), здесь блок только занимает в ней свои ячейки. */
+@media (max-width: 599.98px) {
+  /* Один бокс на все кнопки строки, см. тот же размер у остальных в
+     Header.css/HeaderEndGroup.css/HeaderOverflowMenu.css. */
+  .header__nav .project-status__save {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+  }
+
+  /* Имя проекта и статус (видны на всех ширинах, см. выше) занимают здесь всю
+     левую колонку и обе строки сразу — так блок не участвует в ритме иконок и
+     не сдвигает первый ряд относительно второго; две строки по 11/9px как раз
+     укладываются в 30px ряда.
+     .project-status «растворяется», чтобы кнопка «Save» стала отдельной
+     ячейкой сетки, а не съедала ширину у имени: она появляется в состоянии
+     unsaved (оно же по умолчанию), и внутри колонки от имени осталась бы
+     треть. Полный текст в любом случае остаётся в title/aria и в галерее,
+     которую открывает тот же клик. */
+  .header__nav .project-status { display: contents; }
+  .header__nav .project-status__open {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: stretch;
+    width: auto;
+    max-width: none;
+    height: auto;
+    justify-content: flex-start;
+    padding: 0 4px;
+    border-radius: 8px;
+  }
+
+  /* Второй ряд, хвост: «Save» стоит в DOM сразу за именем проекта, а место ей
+     в конце ряда действий — отсюда order (нумерация общая на оба режима,
+     см. Header.css). */
+  .header__nav .project-status__save { grid-row: 2; }
+  .header__nav .project-status__save { order: 14; }
+}

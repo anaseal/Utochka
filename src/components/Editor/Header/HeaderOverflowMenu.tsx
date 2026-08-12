@@ -1,10 +1,13 @@
 import { RefObject } from 'react';
 import {
-  MoreHorizontal, Download, Upload, Share2, FolderOpen, RotateCcw, Maximize2, Minimize2, Image, Trash2,
+  MoreHorizontal, Download, Upload, Share2, RotateCcw, Maximize2, Minimize2, Image, HelpCircle,
 } from 'lucide-react';
+import './HeaderOverflowMenu.css';
 import { Stepper } from '../../common/Stepper';
+import { IconButton } from '../../common/IconButton';
+import { MenuItemButton } from '../../common/Menu';
 import { WeaveHelp } from './WeaveHelp';
-import { CanvasViewOptions } from './CanvasViewOptions';
+import { canvasViewItems } from './canvasViewItems';
 import { APP_CONSTRAINTS } from '../../../config/theme';
 import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
 import { SharedHeaderProps, Technique } from './Header.types';
@@ -15,27 +18,27 @@ interface HeaderOverflowMenuProps {
   onSetZoom?: (v: number) => void;
   onSaveProject: () => void;
   onShareProject: () => void;
-  onOpenProjectGallery: () => void;
   loadInputRef: RefObject<HTMLInputElement | null>;
   weaveMode: boolean;
   technique: Technique;
   weaveControls: SharedHeaderProps['weaveControls'];
-  // Ниже — только для секции ≤479.98px (.header__overflow-narrow-extra):
-  // вид полотна, образец и очистка, чьи кнопки на этой ширине убраны из
-  // строки хедера (см. Header.css).
+  // Ниже — для секций ≤1024px (вид полотна, образец) и ≤599.98px («?»):
+  // их кнопки на этих ширинах убраны из строки хедера (см. Header.css).
   canvasView: SharedHeaderProps['canvasView'];
   referenceWindowOpen: boolean;
   onToggleReferenceWindow: () => void;
-  onClearAll: () => void;
+  onOpenWelcome: () => void;
 }
 
-// Попап «⋯»: на ≤767.98px сюда переезжают дубли Zoom/Save-Load-Share (и,
-// в режиме плетения, Fullscreen/Reset/«?») из основной строки хедера — там
-// им не хватает места (см. Header.css). На ≤479.98px к ним добавляется вид
-// полотна, образец и очистка — это и есть меню «Функции» целевой раскладки.
+// Попап «⋯»: собирает то, что не поместилось в строку хедера, тремя ступенями
+// по ширине (см. Header.css). ≤1024px — Zoom, вид полотна и образец: они
+// уступили место имени проекта, которое до этого на планшете сжималось до
+// точки-индикатора. ≤767.98px — Save/Load/Share и, в режиме плетения,
+// Fullscreen/Reset/«?». ≤599.98px — «?» рисования. Это и есть меню «Функции»
+// целевой мобильной раскладки.
 export const HeaderOverflowMenu = ({
-  zoom, onZoomChange, onSetZoom, onSaveProject, onShareProject, onOpenProjectGallery, loadInputRef,
-  weaveMode, technique, weaveControls, canvasView, referenceWindowOpen, onToggleReferenceWindow, onClearAll,
+  zoom, onZoomChange, onSetZoom, onSaveProject, onShareProject, loadInputRef,
+  weaveMode, technique, weaveControls, canvasView, referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome,
 }: HeaderOverflowMenuProps) => {
   const { open, setOpen, ref, triggerRef } = useDismissablePopup();
 
@@ -50,14 +53,16 @@ export const HeaderOverflowMenu = ({
         aria-expanded={open}
         onClick={() => setOpen(o => !o)}
       >
-        <MoreHorizontal size={18} />
+        <MoreHorizontal size={14} />
       </button>
       {open && (
         <div className="header__overflow-panel" role="menu">
-          {/* ≤767.98px: дубли Zoom/Save-Load-Share, скрытых из основной
-              строки хедера на этом брейкпоинте (см. Header.css). На более широких
-              экранах эти оригиналы и так видны в строке — блок скрыт. */}
-          <div className="header__overflow-mobile-extra">
+          {/* ≤1024px: то, что уступило место имени проекта в строке хедера —
+              Zoom, вид полотна и образец (см. Header.css). Вид полотна нужен
+              и в режиме плетения: кнопка CanvasViewMenu убрана из строки в
+              обоих режимах. Образец к плетению не относится и там не
+              рендерится, как и везде в хедере. */}
+          <div className="header__overflow-tablet-extra">
             <Stepper
               variant="overflow"
               label="Zoom"
@@ -68,21 +73,83 @@ export const HeaderOverflowMenu = ({
               min={APP_CONSTRAINTS.minZoom * 100}
               max={APP_CONSTRAINTS.maxZoom * 100}
             />
+
+            <div className="header__overflow-row header__overflow-row--stacked">
+              <span className="header__overflow-label">Canvas view</span>
+              {/* Единственное место, где пункты <Menu> рисуются вне <Menu>:
+                  панель «Функции» — не список пунктов, а строки «подпись +
+                  контрол», и своей разметки не теряет. Список пунктов общий
+                  с CanvasViewMenu (canvasViewItems), рисует их тот же
+                  <MenuItemButton>, что и меню, — иначе вид двух пунктов
+                  разошёлся бы с остальными меню хедера. */}
+              <div className="header__overflow-options">
+                {canvasViewItems(canvasView).map((item, index) => (
+                  <MenuItemButton key={index} item={item} />
+                ))}
+              </div>
+            </div>
+
+            {!weaveMode && (
+              <div className="header__overflow-row">
+                <span className="header__overflow-label">Reference image</span>
+                <div className="grid-controls__actions">
+                  {/* Открытая панель — проп active компонента (акцентный глиф
+                      на акцентной подложке), а не прежний класс
+                      .grid-controls__btn--on, красивший только глиф: это тот же
+                      язык «включено», что у активных кнопок ряда хедера. */}
+                  <IconButton
+                    className="grid-controls__btn"
+                    size="md"
+                    shape="square"
+                    variant="ghost"
+                    active={referenceWindowOpen}
+                    onClick={onToggleReferenceWindow}
+                    title="Reference image"
+                    aria-pressed={referenceWindowOpen}
+                    icon={<Image size={14} />}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ≤767.98px: дубли Save/Load/Share, скрытых из основной строки
+              хедера на этом брейкпоинте (см. Header.css). На более широких
+              экранах эти оригиналы и так видны в строке — блок скрыт. */}
+          <div className="header__overflow-mobile-extra">
+            {/* Без «Saved projects» (FolderOpen): галерею на всех ширинах
+                открывает клик по блоку статуса проекта слева в хедере
+                (ProjectStatus.tsx) — вход в неё один, дублей больше нет. */}
             <div className="header__overflow-row">
-              <span className="header__overflow-label">Save / Load / Share / Projects</span>
+              <span className="header__overflow-label">Save / Load / Share</span>
               <div className="grid-controls__actions">
-                <button onClick={onSaveProject} className="grid-controls__btn" title="Save project to file">
-                  <Download size={14} />
-                </button>
-                <button onClick={() => loadInputRef.current?.click()} className="grid-controls__btn" title="Load project from file">
-                  <Upload size={14} />
-                </button>
-                <button onClick={onShareProject} className="grid-controls__btn" title="Copy share link">
-                  <Share2 size={14} />
-                </button>
-                <button onClick={onOpenProjectGallery} className="grid-controls__btn" title="Saved projects">
-                  <FolderOpen size={14} />
-                </button>
+                <IconButton
+                  className="grid-controls__btn"
+                  size="md"
+                  shape="square"
+                  variant="ghost"
+                  onClick={onSaveProject}
+                  title="Save project to file"
+                  icon={<Download size={14} />}
+                />
+                <IconButton
+                  className="grid-controls__btn"
+                  size="md"
+                  shape="square"
+                  variant="ghost"
+                  onClick={() => loadInputRef.current?.click()}
+                  title="Load project from file"
+                  icon={<Upload size={14} />}
+                />
+                <IconButton
+                  className="grid-controls__btn"
+                  size="md"
+                  shape="square"
+                  variant="ghost"
+                  onClick={onShareProject}
+                  title="Copy share link"
+                  icon={<Share2 size={14} />}
+                />
               </div>
             </div>
             {/* Reset/«?» режима плетения: на ≤767.98px их дубли в основной
@@ -94,77 +161,60 @@ export const HeaderOverflowMenu = ({
               <div className="header__overflow-row">
                 <span className="header__overflow-label">Weave mode</span>
                 <div className="grid-controls__actions">
-                  <button
+                  <IconButton
+                    className="grid-controls__btn"
+                    size="md"
+                    shape="square"
+                    variant="ghost"
+                    active={weaveControls.isFullscreen}
                     onClick={weaveControls.onToggleFullscreen}
-                    className={`grid-controls__btn ${weaveControls.isFullscreen ? 'grid-controls__btn--on' : ''}`}
                     title={weaveControls.isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                     aria-pressed={weaveControls.isFullscreen}
-                  >
-                    {weaveControls.isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                  </button>
-                  <button
+                    icon={weaveControls.isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  />
+                  {/* --danger, а не variant="danger": красный нужен только под
+                      курсором, в покое Reset — такая же нейтральная иконка, как
+                      соседи (см. Header.css). */}
+                  <IconButton
+                    className="grid-controls__btn grid-controls__btn--danger"
+                    size="md"
+                    shape="square"
+                    variant="ghost"
                     onClick={weaveControls.onReset}
                     disabled={weaveControls.markedCount === 0}
-                    className="grid-controls__btn grid-controls__btn--danger"
                     title="Reset all progress"
-                  >
-                    <RotateCcw size={14} />
-                  </button>
+                    icon={<RotateCcw size={14} />}
+                  />
                   <WeaveHelp technique={technique} />
                 </div>
               </div>
             )}
           </div>
 
-          {/* ≤479.98px: то, что уехало из строки хедера ради двух ровных рядов
-              (см. Header.css). Вид полотна нужен и в режиме плетения — кнопка
-              CanvasViewMenu убрана из строки в обоих режимах; образец и очистка
-              к плетению не относятся и там не рендерятся, как и везде в
-              хедере. */}
-          <div className="header__overflow-narrow-extra">
-            <div className="header__overflow-row header__overflow-row--stacked">
-              <span className="header__overflow-label">Canvas view</span>
-              <div className="header__overflow-options">
-                <CanvasViewOptions
-                  orientation={canvasView.orientation}
-                  onToggleOrientation={canvasView.onToggleOrientation}
-                  flipped={canvasView.flipped}
-                  onToggleFlip={canvasView.onToggleFlip}
-                />
+          {/* ≤599.98px: приветственное окно — единственное, что уехало из строки
+              хедера ради двух ровных рядов (12 ячеек сетки на 13 кнопок, см.
+              Header.css). Выбрано именно оно: это справка, которую читают один
+              раз, в отличие от очистки и правой панели, которые стояли здесь
+              раньше и вернулись в строку. К плетению не относится (там своя «?»
+              рядом с WeaveControls) и не рендерится, как и везде в хедере. */}
+          {!weaveMode && (
+            <div className="header__overflow-narrow-extra">
+              <div className="header__overflow-row">
+                <span className="header__overflow-label">What this app is</span>
+                <div className="grid-controls__actions">
+                  <IconButton
+                    className="grid-controls__btn"
+                    size="md"
+                    shape="square"
+                    variant="ghost"
+                    onClick={onOpenWelcome}
+                    title="What this app is"
+                    icon={<HelpCircle size={14} />}
+                  />
+                </div>
               </div>
             </div>
-
-            {!weaveMode && (
-              <>
-                <div className="header__overflow-row">
-                  <span className="header__overflow-label">Reference image</span>
-                  <div className="grid-controls__actions">
-                    <button
-                      onClick={onToggleReferenceWindow}
-                      className={`grid-controls__btn ${referenceWindowOpen ? 'grid-controls__btn--on' : ''}`}
-                      title="Reference image"
-                      aria-pressed={referenceWindowOpen}
-                    >
-                      <Image size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="header__overflow-row">
-                  <span className="header__overflow-label">Clear all</span>
-                  <div className="grid-controls__actions">
-                    <button
-                      onClick={onClearAll}
-                      className="grid-controls__btn grid-controls__btn--danger"
-                      title="Clear All"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

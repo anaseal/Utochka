@@ -1,10 +1,169 @@
 @import "tailwindcss";
 
+/* Токены проекта живут в обычном :root, а не в @theme — намеренно.
+   @theme в Tailwind v4 не просто объявляет переменные, он перепрошивает
+   встроенные шкалы утилит: --text-… меняет text-xs/text-sm/…, --radius-…
+   меняет rounded-…, --shadow-… — shadow-…, --color-… — bg-…, text-…, border-…
+   Утилит Tailwind в разметке нет (правило проекта — BEM + var(--token)),
+   так что перепрошивать шкалы не для кого, а --sp-* и --z-* в неймспейсы
+   Tailwind вообще не попадают и раньше ехали в @theme просто за компанию.
+   Цена перехода нулевая: обычный :root объявлен вне каскадных слоёв и потому
+   бьёт дефолты Tailwind, которые @import "tailwindcss" кладёт в @layer theme
+   (совпадают имена --text-*, --radius-*, --shadow-*, --font-mono). */
 :root {
+  /* Поверхности */
   --color-page: #0f172a;
   --color-panel: #1e293b;
+  --color-popover: #0f172a;
+  --color-canvas: #0e1b33;
+
+  /* Текст */
+  --color-text: #e3f3ff;
+  --color-text-muted: #94a3b8;
+  --color-text-dim: #64748b;
+
+  /* Акценты и статусы */
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+  --color-danger: #f87171;
+  --color-danger-hover: #fca5a5;
+  --color-warning: #fbbf24;
+  --color-edge-bottom: #d97706;
+  --color-edge-top: #0284c7;
+
+  /* Шахматка под прозрачностью (превью проекта и референса) */
+  --color-checker: #17223a;
+
+  /* Границы.
+     Четыре ступени, а не одиннадцать: в файлах встречались альфы .05 .06 .08
+     .10 .12 .14 .15 .18 .20 .24 .25, и различие соседних (.10 против .12)
+     на тёмном фоне глазом не ловится. Ступени назначены так:
+       faint  .05 ← .05
+       subtle .08 ← .06 .08 .10
+       base   .12 ← .12 .14 .15 .18
+       strong .20 ← .20 .24 .25
+     Белый с альфой .35 и .5 сюда НЕ входит — это графика холста (ось зеркала
+     в CanvasRulers, штриховка и уголок ресайза в CanvasStats/ReferenceWindow),
+     а не рамки UI, и остаётся литералами. */
+  --color-border-faint: rgba(255, 255, 255, 0.05);
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.20);
+
+  /* Цвета выше с прозрачностью. Записаны явными значениями, а не через
+     rgb(from var(--color-accent) r g b / .15): в проекте остаётся один способ
+     записи цвета, и значение видно глазом прямо здесь. Цена — при смене
+     базового цвета правится и его -soft/-muted/-strong рядом. */
+
+  /* Акцент: заливки чипов активных инструментов (soft), рамки выделения
+     (muted), ползунок скроллбара под курсором (strong). */
+  --color-accent-soft: rgba(34, 211, 238, 0.15);
+  --color-accent-muted: rgba(34, 211, 238, 0.35);
+  --color-accent-strong: rgba(34, 211, 238, 0.55);
+
+  /* Подложки поверх холста (панели, .tool-btn) и затемнение под модалками. */
+  --color-overlay: rgba(15, 23, 42, 0.6);
+  --color-overlay-strong: rgba(15, 23, 42, 0.9);
+  --color-scrim: rgba(0, 0, 0, 0.55);
+
+  /* Статусный чип «не сохранено»: заливка, заливка под курсором, рамка. */
+  --color-warning-soft: rgba(251, 191, 36, 0.12);
+  --color-warning-muted: rgba(251, 191, 36, 0.22);
+  --color-warning-border: rgba(251, 191, 36, 0.4);
+
+  /* Блоки ошибок. Базой взят --color-danger (#f87171) — прежний #ef4444
+     в ColorPicker был другим красным под текстом цвета --color-danger,
+     на альфе .1/.3 разница неразличима, держать два красных незачем. */
+  --color-danger-soft: rgba(248, 113, 113, 0.12);
+  --color-danger-border: rgba(248, 113, 113, 0.4);
+
+  /* Кромки полотна: заливка и рамка легенды верх/низ. Пара симметричная —
+     менять только вместе. */
+  --color-edge-top-soft: rgba(2, 132, 199, 0.15);
+  --color-edge-top-border: rgba(2, 132, 199, 0.3);
+  --color-edge-bottom-soft: rgba(217, 119, 6, 0.15);
+  --color-edge-bottom-border: rgba(217, 119, 6, 0.3);
+
+  /* Скругления */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  /* Типографика. Шкала покрывает весь текст интерфейса — 10..14px, пять
+     ступеней подряд. Вне шкалы намеренно оставлены три значения, и все
+     они не про интерфейс: 7px и 20px у .stats__value/.stats__label (пара
+     «подпись + число» холста, своя пропорция на десктопе и на мобиле) и 8px
+     у мобильных линеек и хедера (ниже нижней ступени). Литералы
+     прокомментированы на месте. Четвёртым здесь был 17px у .canvas__axis-text
+     (номера рядов в SVG) — подтянут к --text-xl, подписи стали на 3px мельче.
+
+     --text-xs раньше был 8px и не использовался ни разу — переведён на
+     10px, самую частую мелкую метку. --text-xl раньше был 15px при одном
+     потребителе (.modal__heading); стал 14px — размер глифа кнопок-иконок,
+     который встречается вшестеро чаще. */
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-md: 12px;
+  --text-lg: 13px;
+  --text-xl: 14px;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Отступы */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+
+  /* Тени. Две ступени, а не три: прежний --shadow-lg (0 16px 40px) отличался
+     от --shadow-md (0 14px 40px) только смещением на 2px при одинаковом
+     размытии и альфе — различие, которого не видно. Модалки переведены на
+     --shadow-md: под ними лежит --color-scrim, и тень там почти ничего не
+     отделяет, в отличие от попапов, под которыми затемнения нет.
+       sm — тост,
+       md — всё всплывающее: меню и попапы хедера, палитра, пипетка,
+            окно референса, модалки.
+     Вне шкалы намеренно остаются: полоса хедера (0 10px 30px — не карточка,
+     а край фиксированной шапки), пузырь подсказки SectionHelp (0 8px 24px —
+     тень с размытием 40px под плашкой шириной 220px весит больше самой
+     плашки), карточка холста (0 25px 50px -12px — отрицательный разброс,
+     отдельная роль), drop-shadow превью подвески (тень по контуру SVG, а не
+     по прямоугольнику — box-shadow-токен туда не подставить) и составные
+     inset-обводки бисерины, свотчей, курсоров пикера и .tool-btn: это кольца
+     вокруг элемента, а не «карточка над фоном». Каждое такое место
+     прокомментировано у своего правила. Кольца, совпавшие с токенами по
+     числу, на них переведены (--color-border-strong у выбранного свотча
+     генератора, --color-accent-strong у активной карточки галереи) —
+     литералом остаётся только сама тень рядом. */
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 14px 40px rgba(0, 0, 0, 0.5);
+
+  /* Слои */
+  --z-canvas: 10;
+  --z-sidebar: 20;
+  --z-float: 50;
+  --z-header: 100;
+  --z-popover: 150;
+  --z-modal: 200;
+  --z-toast: 1000;
+
+  /* Анимация */
   --transition-speed: 0.2s;
-  --palette-height: 84px;
+
+  /* Геометрия макета */
+  --header-height: 84px;
+  /* Две разные величины, выведенные из одного числа:
+       --sidebar-panel-width — собственная ширина панели (.sidebar, Sidebar.css).
+         Панель position:fixed и ВЫЕЗЖАЕТ через transform, поэтому её ширина
+         обязана быть постоянной и в закрытом состоянии;
+       --sidebar-width — резерв места под панель для остального интерфейса
+         (.canvas__svg-frame, .stats вычитают его из своей ширины). Когда панель
+         закрыта, резерв равен 0px, иначе холст остался бы зажатым.
+     Совпадают они только при открытой панели — отсюда переадресация ниже,
+     а не одна переменная на оба случая. */
+  --sidebar-panel-width: 260px;
   --sidebar-width: 0px;
   /* Потолок карточки холста (.canvas__svg-frame, CanvasView.css) — на обычной
      странице сознательно ограничен, чтобы холст не расползался на весь экран
@@ -23,18 +182,19 @@
 }
 
 .editor--sidebar-open {
-  --sidebar-width: 260px;
+  --sidebar-width: var(--sidebar-panel-width);
 }
 
 @media (max-width: 1024px) {
-  .editor--sidebar-open {
-    --sidebar-width: 220px;
+  :root {
+    --sidebar-panel-width: 220px;
   }
 }
 
+/* 480–768px: 220px отъедает почти половину узкого экрана — сужаем дальше. */
 @media (max-width: 767.98px) {
-  .editor--sidebar-open {
-    --sidebar-width: 170px;
+  :root {
+    --sidebar-panel-width: 170px;
   }
 }
 
@@ -47,24 +207,70 @@
    76px оставляет небольшой запас. */
 @media (orientation: landscape) and (max-height: 500px) {
   :root {
-    --palette-height: 76px;
+    --header-height: 76px;
   }
 }
 
-/* Узкий телефон (≤479.98px): хедер там разложен в два ровных ряда по 30px
+/* Узкий экран (≤599.98px): хедер там разложен в два ровных ряда по 30px
    (см. Header.css, тот же брейкпоинт) — 30 + 4 + 30 + паддинг и бордер
    .header__nav даёт 72px, и прежние 84px оставляли пустую полосу. Правило
    стоит ПОСЛЕ ландшафтного блока намеренно: у узкого телефона в ландшафте
    совпадают оба условия, и побеждать должно более тесное значение, а не то,
    что случайно оказалось ниже по файлу.
-   Больше ничего менять не нужно: --palette-height уже вычитается во всех
+   Больше ничего менять не нужно: --header-height уже вычитается во всех
    формулах высоты холста (CanvasView.css, Sidebar.css, ColorPicker.css) и от
    него же позиционируются попапы — они подхватят новое значение сами, а
    холст получит освободившиеся 10px. */
-@media (max-width: 479.98px) {
+@media (max-width: 599.98px) {
   :root {
-    --palette-height: 74px;
+    --header-height: 74px;
   }
+}
+
+/* Шахматка под прозрачными картинками — превью проекта (ProjectGallery)
+   и вьюпорт референса (ReferenceWindow). Утилита, а не два одинаковых
+   background: правило одно на оба места. */
+.u-checkerboard {
+  background: repeating-conic-gradient(var(--color-page) 0% 25%, var(--color-checker) 0% 50%) 50% / 16px 16px;
+}
+
+/* Тонкий скроллбар панелей — один класс вместо шести одинаковых копий блока
+   (сайдбар, каталог подвесок, список цветов в статистике, тело приветствия,
+   вьюпорт референса, подсказка режима плетения). Собственный скроллбар холста
+   (.canvas__svg / .canvas-scrollbar) сюда НЕ входит: у него свои токены и
+   перетаскиваемый бегунок под палец.
+   border + background-clip дают ползунку прозрачные поля по 2px — визуально он
+   тоньше трека, но остаётся кликабельным на всю ширину.
+   :hover — --color-accent-strong (та же прозрачность .55), а не непрозрачный
+   --color-accent-hover: ползунок под курсором должен просвечивать, а не
+   становиться сплошной голубой полосой. */
+.u-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.u-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.u-scroll::-webkit-scrollbar-track { background: transparent; }
+
+.u-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-xs);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background var(--transition-speed) ease;
+}
+
+.u-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-accent-strong); }
+
+/* Узкий вариант — горизонтальная полоса списка цветов в статистике, где на
+   8px просто нет высоты. Прозрачные поля здесь снимаются намеренно: от 6px
+   минус два поля по 2px остался бы видимый палец в 2px — ниточка вместо
+   ползунка. Радиус уменьшен под толщину. */
+.u-scroll--thin::-webkit-scrollbar { width: 6px; height: 6px; }
+
+.u-scroll--thin::-webkit-scrollbar-thumb {
+  border: 0;
+  border-radius: 3px;
 }
 
 html, body, #root {
@@ -85,12 +291,4 @@ html, body, #root {
   overflow: hidden;
   background-color: var(--color-page);
   font-family: sans-serif;
-}
-
-.list-reset {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
 }

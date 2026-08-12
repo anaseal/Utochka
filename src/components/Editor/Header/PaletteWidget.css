@@ -1,0 +1,221 @@
+/* Палитра, кастомный цвет и пипетка (PaletteWidget.tsx). Раму строки и
+   разделитель перед инструментами (.header__divider--palette-tools) задаёт
+   Header.css — он рендерится в Header.tsx, а не здесь. */
+
+/* Обёртка триггера + самой палитры. На десктопе/планшете — просто
+   позиционирующий контекст (position: relative), без визуального эффекта:
+   триггер скрыт (.palette-widget__trigger), палитра ведёт себя как раньше.
+   На ≤599.98px триггер становится видимой круглой кнопкой, а .palette —
+   абсолютно спозиционированным попапом под ней (см. брейкпоинт внизу файла). */
+.palette-widget { position: relative; display: flex; align-items: center; }
+
+.palette-widget__trigger {
+  display: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background-color: var(--color-overlay);
+  color: var(--color-text-muted);
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.palette-widget__trigger:hover { color: var(--color-text); background-color: var(--color-border); }
+
+.palette-widget__trigger-swatch {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-value);
+  border: 1.5px solid var(--color-page);
+}
+
+.palette { display: flex; align-items: center; gap: 0.5rem; }
+
+/* Двухэтажная палитра: базовые цвета сверху, недавние снизу — ровно 2 строки,
+   без «сиротской» неполной строки, которая была при переносе по 4 в ряд. */
+.palette__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.palette__row { display: flex; align-items: center; gap: 0.375rem; }
+
+.palette__divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  margin: 0 0.1rem;
+}
+
+/* Обёртка кастомного пикера + пипетки: на десктопе/планшете "растворяется"
+   (display:contents — оба элемента остаются прямыми flex-детьми .palette,
+   бок о бок, как раньше). На ≤767.98px становится колонкой — см. ниже. */
+.palette__extra { display: contents; }
+
+.palette__custom {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Свотчи и пипетка — последние кнопки хедера на своих классах, и это
+   решено осознанно: на <IconButton> они не переводятся, отдельный <Swatch>
+   в common/ не заводится. У свотча фон — содержимое (цвет бисера
+   var(--color-value)), а у компонента фон задаёт вариант; активное
+   состояние — inset-кольцо, а не цвет рамки; ховер — масштаб, а не цвет;
+   размеры 1.5rem / 1.25rem на ≤1024px мимо шкалы 22/26/36. Перевод свёлся бы
+   к переопределению всего, что компонент даёт. Общего <Swatch> нет по другой
+   причине: три места вызова лежат в одном файле, а прочие свотчи проекта
+   (color-picker__generate-swatch, __project-swatch, __trigger-swatch, бейдж
+   --swatch) другой геометрии — потребитель был бы ровно один. Подробно —
+   spec.md, «Базовые UI-компоненты». */
+.palette__color {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background-color: var(--color-value);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
+  /* opacity здесь не используется намеренно: затемнение смешивает свотч с фоном
+     и искажает реальный цвет — неактивное/активное состояние отличаем только
+     масштабом и кольцом (box-shadow), см. --active и :hover ниже. */
+  /* inset-кольцо вместо border — border вместе с border-radius и conic-gradient
+     (у кнопки кастомного цвета) даёт видимый шов на стыке 0deg/360deg градиента */
+  /* Правило составное: кольцо (форма свотча) + подъём. Вне шкалы --shadow-*
+     оставлено намеренно — токен подставился бы только во вторую половину
+     и разорвал бы правило надвое. */
+  box-shadow: inset 0 0 0 1.5px var(--color-border), 0 2px 6px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+.palette__color:hover {
+  transform: scale(1.15);
+}
+.palette__color--active {
+  transform: scale(1.2);
+  /* То же составное правило, что у .palette__color, плюс внешнее кольцо:
+     подъём вне шкалы --shadow-* намеренно. */
+  box-shadow: inset 0 0 0 1.5px var(--color-text), 0 0 0 1px var(--color-border-strong), 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.palette__eyedropper {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  background: var(--color-overlay);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s, background 0.15s, color 0.15s;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.palette__eyedropper:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.palette__recent-slot {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.palette__recent-slot--empty {
+  border: 1.5px dashed var(--color-border);
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+  pointer-events: none;
+}
+
+@media (max-width: 1024px) {
+  .palette__divider { margin: 0 0.05rem; }
+
+  .palette { gap: 0.375rem; }
+  .palette__row { gap: 0.3rem; }
+  .palette__grid { gap: 0.2rem; }
+  .palette__color,
+  .palette__eyedropper,
+  .palette__recent-slot {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Кастомный пикер + пипетка: в столбик вместо строки — точечная 2-ярусность
+     там, где раньше элементы стояли бок о бок. Экономит ширину, не увеличивая
+     высоту хедера, тем же приёмом, каким палитра уже разложена на base/recent
+     ряды. */
+  .palette__extra {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+/* Узкий экран: всё, что уже сжато на ≤767.98px, всё ещё шире доступной
+   ширины — палитра в развёрнутом виде самый тяжёлый блок строки, ~150–180px
+   из-за двух рядов кружков. Вместо дальнейшего уменьшения кружков до
+   нечитаемого размера палитра прячется под иконку-триггер и раскрывается
+   попапом, тем же паттерном, что .header__overflow уже использует для
+   Zoom/Save-Load-Share. */
+@media (max-width: 599.98px) {
+  /* Палитра сворачивается в иконку; сама палитра становится попапом,
+     который перекрывает соседние элементы хедера, а не толкает их. */
+  .palette-widget__trigger { display: flex; }
+
+  .palette {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 110;
+    flex-direction: column;
+    align-items: flex-start;
+    background: var(--color-page);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: var(--shadow-md);
+  }
+  .palette-widget--open .palette { display: flex; }
+
+  /* Внутри попапа кастомный пикер и пипетка возвращаются в один ряд —
+     колоночная раскладка (.palette__extra на ≤767.98px) имела смысл, когда
+     эта пара делила строку хедера с остальной палитрой; в попапе места
+     достаточно, а в столбик они только зря растягивали его по вертикали. */
+  .palette__extra {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  /* Ячейки двухрядной сетки (сама сетка — в Header.css): один бокс 30px на все
+     кнопки строки, один размер глифа, первый ряд. */
+  .header__nav .palette-widget__trigger {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+  }
+  .header__nav .palette-widget__trigger > svg {
+    width: 18px;
+    height: 18px;
+  }
+  .header__nav .palette-widget { grid-row: 1; }
+}

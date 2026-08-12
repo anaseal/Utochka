@@ -1,0 +1,97 @@
+/* Кнопка-иконка дизайн-системы. Геометрия здесь, цвета — из
+   controlVariants.css через var(--ctl-*), они общие с <Button>.
+
+   Размер задаётся не width/height напрямую, а переменной --icon-btn-size:
+   так размер переопределяется одной строкой там, где ступени шкалы не
+   хватает или где он меняется брейкпоинтом — проп-то на все ширины один.
+   Так живёт хедер (Header.css): на ≤1024px весь ряд переходит на ступень sm,
+   на ≤599.98px встаёт на 30px общей сетки; и так же 32px у кнопок холста
+   (CanvasView.css), где ступени под шаг правого стека нет.
+
+   Ступень lg (36px) сейчас никем не используется: она была снята с трёх
+   крупных кнопок хедера, а те сведены к md — глиф 20 против 14 у соседей
+   читался как сбой, а не как акцент. Оставлена в шкале намеренно: это
+   единственная ступень «крупнее ряда», и восстанавливается она одним пропом. */
+.icon-btn {
+  --icon-btn-size: 1.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Круглая кнопка — прямой flex-дитя своей строки, а flex-shrink по
+     умолчанию 1: браузер сжимает её по главной оси, не трогая кросс-ось,
+     и на узком экране круг схлопывается в овал. Разобрано подробно
+     у .tool-btn в Header.css. */
+  flex-shrink: 0;
+  width: var(--icon-btn-size);
+  height: var(--icon-btn-size);
+  padding: 0;
+  border: 1px solid var(--ctl-border);
+  background: var(--ctl-bg);
+  color: var(--ctl-fg);
+  cursor: pointer;
+  transition: color var(--transition-speed), border-color var(--transition-speed),
+    background var(--transition-speed);
+}
+
+/* font-size нужен тем кнопкам, у которых внутри не svg, а глиф («−», «+»,
+   эмодзи техник). Глиф md/lg — это --text-xl, верхняя ступень шкалы;
+   sm на ступень ниже, --text-md, тот же размер, до которого кнопки хедера
+   жмутся на ≤1024px. */
+.icon-btn--sm {
+  --icon-btn-size: 1.375rem;
+  font-size: var(--text-md);
+}
+
+.icon-btn--md {
+  --icon-btn-size: 1.625rem;
+  font-size: var(--text-xl);
+}
+
+.icon-btn--lg {
+  --icon-btn-size: 2.25rem;
+  font-size: var(--text-xl);
+}
+
+.icon-btn--circle {
+  border-radius: var(--radius-full);
+}
+
+.icon-btn--square {
+  border-radius: var(--radius-md);
+}
+
+/* 8px на кнопке 22px выглядит почти кружком — маленький квадрат скругляется
+   слабее (значение снято с прежней .sidebar__section-clear — кнопки-сброса
+   в заголовке секции сайдбара, которая теперь и есть sm + square). */
+.icon-btn--sm.icon-btn--square {
+  border-radius: var(--radius-sm);
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--ctl-fg-hover, var(--ctl-fg));
+  border-color: var(--ctl-border-hover, var(--ctl-border));
+  background: var(--ctl-bg-hover, var(--ctl-bg));
+}
+
+/* Порядок и специфичность — как у .btn--active, разбор там же (Button.css):
+   без этого правила активная кнопка под курсором гасла бы до обычного ховера. */
+.icon-btn--active:not(:disabled),
+.icon-btn--active:hover:not(:disabled) {
+  color: var(--ctl-fg-active, var(--ctl-fg));
+  border-color: var(--ctl-border-active, var(--ctl-border));
+  background: var(--ctl-bg-active, var(--ctl-bg));
+}
+
+.icon-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

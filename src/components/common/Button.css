@@ -1,0 +1,72 @@
+/* Текстовая кнопка дизайн-системы. Здесь только геометрия и состояния —
+   цвета приходят из controlVariants.css через var(--ctl-*), они общие
+   с <IconButton>.
+
+   Прописные буквы, вес 700 и разрядка 0.05em — это язык кнопок-действий
+   проекта (Confirm/Cancel в ConfirmDialog, Start designing в WelcomeDialog,
+   Export у холста): все три уже написаны так, компонент их повторяет. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--ctl-border);
+  background: var(--ctl-bg);
+  color: var(--ctl-fg);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: color var(--transition-speed), border-color var(--transition-speed),
+    background var(--transition-speed);
+}
+
+.btn--sm {
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+}
+
+.btn--md {
+  padding: 7px 14px;
+  font-size: var(--text-md);
+  border-radius: var(--radius-md);
+}
+
+.btn--full-width {
+  width: 100%;
+}
+
+.btn:hover:not(:disabled) {
+  color: var(--ctl-fg-hover, var(--ctl-fg));
+  border-color: var(--ctl-border-hover, var(--ctl-border));
+  background: var(--ctl-bg-hover, var(--ctl-bg));
+}
+
+/* :hover и --active красят одни и те же свойства, поэтому без этого правила
+   наведение на УЖЕ активную кнопку сбрасывало бы её подсветку до обычного
+   ховера, и активная кнопка под курсором на секунду выглядела бы неактивной
+   (тот же случай, что разобран у .sidebar__tab--active:hover в Sidebar.css).
+   Правило стоит ПОСЛЕ ховера и явно перечисляет :hover: специфичность
+   у .btn--active:hover:not(:disabled) и у .btn:hover:not(:disabled)
+   одинаковая — (0,3,0) — и решает порядок в файле. */
+.btn--active:not(:disabled),
+.btn--active:hover:not(:disabled) {
+  color: var(--ctl-fg-active, var(--ctl-fg));
+  border-color: var(--ctl-border-active, var(--ctl-border));
+  background: var(--ctl-bg-active, var(--ctl-bg));
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

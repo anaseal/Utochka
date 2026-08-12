@@ -1,110 +1,25 @@
-/* Затемнение и панель — тот же язык, что у галереи проектов
-   (ProjectGallery.css) и диалога подтверждения: это те же модальные окна.
-   z-index 180 — между галереей (170) и ConfirmDialog (190): приветственное окно
-   открывается поверх пустого редактора, ни с чем из них одновременно не
-   пересекается, но если человек нажмёт «?» при открытой галерее — ляжет
-   поверх неё. Вся тройка модалок лежит ВЫШЕ хедера (100) и его выпадающих
-   попапов (110–140): хедер зафиксирован сверху (position: fixed), и при
-   прежних 70/80/90 он рисовался поверх затемнения — на телефоне, где панель
-   почти во всю высоту экрана, её шапка с крестиком уезжала под хедер, а сам
-   хедер оставался незатемнённым и кликабельным при открытом aria-modal окне.
-   Тост (1000) по-прежнему выше всех. */
-.welcome__backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 180;
-  padding: 24px;
-}
+/* Затемнение, панель, шапка с крестиком, прокручиваемое тело и подвал —
+   в common/Modal.css: это те же модальные окна, что галерея проектов и диалог
+   подтверждения, и с этой задачи они собраны из одного <Modal size="md">.
+   Там же лежит и 85dvh, без которого на ландшафтном телефоне (~350px высоты)
+   панель переполняла экран и кнопка «Start designing» уезжала за нижний край.
 
+   Здесь остаётся только содержимое окна. Типографика текста стоит на самой
+   панели (класс .welcome на ней сохранён) и наследуется телом: шапка, подвал
+   и кнопки задают свой кегль сами. */
 .welcome {
-  display: flex;
-  flex-direction: column;
-  width: min(560px, 100%);
-  max-height: 85vh;
-  /* dvh вместо vh — см. index.css: на мобильном 100vh считается так, будто
-     адресная строка уже скрыта, а само затемнение (position: fixed) занимает
-     реально видимую область. При первом открытии страницы строка ещё на
-     месте, и 85vh оказывались выше контейнера — панель переполняла его в обе
-     стороны, пряча шапку сверху и кнопку «Start designing» за нижним краем. */
-  max-height: 85dvh;
-  background: var(--color-panel);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-}
-
-.welcome__header {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 12px 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.welcome__title {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 700;
-  color: #e3f3ff;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.welcome__icon-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background-color: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-speed);
-}
-.welcome__icon-btn:hover { background-color: rgba(255, 255, 255, 0.2); color: #e3f3ff; }
-
-/* Тело прокручивается, шапка и подвал с кнопкой остаются на месте — на
-   ландшафтном телефоне (~350px высоты) текст иначе выталкивал бы кнопку
-   «Start designing» за край экрана. */
-.welcome__body {
-  flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 16px;
-  color: #e3f3ff;
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: var(--text-md);
   line-height: 1.55;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
-/* Тот же скролл, что у сайдбара, окна референса и подсказки режима плетения:
-   прозрачная дорожка, полупрозрачный палец с циановым ховером. */
-.welcome__body::-webkit-scrollbar { width: 8px; }
-.welcome__body::-webkit-scrollbar-track { background: transparent; }
-.welcome__body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background var(--transition-speed) ease;
-}
-.welcome__body::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.55);
-  background-clip: padding-box;
-}
-
+/* Цвет не задаётся: вступительный абзац — главный текст окна и берёт
+   --color-text с самой панели. Прежний #cbd5e1 был четвёртой ступенью серого
+   между --color-text и --color-text-muted — вне шкалы и ни разу больше
+   не встречался; список ниже остаётся приглушённым, иерархия от этого
+   только чётче. */
 .welcome__lead {
   margin: 0 0 14px;
-  color: #cbd5e1;
 }
 
 .welcome__list {
@@ -120,54 +35,36 @@
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .welcome__icon {
   flex-shrink: 0;
   display: flex;
   margin-top: 3px;
-  color: #22d3ee;
+  color: var(--color-accent);
   opacity: 0.85;
 }
 
 .welcome b {
-  color: #e3f3ff;
+  color: var(--color-text);
   font-weight: 600;
 }
 
-.welcome__footer {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
+/* Подвал — .modal__footer в common/Modal.css: та же полоса с рамкой сверху,
+   что была здесь, теперь общая для всех модалок с подвалом. */
 
 .welcome__note {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--text-sm);
+  color: var(--color-text-dim);
 }
 
+/* Оформление кнопки — <Button variant="primary" size="md">, см. common/Button.css.
+   Здесь остаётся только её поведение в подвале: не сжиматься под длинным
+   текстом подсказки слева. */
 .welcome__start {
   flex-shrink: 0;
-  padding: 7px 14px;
-  border: 1px solid #22d3ee;
-  border-radius: 8px;
-  background: var(--color-page);
-  color: #22d3ee;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: color var(--transition-speed), border-color var(--transition-speed);
 }
-.welcome__start:hover { color: #67e8f9; border-color: #67e8f9; }
-.welcome__start:active { transform: translateY(1px); }
-.welcome__start:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
 
 /* Узкий экран: подпись про «?» съедает строку подвала, а кнопка сжимается до
    двух строк текста — на телефоне подсказка не нужна (кнопка «?» там всё

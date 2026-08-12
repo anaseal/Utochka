@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
+import { IconButton } from './IconButton';
+import { TextField } from './TextField';
 import './Stepper.css';
 
 export type StepperVariant = 'bar' | 'overflow';
@@ -66,15 +68,21 @@ export const Stepper = ({
   const wrapperClass = variant === 'overflow' ? 'header__overflow-row' : 'grid-controls__group';
   const labelClass = variant === 'overflow' ? 'header__overflow-label' : 'grid-controls__label';
 
+  // Класс остаётся только ради ширины, выключки по центру и акцентного цвета
+  // цифр — рамка-подчёркивание, моношрифт и размер приходят из
+  // <TextField mono inline>. Поле живёт только пока идёт правка (blur его
+  // же и закрывает), то есть всегда в фокусе — подчёркивание всегда акцентное,
+  // как и было прописано руками.
   const valueEl = editing ? (
-    <input
+    <TextField
       ref={inputRef}
       className="grid-controls__input"
+      mono
+      inline
       value={draft}
-      onChange={e => setDraft(e.target.value)}
+      onChange={setDraft}
       onBlur={confirm}
       onKeyDown={handleKeyDown}
-      type="text"
       inputMode="numeric"
     />
   ) : (
@@ -87,25 +95,50 @@ export const Stepper = ({
     </span>
   );
 
+  // Глиф передаётся как icon, а не как children: <IconButton> children не
+  // рендерит вовсе, и «−»/«+» здесь ровно та же роль, что svg у соседних
+  // кнопок таблетки — единственный знак внутри квадрата. Ступень md выбрана
+  // ради размера глифа (14px, --text-xl), совпадающего с size={14} у lucide
+  // в тулбарах хедера; сам бокс — 24px из .grid-controls__btn (Stepper.css).
   const actions = (
     <div className="grid-controls__actions">
-      <button onClick={() => onDelta(-1)} className="grid-controls__btn" disabled={disabled}>−</button>
+      <IconButton
+        className="grid-controls__btn"
+        size="md"
+        shape="square"
+        variant="ghost"
+        onClick={() => onDelta(-1)}
+        disabled={disabled}
+        icon="−"
+      />
       {valueEl}
-      <button onClick={() => onDelta(1)} className="grid-controls__btn" disabled={disabled}>+</button>
+      <IconButton
+        className="grid-controls__btn"
+        size="md"
+        shape="square"
+        variant="ghost"
+        onClick={() => onDelta(1)}
+        disabled={disabled}
+        icon="+"
+      />
     </div>
   );
 
+  // Класс остаётся только ради места: колонку в сетке строки задаёт
+  // GridSidebar.css (`grid-area: 1 / 3` и ужатие до 18px на узкой панели),
+  // оформление — целиком в <IconButton variant="ghost">.
   const reset = onReset && (
-    <button
-      type="button"
-      onClick={onReset}
+    <IconButton
       className="grid-controls__reset"
+      size="sm"
+      shape="square"
+      variant="ghost"
+      onClick={onReset}
       disabled={disabled}
       title="Reset to default"
       aria-label="Reset to default"
-    >
-      <RotateCcw size={13} />
-    </button>
+      icon={<RotateCcw size={13} />}
+    />
   );
 
   return (

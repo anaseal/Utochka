@@ -13,9 +13,9 @@
      которые компенсируют --sidebar-width тем же способом. */
   left: calc(50% - var(--sidebar-width) / 2);
   transform: translateX(-50%);
-  background-color: rgba(15, 23, 42, 0.9);
+  background-color: var(--color-overlay-strong);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 10px;
   padding: 8px 12px;
   z-index: 50;
@@ -37,10 +37,14 @@
   margin: 0;
 }
 
+/* 7px — ниже нижней ступени шкалы (--text-xs = 10px) и остаётся литералом:
+   подпись работает в паре со .stats__value под ней, читается как надстрочная
+   метка к числу, а не как самостоятельный текст. Пара переразмеривается
+   целиком в медиа-запросах ниже. */
 .stats__label {
   font-size: 7px;
-  color: #64748b;
-  font-weight: 900;
+  color: var(--color-text-dim);
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 1;
@@ -48,9 +52,9 @@
 }
 
 .stats__value {
-  color: #e3f3ff;
-  font-family: monospace;
-  font-size: 14px;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
   font-weight: 700;
   line-height: 1;
   margin: 0;
@@ -59,7 +63,7 @@
 .stats__divider {
   align-self: stretch;
   width: 1px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-border-subtle);
   flex-shrink: 0;
 }
 
@@ -82,28 +86,7 @@
   max-width: 134px; /* 2 колонки: 2*64 + 1*6 */
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
-}
-
-.stats__list::-webkit-scrollbar {
-  height: 6px;
-}
-
-.stats__list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.stats__list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 3px;
-  background-clip: padding-box;
-  transition: background var(--transition-speed) ease;
-}
-
-.stats__list::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.55);
-  background-clip: padding-box;
+  /* Оформление скроллбара — .u-scroll .u-scroll--thin в index.css */
 }
 
 .stats__color-badge {
@@ -111,14 +94,14 @@
   align-items: center;
   gap: 5px;
   padding: 3px 6px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-border-faint);
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border-faint);
 }
 
 .stats__color-badge--active {
-  border-color: #22d3ee;
-  background-color: rgba(34, 211, 238, 0.15);
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
 }
 
 .stats__indicator-btn {
@@ -152,9 +135,9 @@
 }
 
 .stats__count {
-  color: #e3f3ff;
-  font-family: monospace;
-  font-size: 11px;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
   line-height: 1;
 }
 
@@ -163,7 +146,7 @@
   align-items: center;
   justify-content: center;
   padding: 3px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   background: none;
   border: none;
   border-radius: 4px;
@@ -172,12 +155,12 @@
 }
 
 .stats__replace-btn:hover {
-  color: #e3f3ff;
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  background-color: var(--color-border-subtle);
 }
 
 .stats__replace-btn:disabled {
-  color: #64748b;
+  color: var(--color-text-dim);
   cursor: default;
   background: none;
 }
@@ -205,13 +188,13 @@
   background: none;
   border: none;
   border-radius: 50%;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 
 .stats__toggle:hover {
-  color: #e3f3ff;
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  background-color: var(--color-border-subtle);
 }
 
 /* Tablet (768–1023px): чуть просторнее мобильных отступов, 3 колонки бейджей */
@@ -223,7 +206,7 @@
   }
 
   .stats__value {
-    font-size: 12px;
+    font-size: var(--text-md);
   }
 
   .stats__list {
@@ -244,7 +227,7 @@
   }
 
   .stats__count {
-    font-size: 12px;
+    font-size: var(--text-md);
   }
 }
 
@@ -258,10 +241,12 @@
   }
 
   .stats__label {
-    font-size: 9px;
+    font-size: var(--text-xs);
     letter-spacing: 0.1em;
   }
 
+  /* 20px выше верхней ступени шкалы и остаётся литералом: на мобиле число
+     — главный элемент панели, а не строка интерфейса. */
   .stats__value {
     font-size: 20px;
   }
@@ -284,7 +269,7 @@
   }
 
   .stats__count {
-    font-size: 13px;
+    font-size: var(--text-lg);
   }
 }
 
@@ -298,7 +283,8 @@
    чья ширина (растущая от количества цветов) в принципе не гарантировала
    зазор от карточки холста. Total Count и список цветов уходят в попап,
    раскрывающийся по тапу вверх от кнопки — тот же паттерн, что у
-   .mirror-menu/.header__overflow в Header.tsx (кнопка + всплывающая панель).
+   .menu/.header__overflow в хедере (кнопка + всплывающая панель, см.
+   common/Menu.css).
 
    Два независимых триггера через запятую (OR), а не один общий: изначально
    приём был сделан только под ландшафтный телефон (мало высоты — там инлайн-
@@ -322,8 +308,8 @@
     padding: 0;
     gap: 0;
     justify-content: center;
-    background: #0f172a;
-    border: 1px solid #64748b;
+    background: var(--color-popover);
+    border: 1px solid var(--color-text-dim);
     border-radius: 8px;
     backdrop-filter: none;
     max-width: none;
@@ -331,18 +317,18 @@
   }
 
   .stats:hover {
-    border-color: #22d3ee;
+    border-color: var(--color-accent);
   }
 
   .stats__toggle {
     display: flex;
     width: 100%;
     height: 100%;
-    color: #64748b;
+    color: var(--color-text-dim);
   }
 
   .stats__toggle:hover {
-    color: #22d3ee;
+    color: var(--color-accent);
     background: none;
   }
 
@@ -353,7 +339,7 @@
   /* Якорь позиционирования — .stats (сама иконка-кнопка, position: fixed) —
      попап раскрывается вверх и прижат к правому краю кнопки, чтобы не
      вылезать за правый край экрана. Попап нередко перекрывает правый край
-     холста (та же логика, что у .mirror-menu__panel/.header__overflow-panel —
+     холста (та же логика, что у .menu__panel/.header__overflow-panel —
      всплывающая панель поверх содержимого, а не отдельная зона) — фон
      должен быть СПЛОШНЫМ (#0f172a, без alpha, как у них), а не
      полупрозрачным: rgba(...0.95) — унаследованный от старой, буквально
@@ -367,11 +353,11 @@
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-popover);
+    border: 1px solid var(--color-border-subtle);
     border-radius: 10px;
     padding: 8px;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-md);
     /* Попап открывается по тапу для быстрого просмотра, а не как постоянная
        панель — компактный размер даже на широких ширинных тирах (768/1024px),
        чьи увеличенные шрифты/паддинги здесь избыточны. */
@@ -407,8 +393,8 @@
     max-width: 50%;
   }
   .stats--list-open .stats__value {
-    font-size: 10px;
-    color: #64748b;
+    font-size: var(--text-xs);
+    color: var(--color-text-dim);
   }
 
   /* Одна колонка вместо нескольких — попап и так всплывает поверх
@@ -440,6 +426,6 @@
     height: 8px;
   }
   .stats--list-open .stats__count {
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
 }

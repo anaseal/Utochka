@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Plus, Minus, Upload, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import './ReferenceWindow.css';
+import { Button } from '../../common/Button';
+import { IconButton } from '../../common/IconButton';
 import { REFERENCE_WINDOW } from '../../../config/theme';
 import { clamp } from '../../../utils/clamp';
 import { useReferenceImage } from '../../../hooks/useReferenceImage';
@@ -207,36 +209,46 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
         <span className="reference-window__title">Reference</span>
         {imageUrl && !collapsed && (
           <div className="reference-window__zoom-controls">
-            <button type="button" className="reference-window__icon-btn" onClick={() => setZoom((z) => z - REFERENCE_WINDOW.zoomStep)} title="Zoom out">
-              <Minus size={12} />
-            </button>
+            <IconButton
+              size="sm"
+              variant="chip"
+              onClick={() => setZoom((z) => z - REFERENCE_WINDOW.zoomStep)}
+              title="Zoom out"
+              icon={<Minus size={12} />}
+            />
             <span className="reference-window__zoom-value">{Math.round(zoom * 100)}%</span>
-            <button type="button" className="reference-window__icon-btn" onClick={() => setZoom((z) => z + REFERENCE_WINDOW.zoomStep)} title="Zoom in">
-              <Plus size={12} />
-            </button>
+            <IconButton
+              size="sm"
+              variant="chip"
+              onClick={() => setZoom((z) => z + REFERENCE_WINDOW.zoomStep)}
+              title="Zoom in"
+              icon={<Plus size={12} />}
+            />
           </div>
         )}
-        <button
-          type="button"
-          className="reference-window__icon-btn"
+        {/* stopPropagation здесь — не защита от перетаскивания (шапка и так
+            игнорирует pointerdown на любой кнопке, см. handlePointerDown),
+            а страховка от всплытия к будущим обработчикам шапки. Проп
+            проезжает насквозь: <IconButton> наследует ButtonHTMLAttributes. */}
+        <IconButton
+          size="sm"
+          variant="chip"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setCollapsed((c) => !c)}
           title={collapsed ? 'Expand' : 'Collapse'}
           aria-label={collapsed ? 'Expand reference window' : 'Collapse reference window'}
           aria-pressed={collapsed}
-        >
-          {collapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </button>
-        <button
-          type="button"
-          className="reference-window__icon-btn reference-window__close"
+          icon={collapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        />
+        <IconButton
+          size="sm"
+          variant="chip"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setOpen(false)}
           title="Close"
           aria-label="Close reference window"
-        >
-          <X size={14} />
-        </button>
+          icon={<X size={14} />}
+        />
       </div>
 
       {!collapsed && (
@@ -265,7 +277,7 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
             <div className="reference-window__empty">Loading…</div>
           ) : imageUrl ? (
             <>
-              <div ref={viewportRef} className="reference-window__viewport">
+              <div ref={viewportRef} className="reference-window__viewport u-checkerboard u-scroll">
                 <img
                   src={imageUrl}
                   alt="Reference"
@@ -275,12 +287,12 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
                 />
               </div>
               <div className="reference-window__footer">
-                <button type="button" className="reference-window__text-btn" onClick={() => fileInputRef.current?.click()}>
-                  <Upload size={12} /> Replace
-                </button>
-                <button type="button" className="reference-window__text-btn" onClick={removeImage}>
-                  <Trash2 size={12} /> Remove
-                </button>
+                <Button variant="chip" size="sm" icon={<Upload size={12} />} onClick={() => fileInputRef.current?.click()}>
+                  Replace
+                </Button>
+                <Button variant="chip" size="sm" icon={<Trash2 size={12} />} onClick={removeImage}>
+                  Remove
+                </Button>
               </div>
             </>
           ) : (
@@ -291,9 +303,9 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
               onDrop={handleDrop}
             >
               <p>Drop an image here</p>
-              <button type="button" className="reference-window__text-btn" onClick={() => fileInputRef.current?.click()}>
-                <Upload size={12} /> Choose file
-              </button>
+              <Button variant="chip" size="sm" icon={<Upload size={12} />} onClick={() => fileInputRef.current?.click()}>
+                Choose file
+              </Button>
             </div>
           )}
 
