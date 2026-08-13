@@ -47,17 +47,6 @@
   padding: 0 14px 6px;
 }
 
-/* Пояснение под подзаголовком секции (что делает Rows, что делает Depth) —
-   тот же приглушённый регистр, что и .sidebar__section-desc, но с отступом
-   ровно как у степперов, чтобы текст читался вместе со своей парой контролов. */
-.grid-sidebar__hint {
-  margin: 0;
-  padding: 0 14px 8px;
-  font-size: var(--text-xs);
-  line-height: 1.4;
-  color: var(--color-text-dim);
-}
-
 /* Разделяет группы Rows/Depth внутри секции Taper — без него подсказка
    и степпер Depth визуально не отличались от хвоста группы Rows над ними. */
 .grid-sidebar__subsection--divider {

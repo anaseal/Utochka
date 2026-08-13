@@ -86,6 +86,7 @@ export const PaletteWidget = ({
                 onClick={() => selectColor(color)}
                 className={`palette__color ${activeTool !== 'eraser' && activeColor === color ? 'palette__color--active' : ''}`}
                 style={{ '--color-value': color } as React.CSSProperties}
+                title={color}
               />
             ))}
           </div>

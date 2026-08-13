@@ -4,10 +4,17 @@
   flex-shrink: 0;
 }
 
+/* Ширина — ступень sm у <IconButton> (22px), высота остаётся по значку.
+   «?» стоит в правом столбце секции вместе с кнопками той же ступени
+   (связка Top/Bottom, сбросы степперов), а их значок центрирован внутри
+   бокса 22px: без общей ширины «?» упирается в правый край панели, а соседние
+   значки оказываются на несколько пикселей левее — столбец идёт ступенькой.
+   Высота не задаётся, чтобы ряд заголовка секции держал высоту по тексту. */
 .section-help__icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 1.375rem;
   padding: 0;
   border: none;
   background: transparent;
@@ -55,4 +62,18 @@
   border-left: 1px solid var(--color-border-subtle);
   border-top: 1px solid var(--color-border-subtle);
   transform: rotate(45deg);
+}
+
+/* Подсказка «?», под которым не хватает места до края окна (подвал панели),
+   раскрывается вверх — координату ей даёт bottom, а не top (см.
+   SectionHelp.tsx). Хвостик переезжает на нижнюю грань: те же две светлые
+   стороны квадрата, но правая и нижняя, — при повороте на 45° именно они
+   смотрят наружу, вниз, к иконке. */
+.section-help__bubble--above::before {
+  top: auto;
+  bottom: -5px;
+  border-left: none;
+  border-top: none;
+  border-right: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
 }

@@ -7,6 +7,7 @@ import {
 import { BEAD_THEME } from '../../config/theme';
 import { useBeadCoords } from '../../hooks/useBeadCoords';
 import { Button } from '../common/Button';
+import { SectionHelp } from '../common/SectionHelp';
 import { ToothMesh, isColumnInAnyTooth } from '../../utils/tooth';
 import { PendantsCatalogSection } from './PendantsCatalogSection';
 import { ChainsSection } from './ChainsSection';
@@ -293,23 +294,24 @@ export const PendantsSidebar = ({
       </div>
 
       <div className="sidebar__footer">
-        <Button
-          variant="secondary"
-          size="md"
-          className="sidebar__action sidebar__action--footer"
-          onClick={handleClearAll}
-          disabled={
-            !hasPendants && !hasActiveBands && pendantChains.length === 0 &&
-            !hasDecorTails && teeth.length === 0 && !hasDeletedBeads
-          }
-        >
-          Reset all
-        </Button>
-        <p className="sidebar__hint">
-          {bottomEdgeEnabled
-            ? 'Drag a band onto a row gap (pendants and tails unavailable while Bottom Chain is on)'
-            : 'Drag a pendant or a tail onto a bottom-row node, or a band onto a row gap'}
-        </p>
+        {/* Возврат удалённых бисерин назван в «?» отдельно: Undo их не
+            покрывает (см. HolesSection), и эта кнопка — единственный способ
+            вернуть их все разом. */}
+        <div className="sidebar__footer-row">
+          <Button
+            variant="secondary"
+            size="md"
+            className="sidebar__action sidebar__action--footer"
+            onClick={handleClearAll}
+            disabled={
+              !hasPendants && !hasActiveBands && pendantChains.length === 0 &&
+              !hasDecorTails && teeth.length === 0 && !hasDeletedBeads
+            }
+          >
+            Reset all
+          </Button>
+          <SectionHelp text="Clears every section of this tab at once: pendants, chains, teeth, decor bands and tails. Beads deleted with Holes come back too — Undo does not cover those." />
+        </div>
       </div>
     </>
   );

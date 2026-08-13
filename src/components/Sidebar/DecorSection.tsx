@@ -73,7 +73,7 @@ export const DecorSection = ({
         <div className="sidebar__section-heading-row">
           <span className="sidebar__section-heading-label">
             <h3 className="sidebar__section-title">Decor</h3>
-            <SectionHelp text="Drag a band into a gap between rows, or a tail onto a bottom-row node." />
+            <SectionHelp text="A band fills the gap between two rows across the whole width — its ± sets how many beads sit in the gap of one column. A tail hangs from a single node of the bottom row, and its last bead holds a pendant the same way a node does." />
           </span>
           <IconButton
             size="sm"
@@ -86,6 +86,12 @@ export const DecorSection = ({
             icon={<RotateCcw size={13} />}
           />
         </div>
+        {/* Две карточки — две разные цели драга, и по превью их не различить:
+            без этой строки Band уезжает на ноду, а Tail в промежуток, и оба
+            раза ничего не происходит. */}
+        <p className="sidebar__section-desc">
+          Drag Band into a gap between rows, Tail onto a bottom-row node
+        </p>
       </header>
       <div className="pendants-sidebar__catalog decor-catalog">
         <button
@@ -124,6 +130,15 @@ export const DecorSection = ({
         </button>
       </div>
 
+      {/* Гаснет только Tail: хвосты растут из нижнего ряда, который занимает
+          Bottom Chain, а Band ложится в промежуток между рядами и работает
+          всегда — иначе погашенная карточка читается как поломка секции. */}
+      {bottomEdgeEnabled && (
+        <p className="sidebar__hint">
+          Turn off Bottom Chain (Grid tab) to place tails; bands work either way.
+        </p>
+      )}
+
       {activeBands.length > 0 && (
         <div className="decor-bands-list">
           <div className="decor-bands-list__title">Bands placed</div>
@@ -135,6 +150,7 @@ export const DecorSection = ({
                   type="button"
                   className="decor-band-item__btn"
                   onClick={() => onDecorCount(row, -1)}
+                  aria-label={`Fewer beads in gap ${gapIndex}`}
                 >
                   −
                 </button>
@@ -143,6 +159,7 @@ export const DecorSection = ({
                   type="button"
                   className="decor-band-item__btn"
                   onClick={() => onDecorCount(row, 1)}
+                  aria-label={`More beads in gap ${gapIndex}`}
                 >
                   +
                 </button>
@@ -163,6 +180,7 @@ export const DecorSection = ({
                   type="button"
                   className="decor-band-item__btn"
                   onClick={() => onUpdateDecorTailLength(tailPlacement.placementId, -1)}
+                  aria-label={`Shorten tail at col ${tailPlacement.col}`}
                 >
                   −
                 </button>
@@ -171,6 +189,7 @@ export const DecorSection = ({
                   type="button"
                   className="decor-band-item__btn"
                   onClick={() => onUpdateDecorTailLength(tailPlacement.placementId, 1)}
+                  aria-label={`Lengthen tail at col ${tailPlacement.col}`}
                 >
                   +
                 </button>

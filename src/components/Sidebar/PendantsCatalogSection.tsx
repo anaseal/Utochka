@@ -43,7 +43,7 @@ export const PendantsCatalogSection = ({
         <div className="sidebar__section-heading-row">
           <span className="sidebar__section-heading-label">
             <h3 className="sidebar__section-title">Pendants</h3>
-            <SectionHelp text="Drag a design onto a bottom-row bead." />
+            <SectionHelp text="A pendant hangs from a single node of the bottom row. Where a tooth covers the columns, the bottom row does not run under it — there the pendant hangs from an edge node of the tooth itself." />
           </span>
           <IconButton
             size="sm"
@@ -56,6 +56,12 @@ export const PendantsCatalogSection = ({
             icon={<RotateCcw size={13} />}
           />
         </div>
+        {/* Способ взаимодействия — постоянной строкой в потоке, как у секций с
+            кнопкой-инструментом: карточка не выглядит перетаскиваемой сама по
+            себе, а «?» открывается по клику и до него ещё надо додуматься. */}
+        <p className="sidebar__section-desc">
+          Drag a card onto a bottom-row node or a tooth edge
+        </p>
       </header>
       <div className="pendants-sidebar__catalog">
         {templates.map((template) => {
@@ -85,6 +91,15 @@ export const PendantsCatalogSection = ({
           );
         })}
       </div>
+
+      {/* Причина погашенных карточек стоит рядом с ними: подвески и Bottom
+          Chain занимают один и тот же нижний ряд. Обратная половина пары —
+          подсказка у тумблера Bottom Chain на вкладке Grid. */}
+      {bottomEdgeEnabled && (
+        <p className="sidebar__hint">
+          Turn off Bottom Chain (Grid tab) to place pendants.
+        </p>
+      )}
 
       {drag && dragTemplate && createPortal(
         <div

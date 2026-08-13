@@ -95,6 +95,13 @@ export const Stepper = ({
     </span>
   );
 
+  // Имя кнопки собирается из подписи степпера: сам по себе глиф «−» читается
+  // вслух как «минус» без всякого намёка на то, что именно он меняет. Только
+  // aria-label, без title: по −/+ кликают подряд, и всплывающая подсказка
+  // вставала бы под курсор между нажатиями. Подпись бывает и узлом (не
+  // строкой) — тогда имени нет, выдумать его не из чего.
+  const labelText = typeof label === 'string' ? label : undefined;
+
   // Глиф передаётся как icon, а не как children: <IconButton> children не
   // рендерит вовсе, и «−»/«+» здесь ровно та же роль, что svg у соседних
   // кнопок таблетки — единственный знак внутри квадрата. Ступень md выбрана
@@ -109,6 +116,7 @@ export const Stepper = ({
         variant="ghost"
         onClick={() => onDelta(-1)}
         disabled={disabled}
+        aria-label={labelText && `Decrease ${labelText}`}
         icon="−"
       />
       {valueEl}
@@ -119,6 +127,7 @@ export const Stepper = ({
         variant="ghost"
         onClick={() => onDelta(1)}
         disabled={disabled}
+        aria-label={labelText && `Increase ${labelText}`}
         icon="+"
       />
     </div>
@@ -135,8 +144,8 @@ export const Stepper = ({
       variant="ghost"
       onClick={onReset}
       disabled={disabled}
-      title="Reset to default"
-      aria-label="Reset to default"
+      title={labelText ? `Reset ${labelText} to default` : 'Reset to default'}
+      aria-label={labelText ? `Reset ${labelText} to default` : 'Reset to default'}
       icon={<RotateCcw size={13} />}
     />
   );

@@ -200,7 +200,14 @@ export const GridSidebar = (props: GridSidebarProps) => {
 
               <div className="grid-sidebar__subsection">
                 <div className="sidebar__section-heading-row grid-sidebar__subheading">
-                  <h4 className="sidebar__section-title">Rows</h4>
+                  {/* Подзаголовок объясняется тем же «?», что и заголовок
+                      секции: у панели один способ объяснить механику, а
+                      постоянный абзац остаётся только под текст, зависящий от
+                      состояния (см. Depth ниже). */}
+                  <span className="sidebar__section-heading-label">
+                    <h4 className="sidebar__section-title">Rows</h4>
+                    <SectionHelp text="How many rows that end takes to slope in. 0 leaves the end straight." />
+                  </span>
                   {/* Залипающее состояние — проп active, а не селектор по
                       aria-pressed: у дизайн-системы это один и тот же вид
                       подсветки на всех кнопках. */}
@@ -216,9 +223,6 @@ export const GridSidebar = (props: GridSidebarProps) => {
                     icon={silyankaProps.taperRowsLinked ? <Link2 size={13} /> : <Unlink2 size={13} />}
                   />
                 </div>
-                <p className="grid-sidebar__hint">
-                  How many rows that end takes to slope in. 0 leaves the end straight.
-                </p>
                 <div className="grid-sidebar__steppers">
                   <Stepper
                     label="Top"
@@ -244,14 +248,20 @@ export const GridSidebar = (props: GridSidebarProps) => {
               </div>
 
               <div className="grid-sidebar__subsection grid-sidebar__subsection--divider">
-                <div className="grid-sidebar__subheading">
-                  <h4 className="sidebar__section-title">Depth</h4>
+                <div className="sidebar__section-heading-row grid-sidebar__subheading">
+                  <span className="sidebar__section-heading-label">
+                    <h4 className="sidebar__section-title">Depth</h4>
+                    <SectionHelp text="How deep the narrowing goes: what stays cut off after the slope has run out, all along the piece. Counted in half columns — 2 takes off one whole column per side." />
+                  </span>
                 </div>
-                <p className="grid-sidebar__hint">
-                  {taperDepthEnabled
-                    ? 'How deep the narrowing goes: what stays cut off after the slope has run out, all along the piece. Counted in half columns — 2 takes off one whole column per side.'
-                    : 'Depth only limits an active slope — set Rows above 0 on at least one end first.'}
-                </p>
+                {/* Абзацем — только причина, по которой степпер погашен: её
+                    надо видеть без наведения, иначе выключенный контрол
+                    выглядит поломкой. Что делает Depth — в «?» выше. */}
+                {!taperDepthEnabled && (
+                  <p className="sidebar__hint">
+                    Depth only limits an active slope — set Rows above 0 on at least one end first.
+                  </p>
+                )}
                 <div className="grid-sidebar__steppers">
                   <Stepper
                     label="Depth"
@@ -268,7 +278,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
               </div>
 
               {taperActive && (silyankaProps.hasPendants || silyankaProps.hasDecorTails) && (
-                <p className="grid-sidebar__hint">
+                <p className="sidebar__hint">
                   Pendants and tails on the columns the taper cuts away are hidden, not deleted —
                   lower Rows or Depth and they come back.
                 </p>
@@ -345,15 +355,23 @@ export const GridSidebar = (props: GridSidebarProps) => {
       </div>
 
       <div className="sidebar__footer">
-        <Button
-          variant="secondary"
-          size="md"
-          className="sidebar__action sidebar__action--footer"
-          onClick={silyankaProps ? silyankaProps.onResetAll : basicProps!.onResetAll}
-          disabled={silyankaProps ? silyankaProps.resetAllDisabled : basicProps!.resetAllDisabled}
-        >
-          Reset all
-        </Button>
+        {/* Состав сброса у силянки и у остальных техник разный (у тех в этой
+            панели нет ни краёв, ни taper, ни цепочек) — и «?» перечисляет то,
+            что действительно вернётся к умолчанию. */}
+        <div className="sidebar__footer-row">
+          <Button
+            variant="secondary"
+            size="md"
+            className="sidebar__action sidebar__action--footer"
+            onClick={silyankaProps ? silyankaProps.onResetAll : basicProps!.onResetAll}
+            disabled={silyankaProps ? silyankaProps.resetAllDisabled : basicProps!.resetAllDisabled}
+          >
+            Reset all
+          </Button>
+          <SectionHelp text={silyankaProps
+            ? 'Returns this tab to its defaults: size and spacing, both edges, per-row bead counts, taper, top and bottom chain, edge extensions. Your drawing and its colors stay.'
+            : 'Returns size and spacing to their defaults. Your drawing and its colors stay.'} />
+        </div>
       </div>
     </>
   );

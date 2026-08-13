@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { RotateCw } from 'lucide-react';
 import { IconButton } from '../../common/IconButton';
 import { Menu } from '../../common/Menu';
+import { CanvasRotateIcon } from './icons';
 import { canvasViewItems } from './canvasViewItems';
 import { SharedHeaderProps } from './Header.types';
 
@@ -33,7 +33,7 @@ export const CanvasViewMenu = (canvasView: SharedHeaderProps['canvasView']) => {
           title="Canvas view: rotate or mirror"
           aria-haspopup="menu"
           aria-expanded={open}
-          icon={<RotateCw size={14} />}
+          icon={<CanvasRotateIcon size={14} />}
         />
       }
       items={canvasViewItems(canvasView)}

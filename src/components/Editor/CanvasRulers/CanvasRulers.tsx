@@ -49,6 +49,14 @@ const SpanCtrlButton = ({
     onPointerDown={(e) => e.stopPropagation()}
     onClick={(e) => { e.stopPropagation(); onClick(); }}
   >
+    {/* Подпись — элементом <title>, а не атрибутом title: в SVG всплывающую
+        подсказку браузер берёт из первого <title> внутри элемента, атрибут
+        там не работает. Ряд назван своим краем (тем же словом, что и Top/
+        Bottom Edge в панели Grid) — иначе из «−» у безымянного ряда не
+        понять, что именно меняется. */}
+    <title>
+      {`${glyph === '−' ? 'Fewer' : 'More'} beads in this row (${type} edge)`}
+    </title>
     <rect
       x={cx - 8}
       y={midY - 8}

@@ -302,9 +302,22 @@ export const ColorPicker = ({
       {mode === 'generate' && (
         <div className="color-picker__generate">
           <div className="color-picker__generate-buttons">
-            <button type="button" onClick={() => generate(2)} disabled={genLoading} className="color-picker__generate-btn">2</button>
-            <button type="button" onClick={() => generate(3)} disabled={genLoading} className="color-picker__generate-btn">3</button>
-            <button type="button" onClick={() => generate(5)} disabled={genLoading} className="color-picker__generate-btn">5</button>
+            {/* Цифра на кнопке — сколько цветов из сгенерированного ряда
+                окажутся отмеченными; сама генерация всегда даёт пять
+                (см. generate выше). Из голой цифры это не читается, поэтому
+                подпись у каждой своя. */}
+            {([2, 3, 5] as const).map((count) => (
+              <button
+                key={count}
+                type="button"
+                onClick={() => generate(count)}
+                disabled={genLoading}
+                className="color-picker__generate-btn"
+                title={`Generate a palette with ${count} colors selected`}
+              >
+                {count}
+              </button>
+            ))}
             {genPalette.length > 0 && (
               <button
                 type="button"
