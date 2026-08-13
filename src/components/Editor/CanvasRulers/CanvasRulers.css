@@ -40,7 +40,7 @@
 
 @media (max-width: 767.98px) {
   .canvas__axis-text--compact {
-    font-size: 8px;
+    font-size: var(--text-xxs);
   }
 }
 
@@ -127,7 +127,7 @@
 /* Центральная ось плетения — вертикальный пунктир.
    На светлом холсте белая линия невидима — переопределяем токеном. */
 .canvas__mirror-axis {
-  stroke: var(--canvas-mirror-axis, rgba(255, 255, 255, 0.5));
+  stroke: var(--canvas-mirror-axis, var(--color-canvas-line));
   stroke-width: 1.5;
   stroke-dasharray: 6 6;
   pointer-events: none;

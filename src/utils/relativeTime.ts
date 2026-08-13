@@ -9,11 +9,8 @@
 
 /** Точная дата — то, что показывается в `title` при наведении. */
 export const formatDate = (iso: string): string => {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  const formatted = new Date(iso).toLocaleString();
+  return formatted === 'Invalid Date' ? iso : formatted;
 };
 
 export const formatRelativeTime = (iso: string): string => {

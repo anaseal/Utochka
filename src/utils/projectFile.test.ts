@@ -159,7 +159,13 @@ describe('isProjectFile', () => {
     expect(isProjectFile(projectFileOf({ '__evil': 'x' }))).toBe(false);
     expect(isProjectFile(projectFileOf({ 'some-other-app:token': 'x' }))).toBe(false);
     expect(isProjectFile(projectFileOf({ 'app:zoom': 1, '__evil': 'x' }))).toBe(false);
-    expect(isProjectFile(projectFileOf({ '__proto__': 'x' }))).toBe(false);
+    // `__proto__` строится не через projectFileOf: в объектном литерале это
+    // синтаксис установки прототипа, собственного ключа он не создаёт, и
+    // проверять было бы нечего. Файл приходит с диска разбором JSON, а
+    // JSON.parse кладёт `__proto__` обычным собственным ключом — так и здесь.
+    expect(isProjectFile(
+      JSON.parse('{"version":1,"savedAt":"","localStorage":{"__proto__":"x"}}'),
+    )).toBe(false);
   });
 
   it('принимает ключи всех пяти своих префиксов', () => {

@@ -48,7 +48,7 @@
 }
 
 .thread-group__remove-btn-bg {
-  fill: #ff4757;
+  fill: var(--color-remove);
   stroke: var(--color-page);
   stroke-width: 1.5;
 }

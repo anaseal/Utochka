@@ -4,7 +4,7 @@
 }
 
 .pendant-chain-bead__body {
-  stroke: #000000;
+  stroke: var(--color-bead-outline);
   stroke-width: 0.5px;
   pointer-events: none;
   shape-rendering: geometricPrecision;
@@ -24,7 +24,7 @@
 }
 
 .pendant-chain-remove-btn__bg {
-  fill: #ff4757;
+  fill: var(--color-remove);
   stroke: var(--color-page);
   stroke-width: 1.5;
 }

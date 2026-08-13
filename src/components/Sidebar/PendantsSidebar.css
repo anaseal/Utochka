@@ -60,8 +60,8 @@
 }
 
 .pendant-preview__anchor {
-  fill: rgba(140, 185, 220, 0.25);
-  stroke: rgba(140, 185, 220, 0.6);
+  fill: var(--color-bead-empty);
+  stroke: var(--color-bead-empty-line);
   stroke-width: 2;
   stroke-dasharray: 4 3;
 }
@@ -218,7 +218,7 @@
   opacity: 0.85;
   z-index: 1000;
   /* drop-shadow, а не box-shadow: тень нужна по контуру SVG-превью подвески,
-     а не по прямоугольнику элемента. Токены --shadow-* — значения box-shadow,
-     сюда не подставляются; оставлено намеренно. */
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+     а не по прямоугольнику элемента. Ступени шкалы объявлены без разброса
+     (spread), поэтому подставляются и сюда. */
+  filter: drop-shadow(var(--shadow-sm));
 }

@@ -115,7 +115,7 @@
 }
 
 .stats__indicator-btn:hover .stats__indicator {
-  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline: 2px solid var(--color-canvas-line);
   outline-offset: 1px;
 }
 
@@ -131,7 +131,7 @@
    этом месте был бы просто невидимый кружок. Пунктирное кольцо — тот же
    приём, что у .palette__recent-slot--empty. */
 .stats__indicator--transparent {
-  border: 1px dashed rgba(255, 255, 255, 0.35);
+  border: 1px dashed var(--color-canvas-line);
 }
 
 .stats__count {

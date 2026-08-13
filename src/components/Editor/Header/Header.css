@@ -28,10 +28,7 @@
   height: var(--header-height);
   background-color: var(--color-page);
   border-bottom: 1px solid var(--color-border-faint);
-  /* Вне шкалы --shadow-* оставлено намеренно: это не карточка над фоном,
-     а край фиксированной шапки во всю ширину — тень длинная и мягкая, чтобы
-     обозначить край полосы, а не оторвать её от страницы. */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
   z-index: 100;
   position: fixed;
   top: 0;
@@ -46,7 +43,7 @@
   padding: 0.3rem 0.875rem;
   max-width: 100%;
   box-sizing: border-box;
-  background-color: rgba(30, 41, 59, 0.5);
+  background-color: var(--color-overlay);
   border-radius: 1.5rem;
   border: 1px solid var(--color-border-faint);
 }
@@ -320,17 +317,16 @@
   .header .grid-controls__btn { --icon-btn-size: 26px; }
   /* Высота — вслед за соседями по ряду (иконки выше берут её из
      --icon-btn-size, у текстовой кнопки своей переменной нет).
-     8px мимо шкалы --text-*: её нижняя ступень — 10px, а здесь надпись
-     ужимается ради того, чтобы ряд кнопок влез в узкий экран. Ставить ради
-     двух мобильных строк ступень ниже 10px не за чем — она бы больше нигде
-     не пригодилась. */
-  .btn.grid-controls__clear { height: 26px; font-size: 8px; }
+     --text-xxs — нижняя ступень шкалы, общий этаж плотной мобильной
+     раскладки: надпись ужимается ради того, чтобы ряд кнопок влез в узкий
+     экран. */
+  .btn.grid-controls__clear { height: 26px; font-size: var(--text-xxs); }
   /* Префикс .header по той же причине, что у .grid-controls__btn выше:
      одноклассовое правило доставало и до подписей степперов правой панели, а
      она сужается на своём пороге (≤1024px, --sidebar-panel-width в index.css)
-     и мельчить её лейблы на 125px раньше нечем оправдать. Свои 8px на своей
-     ширине панель задаёт сама (GridSidebar.css). */
-  .header .grid-controls__label { font-size: 8px; }
+     и мельчить её лейблы на 125px раньше нечем оправдать. Свой --text-xxs на
+     своей ширине панель задаёт сама (GridSidebar.css). */
+  .header .grid-controls__label { font-size: var(--text-xxs); }
 
   /* Undo/Redo/Clear/Save/Load/Share: тот же приём, что уже даёт компактность
      Width/Height (grid-controls--stacked) — два ряда по три кнопки вместо

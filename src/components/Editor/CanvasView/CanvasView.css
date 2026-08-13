@@ -54,10 +54,7 @@
   display: block;
   background-color: var(--canvas-surface);
   border-radius: 24px;
-  /* Вне шкалы --shadow-* оставлено намеренно: отрицательный разброс (-12px)
-     поджимает тень под карточку, у обеих ступеней шкалы его нет — подставить
-     токен не меняя вида нельзя. */
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--canvas-border);
 
   /* Размер самой карточки задаёт .canvas__svg-frame (см. её правило ниже) —
@@ -335,8 +332,12 @@
   position: absolute;
   pointer-events: auto;
   touch-action: none;
+  /* Единственная заливка такого тона в проекте: ручка лежит поверх обеих тем
+     полотна и должна читаться на светлой и на тёмной, поэтому взят
+     среднетоновый серо-голубой, а не ступень с одного из краёв. Под курсором
+     она уходит в --color-accent-strong (правило ниже). */
   background: rgba(148, 163, 184, 0.55);
-  border: 1px solid rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--color-overlay);
   border-radius: 999px;
   cursor: grab;
   transition: background 0.15s;

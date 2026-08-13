@@ -8,7 +8,7 @@
 
 .bead__body {
   transition: fill 0.1s ease, r 0.2s ease;
-  stroke: #000000;
+  stroke: var(--color-bead-outline);
   stroke-width: 0.5px;
   shape-rendering: geometricPrecision;
   pointer-events: none;
@@ -24,18 +24,17 @@
    тёмная тема; светлую задаёт .canvas__svg[data-canvas-theme="light"]
    через токены. */
 .bead--empty .bead__body {
-  stroke: var(--bead-empty-stroke, rgba(140, 185, 220, 0.6));
+  stroke: var(--bead-empty-stroke, var(--color-bead-empty-line));
   stroke-width: 1px;
-  fill: var(--bead-empty-fill, rgba(140, 185, 220, 0.04));
+  fill: var(--bead-empty-fill, var(--color-bead-empty));
 }
 
-/* drop-shadow здесь — ореол самой бусины (её же цветом), а не тень над фоном:
-   шкала --shadow-* к нему отношения не имеет, литеральная rgba оставлена
-   намеренно. */
+/* drop-shadow здесь — ореол самой бусины, а не тень над фоном: шкала
+   --shadow-* к нему отношения не имеет, радиус задан на месте. */
 .bead--type-node.bead--empty .bead__body {
-  fill: var(--bead-node-empty-fill, rgba(140, 185, 220, 0.07));
-  stroke: var(--bead-node-empty-stroke, rgba(140, 185, 220, 0.85));
-  filter: drop-shadow(0 0 8px var(--bead-node-empty-glow, rgba(140, 185, 220, 1)));
+  fill: var(--bead-node-empty-fill, var(--color-bead-empty));
+  stroke: var(--bead-node-empty-stroke, var(--color-bead-node-line));
+  filter: drop-shadow(0 0 8px var(--bead-node-empty-glow, var(--color-bead-node-line)));
 }
 
 /* Светлая тема холста: базовый бисер — чистые контуры без мутной заливки и
@@ -76,8 +75,8 @@
    нагромождение толстых пересекающихся окружностей, тон просто подсвечивает
    сами бисерины. */
 .bead__delete-preview {
-  fill: rgba(255, 71, 87, 0.45);
-  stroke: #ff4757;
+  fill: var(--color-remove-soft);
+  stroke: var(--color-remove);
   stroke-width: 1px;
   opacity: 0.9;
 }
@@ -89,7 +88,7 @@
    однозначно говорит «ждёт», заливка была лишней. */
 .bead__pending-delete {
   fill: none;
-  stroke: #ff4757;
+  stroke: var(--color-remove);
   stroke-width: 1.4px;
   stroke-dasharray: 3 2;
   opacity: 0.9;

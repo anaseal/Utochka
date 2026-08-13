@@ -84,11 +84,10 @@
   height: 14px;
   border-radius: 50%;
   border: 2px solid var(--color-text);
-  /* Вне шкалы --shadow-* оставлено намеренно: первая половина — не тень,
-     а тёмное кольцо в 1px, которым белый кружок отделяется от светлых
-     участков поля насыщенности; вторая держит его над ними. Составное
-     правило, токен подставился бы только во вторую половину. */
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.4);
+  /* Тёмное кольцо в 1px отделяет белый кружок от светлых участков поля
+     насыщенности, подъём держит его над ними — неразрывная пара, поэтому
+     она собрана в один токен. */
+  box-shadow: var(--shadow-cursor);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -119,10 +118,9 @@
   height: 14px;
   border-radius: 50%;
   border: 2px solid var(--color-text);
-  /* Кольцо + подъём, как у .color-picker__sv-cursor выше (и по той же
-     причине вне шкалы --shadow-*) — оба курсора ходят по произвольному
-     цвету и должны читаться на любом. */
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.4);
+  /* Тот же токен, что у .color-picker__sv-cursor выше — оба курсора ходят
+     по произвольному цвету и должны читаться на любом. */
+  box-shadow: var(--shadow-cursor);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -305,11 +303,9 @@ border: 1px solid var(--color-text-dim);
 .color-picker__generate-swatch--selected {
   opacity: 1;
   border-color: var(--color-text);
-  /* Кольцо выбранного свотча переведено на --color-border-strong — это ровно
-     те же rgba(255,255,255,.2), и по смыслу рамка, а не тень (тот же приём,
-     что у .palette__color--active). Вторая половина, подъём, остаётся вне
-     шкалы --shadow-* намеренно: она часть составного кольца. */
-  box-shadow: 0 0 0 2px var(--color-border-strong), 0 4px 12px rgba(0, 0, 0, 0.4);
+  /* Кольцо — рамка, а не тень (тот же приём, что у .palette__color--active),
+     подъём рядом с ним берётся из шкалы. */
+  box-shadow: 0 0 0 2px var(--color-border-strong), var(--shadow-sm);
 }
 .color-picker__generate-swatch--locked {
   border-color: var(--color-accent);
@@ -434,11 +430,9 @@ border: 1px solid var(--color-text-dim);
   flex-shrink: 0;
   background-color: var(--color-value);
   /* inset-обводка — часть формы свотча (border на круге с произвольной
-     заливкой даёт шов), а не тень над фоном; в шкалу --shadow-* не ложится,
-     оставлено намеренно. Альфа .25 своя: не совпадает ни с --color-border
-     (.12), ни с --color-border-strong (.20), и подтягивание к токену меняло
-     бы вид. */
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+     заливкой даёт шов), а не тень над фоном, поэтому цвет берётся из
+     --color-canvas-line, а не из шкалы теней. */
+  box-shadow: inset 0 0 0 1px var(--color-canvas-line);
 }
 .color-picker__project-hex {
   flex: 1;

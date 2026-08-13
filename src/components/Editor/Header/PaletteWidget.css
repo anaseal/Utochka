@@ -91,10 +91,8 @@
      масштабом и кольцом (box-shadow), см. --active и :hover ниже. */
   /* inset-кольцо вместо border — border вместе с border-radius и conic-gradient
      (у кнопки кастомного цвета) даёт видимый шов на стыке 0deg/360deg градиента */
-  /* Правило составное: кольцо (форма свотча) + подъём. Вне шкалы --shadow-*
-     оставлено намеренно — токен подставился бы только во вторую половину
-     и разорвал бы правило надвое. */
-  box-shadow: inset 0 0 0 1.5px var(--color-border), 0 2px 6px rgba(0, 0, 0, 0.35);
+  /* Правило составное: кольцо (форма свотча) + подъём из шкалы. */
+  box-shadow: inset 0 0 0 1.5px var(--color-border), var(--shadow-xs);
   flex-shrink: 0;
 }
 .palette__color:hover {
@@ -102,9 +100,9 @@
 }
 .palette__color--active {
   transform: scale(1.2);
-  /* То же составное правило, что у .palette__color, плюс внешнее кольцо:
-     подъём вне шкалы --shadow-* намеренно. */
-  box-shadow: inset 0 0 0 1.5px var(--color-text), 0 0 0 1px var(--color-border-strong), 0 4px 14px rgba(0, 0, 0, 0.5);
+  /* То же составное правило, что у .palette__color, плюс внешнее кольцо
+     и ступень подъёма выше — выбранный свотч приподнят заметнее. */
+  box-shadow: inset 0 0 0 1.5px var(--color-text), 0 0 0 1px var(--color-border-strong), var(--shadow-sm);
 }
 
 .palette__eyedropper {
