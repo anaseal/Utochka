@@ -4,11 +4,73 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Цвет строки адреса в мобильных браузерах — под тёмный фон приложения
+         (--color-page в src/index.css). Светлой темы у приложения нет,
+         поэтому вариант под prefers-color-scheme: light не нужен. -->
+    <meta name="theme-color" content="#0f172a" />
     <title>Beadlace</title>
+    <meta
+      name="description"
+      content="Beadlace draws schemes for beaded jewellery — sylianka, RAW, peyote and loom. Not a pixel grid: every bead sits where the thread would really put it."
+    />
+
+    <!-- Карточка ссылки в мессенджерах и соцсетях. Share-ссылка (см.
+         src/utils/shareLink.ts) — это тот же index.html с хешем (`#g=<id>`
+         или `#s=<данные>`), а хеш до сервера не доходит, поэтому превью у всех
+         ссылок общее и статичное: показать в карточке именно ту схему, которой
+         поделились, можно было бы только рендером на сервере.
+         Домен в адресе картинки достраивает на сборке плагин inject-og-origin
+         (vite.config.js): краулерам нужен абсолютный адрес, а домен деплоя в
+         коде не хардкодится. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Beadlace" />
+    <meta property="og:title" content="Beadlace — pattern editor for beaded jewellery" />
+    <meta
+      property="og:description"
+      content="Beadlace draws schemes for beaded jewellery — sylianka, RAW, peyote and loom. Not a pixel grid: every bead sits where the thread would really put it."
+    />
+    <meta property="og:image" content="__OG_ORIGIN__/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Beadlace diamond mark above the Beadlace wordmark" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Лоадер первого кадра: пульсирующий знак по центру экрана. Разметка
+         ниже, внутри #root, оформление — в public/boot.css. Оба файла
+         отвечают за одно, правятся вместе.
+
+         Зачем: #root был пустым, поэтому первый кадр совпадал с монтированием
+         React — а тот на старте создаёт ~6000 узлов DOM (около 3700 <circle>
+         одних только бисерин). Всё это время экран оставался пустым. Замер на
+         собранной сборке с задержкой 1.5 с на бандле (медиана трёх прогонов,
+         кеш выключен): first-contentful-paint 2373 мс без лоадера против
+         ~430 мс с ним — знак рисуется, не дожидаясь JS.
+
+         Разметка лежит ВНУТРИ #root не случайно: createRoot() вычищает
+         содержимое контейнера тем же коммитом, которым вставляет приложение, —
+         лоадер пропадает без кода удаления в main.tsx и без пустого кадра
+         между ним и холстом.
+
+         Почему стили отдельным файлом в public/, а не <style> здесь и не часть
+         index.css — см. шапку boot.css. Полностью история решений и замеры —
+         src/spec.md, раздел 10. -->
+    <link rel="stylesheet" href="/boot.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- aria-hidden: лоадер ничего не сообщает, читать его скринридеру нечего. -->
+      <div class="boot" aria-hidden="true">
+        <svg class="boot__mark" viewBox="0 0 32 32">
+          <path d="M16 4 L28 16 L16 28 L4 16 Z" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round" />
+          <circle cx="16" cy="4" r="3" fill="#22d3ee" />
+          <circle cx="28" cy="16" r="3" fill="#22d3ee" />
+          <circle cx="16" cy="28" r="3" fill="#22d3ee" />
+          <circle cx="4" cy="16" r="3" fill="#22d3ee" />
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
-  
+
   </body>
 </html>

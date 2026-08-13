@@ -2,15 +2,20 @@ import express, { Request, Response } from 'express';
 import https from 'https';
 import { randomBytes } from 'node:crypto';
 import { Redis } from '@upstash/redis';
-import { isAllowedOrigin, withinRateLimit } from './api/_lib/security';
+import {
+  isAllowedOrigin,
+  isShareId,
+  randomShareId,
+  readShare,
+  shareKey,
+  withinRateLimit,
+} from './api/_lib/security';
 
 const app = express();
 const PORT = 3001;
 const DEV_ORIGIN = 'http://localhost:5173';
 const redis = Redis.fromEnv();
 
-const SHARE_ID_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-const SHARE_ID_LENGTH = 7;
 const SHARE_MAX_PAYLOAD_LENGTH = 200_000;
 const SHARE_TTL_SECONDS = 90 * 24 * 60 * 60;
 const PALETTE_RATE_LIMIT = 20;
@@ -18,11 +23,14 @@ const SHARE_WRITE_RATE_LIMIT = 10;
 const SHARE_READ_RATE_LIMIT = 60;
 const RATE_WINDOW_SECONDS = 60;
 
-const randomShareId = (): string =>
-  Array.from(randomBytes(SHARE_ID_LENGTH), (b) => SHARE_ID_CHARS[b % SHARE_ID_CHARS.length]).join('');
+const randomId = (): string => randomShareId(randomBytes);
 
-const clientIp = (req: Request): string =>
-  (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.socket.remoteAddress ?? 'unknown';
+// Перед этим сервером нет доверенного прокси: Vite проксирует '/api' на
+// localhost:3001 без x-forwarded-for, так что любой такой заголовок здесь
+// прислал бы сам клиент и мог бы им выбрать себе ключ лимита. Единственный
+// неподделываемый источник в dev — адрес сокета; заголовки не читаем вовсе.
+// На Vercel адрес приходит от платформы — там свой clientIp в _lib/security.ts.
+const clientIp = (req: Request): string => req.socket.remoteAddress ?? 'unknown';
 
 app.use(express.json());
 
@@ -110,9 +118,9 @@ app.post('/api/share', express.text({ type: '*/*' }), async (req: Request, res: 
     res.status(400).json({ error: 'Invalid payload' });
     return;
   }
-  let id = randomShareId();
-  while (await redis.exists(id)) id = randomShareId();
-  await redis.set(id, payload, { ex: SHARE_TTL_SECONDS });
+  let id = randomId();
+  while (await redis.exists(shareKey(id))) id = randomId();
+  await redis.set(shareKey(id), payload, { ex: SHARE_TTL_SECONDS });
   res.json({ id });
 });
 
@@ -123,11 +131,11 @@ app.get('/api/share', async (req: Request, res: Response) => {
   }
 
   const id = req.query.id;
-  if (typeof id !== 'string') {
+  if (!isShareId(id)) {
     res.status(400).json({ error: 'Missing id' });
     return;
   }
-  const data = await redis.get<string>(id);
+  const data = await readShare(redis, id);
   if (data === null) {
     res.status(404).json({ error: 'Not found' });
     return;

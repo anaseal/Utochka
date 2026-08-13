@@ -150,6 +150,27 @@ describe('isProjectFile', () => {
   it('отвергает файл, где значения не строки', () => {
     expect(isProjectFile({ version: 1, savedAt: '', localStorage: { 'app:zoom': 1 } })).toBe(false);
   });
+
+  // Файл/ссылка приходят из недоверенного источника, а applyProjectData пишет
+  // ключи в localStorage как есть. Ключ вне KEY_PREFIXES не убрать ни сбросом в
+  // ErrorBoundary, ни следующей загрузкой проекта — обе операции ходят только по
+  // своим префиксам. Поэтому такой файл отвергается целиком.
+  it('отвергает посторонние ключи вне своих префиксов', () => {
+    expect(isProjectFile(projectFileOf({ '__evil': 'x' }))).toBe(false);
+    expect(isProjectFile(projectFileOf({ 'some-other-app:token': 'x' }))).toBe(false);
+    expect(isProjectFile(projectFileOf({ 'app:zoom': 1, '__evil': 'x' }))).toBe(false);
+    expect(isProjectFile(projectFileOf({ '__proto__': 'x' }))).toBe(false);
+  });
+
+  it('принимает ключи всех пяти своих префиксов', () => {
+    expect(isProjectFile(projectFileOf({
+      'app:zoom': 1,
+      'silyanka:designMap': {},
+      'crossWeave:gridSize': {},
+      'peyote:designMap': {},
+      'loom:designMap': {},
+    }))).toBe(true);
+  });
 });
 
 describe('applyProjectData', () => {
@@ -214,6 +235,15 @@ describe('importProject', () => {
 
     await expect(importProject(asFile({ ...projectFileOf({}), version: 99 })))
       .rejects.toThrow(/не файл проекта silyanka|версия/i);
+    expect(snapshotLocalStorage()).toEqual(before);
+  });
+
+  it('файл с посторонним ключом не грузится и ничего не пишет', async () => {
+    seedLocalStorage({ 'app:zoom': 1 });
+    const before = snapshotLocalStorage();
+
+    await expect(importProject(asFile(projectFileOf({ 'app:zoom': 2, '__evil': 'x' }))))
+      .rejects.toThrow();
     expect(snapshotLocalStorage()).toEqual(before);
   });
 

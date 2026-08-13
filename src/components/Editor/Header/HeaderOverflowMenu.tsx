@@ -22,7 +22,7 @@ interface HeaderOverflowMenuProps {
   weaveMode: boolean;
   technique: Technique;
   weaveControls: SharedHeaderProps['weaveControls'];
-  // Ниже — для секций ≤1024px (вид полотна, образец) и ≤599.98px («?»):
+  // Ниже — для секций ≤1279.98px (вид полотна, образец) и ≤599.98px («?»):
   // их кнопки на этих ширинах убраны из строки хедера (см. Header.css).
   canvasView: SharedHeaderProps['canvasView'];
   referenceWindowOpen: boolean;
@@ -31,9 +31,9 @@ interface HeaderOverflowMenuProps {
 }
 
 // Попап «⋯»: собирает то, что не поместилось в строку хедера, тремя ступенями
-// по ширине (см. Header.css). ≤1024px — Zoom, вид полотна и образец: они
-// уступили место имени проекта, которое до этого на планшете сжималось до
-// точки-индикатора. ≤767.98px — Save/Load/Share и, в режиме плетения,
+// по ширине (см. Header.css). ≤1279.98px — Zoom, вид полотна и образец: они
+// уступили место имени проекта, которое до этого сжималось до
+// точки-индикатора уже на узком десктопе (~1050px). ≤767.98px — Save/Load/Share и, в режиме плетения,
 // Fullscreen/Reset/«?». ≤599.98px — «?» рисования. Это и есть меню «Функции»
 // целевой мобильной раскладки.
 export const HeaderOverflowMenu = ({
@@ -57,7 +57,7 @@ export const HeaderOverflowMenu = ({
       </button>
       {open && (
         <div className="header__overflow-panel" role="menu">
-          {/* ≤1024px: то, что уступило место имени проекта в строке хедера —
+          {/* ≤1279.98px: то, что уступило место имени проекта в строке хедера —
               Zoom, вид полотна и образец (см. Header.css). Вид полотна нужен
               и в режиме плетения: кнопка CanvasViewMenu убрана из строки в
               обоих режимах. Образец к плетению не относится и там не

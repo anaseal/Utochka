@@ -80,12 +80,21 @@ export const exportProject = () => {
   URL.revokeObjectURL(url);
 };
 
+const isOwnKey = (key: string) => KEY_PREFIXES.some(prefix => key.startsWith(prefix));
+
+// Проверяются и значения, и КЛЮЧИ. Данные приходят из недоверенного источника
+// (чужой .json или #-фрагмент чужой ссылки), а applyProjectData пишет их в
+// localStorage как есть — поэтому ключ вне KEY_PREFIXES отвергает весь файл
+// целиком, тем же правилом «повреждённый файл — ничего не меняем». Иначе
+// посторонний ключ осел бы в хранилище навсегда: и clearOwnStorage, и повторная
+// загрузка проекта ходят только по KEY_PREFIXES и его бы не убрали.
 export const isProjectFile = (v: unknown): v is ProjectFile => {
   if (typeof v !== 'object' || v === null) return false;
   const obj = v as Record<string, unknown>;
   if (obj.version !== PROJECT_FILE_VERSION) return false;
   if (typeof obj.localStorage !== 'object' || obj.localStorage === null) return false;
-  return Object.values(obj.localStorage).every(entry => typeof entry === 'string');
+  return Object.entries(obj.localStorage as Record<string, unknown>)
+    .every(([key, entry]) => typeof entry === 'string' && isOwnKey(key));
 };
 
 // Удаляет все собственные ключи localStorage (см. KEY_PREFIXES выше), не

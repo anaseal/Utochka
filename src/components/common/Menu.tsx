@@ -34,7 +34,7 @@ interface MenuProps {
   items: MenuItem[];
   trigger: ReactNode;
   // Класс-зацепка для места вызова: у меню хедера на нём висит адресация
-  // брейкпоинтов (.canvas-view-menu прячется на ≤1024px, .menu--technique
+  // брейкпоинтов (.canvas-view-menu прячется на ≤1279.98px, .menu--technique
   // задаёт свою ширину панели). Оформление сюда не пишем.
   className?: string;
   // Хвост панели под пунктами. Нужен ровно одному меню — «Нитка» у крестика

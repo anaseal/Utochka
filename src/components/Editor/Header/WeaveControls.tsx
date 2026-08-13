@@ -111,7 +111,7 @@ export const WeaveControls = ({
               компактность Undo/Redo/Clear/Save/Load/Share в Header.tsx
               (см. .grid-controls__actions-row/-divider в Header.css): на
               десктопе/планшете обе строки "растворяются" в один ряд
-              (display: contents), на ≤1024px становятся физическими рядами.
+              (display: contents), на ≤1149.98px становятся физическими рядами.
               Поворот/отражение полотна отсюда уехали в CanvasViewMenu
               (Header.tsx) — контрол общий для рисования и режима плетения,
               копии здесь больше нет. */}

@@ -81,4 +81,12 @@ export default defineConfig([
       globals: globals.node,
     },
   },
+  // Конфиг Vite исполняется в Node, а не в браузере: плагин inject-og-origin
+  // читает из process.env домен деплоя для og:image (см. index.html).
+  {
+    files: ['vite.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])
