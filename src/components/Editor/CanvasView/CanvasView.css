@@ -352,8 +352,8 @@
 .canvas-scrollbar--x .canvas-scrollbar__thumb { left: 0; top: 50%; height: 10px; margin-top: -5px; }
 .canvas-scrollbar--y .canvas-scrollbar__thumb { left: 50%; top: 0; width: 10px; margin-left: -5px; }
 
-/* Увеличенная невидимая зона захвата — тот же приём, что у бейджей штампа
-   (Header.css, .tool-btn-group__badge::before): видимая толщина бегунка
+/* Увеличенная невидимая зона захвата — тот же приём, что у бейджей нитки
+   (HeaderToolGroup.css, .tool-btn-group__badge::before): видимая толщина бегунка
    всего 10px, чтобы не быть навязчивым, но реальная зона пальца шире (итог
    ~22px, тот же масштаб, что hitboxRadius бисерин). */
 .canvas-scrollbar__thumb::before {

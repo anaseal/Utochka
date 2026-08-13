@@ -81,7 +81,8 @@ export const ProjectStatus = ({ library, onOpenGallery }: ProjectStatusProps) =>
     : 'Not in a project';
 
   // Полный текст в title и aria-label: имя в строке ужимается многоточием тем
-  // сильнее, чем уже экран (см. .project-status в Header.css).
+  // сильнее, чем уже экран, а на телефоне (≤599.98px) подпись состояния и
+  // вовсе не показана — там его несёт цвет точки (см. ProjectStatus.css).
   const fullText = `${name}${status ? ` — ${status}` : ''}`;
 
   return (

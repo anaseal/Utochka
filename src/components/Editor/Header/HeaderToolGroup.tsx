@@ -1,10 +1,9 @@
-import {
-  PaintBucket, Stamp, Pencil, ArrowUpToLine, ArrowDownToLine, X, Wrench,
-} from 'lucide-react';
+import { PaintBucket, Stamp, Pencil, Wrench } from 'lucide-react';
 import './HeaderToolGroup.css';
 import { EraserIcon, ThreadIcon } from './icons';
 import { IconButton } from '../../common/IconButton';
 import { MirrorMenu } from './MirrorMenu';
+import { StampMenu, StampMenuPanel, StampControls } from './StampMenu';
 import { ThreadMenu } from './ThreadMenu';
 import { ThreadStyleButton } from './ThreadStyleButton';
 import { useDismissablePopup } from '../../../hooks/useDismissablePopup';
@@ -34,6 +33,23 @@ export const HeaderToolGroup = ({
   // = PeyoteHeaderProps, см. Header.types.ts) — тот же приём, что GridSidebar
   // использует для crossWeave/Peyote (basicProps = crossWeaveProps ?? peyoteProps).
   const stampMirrorProps = peyoteProps ?? loomProps;
+
+  // Настройки штампа одним набором на все техники: плашку с ними показывают
+  // два места сразу — сама кнопка штампа и плавающая копия в конце ряда
+  // (см. StampMenu.css), и разъезжаться их содержимому нельзя.
+  const stampControls: StampControls | null = silyankaProps
+    ? {
+      hasStampPattern: silyankaProps.hasStampPattern,
+      onCancelStampPattern: silyankaProps.onCancelStampPattern,
+      anchorEdge: silyankaProps.stampAnchorEdge,
+      onToggleAnchorEdge: silyankaProps.onToggleStampAnchorEdge,
+    }
+    : stampMirrorProps
+      ? {
+        hasStampPattern: stampMirrorProps.hasStampPattern,
+        onCancelStampPattern: stampMirrorProps.onCancelStampPattern,
+      }
+      : null;
 
   // Меню «Инструменты» (.tool-extras): на ≤599.98px всё, что после карандаша
   // и ластика, уезжает под одну кнопку — иначе строка хедера не укладывается
@@ -146,44 +162,9 @@ export const HeaderToolGroup = ({
                 icon={<PaintBucket size={14} />}
               />
 
-              <div className="tool-btn-group">
-                <IconButton
-                  variant="chip"
-                  className="tool-btn"
-                  active={activeTool === 'stamp'}
-                  onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
-                  title="Stamp (S)"
-                  aria-pressed={activeTool === 'stamp'}
-                  icon={<Stamp size={14} />}
-                />
-
-                {activeTool === 'stamp' && silyankaProps.hasStampPattern && (
-                  <>
-                    <button
-                      onClick={silyankaProps.onToggleStampAnchorEdge}
-                      className="tool-btn-group__badge"
-                      title={silyankaProps.stampAnchorEdge === 'top'
-                        ? 'Stamp anchor point: top (click or Shift to switch to bottom, Esc/Alt to reset stamp)'
-                        : 'Stamp anchor point: bottom (click or Shift to switch to top, Esc/Alt to reset stamp)'}
-                      aria-pressed={silyankaProps.stampAnchorEdge === 'bottom'}
-                    >
-                      {silyankaProps.stampAnchorEdge === 'top'
-                        ? <ArrowUpToLine size={9} />
-                        : <ArrowDownToLine size={9} />}
-                    </button>
-
-                    {/* Тач-эквивалент Escape/Alt — на тач-экране нет клавиатуры,
-                        так что сброс захваченного узора нужен и кнопкой. */}
-                    <button
-                      onClick={silyankaProps.onCancelStampPattern}
-                      className="tool-btn-group__badge tool-btn-group__badge--cancel"
-                      title="Reset stamp pattern (Esc/Alt)"
-                    >
-                      <X size={9} />
-                    </button>
-                  </>
-                )}
-              </div>
+              {stampControls && (
+                <StampMenu activeTool={activeTool} setActiveTool={setActiveTool} {...stampControls} />
+              )}
 
               <MirrorMenu
                 mirrorMode={silyankaProps.mirrorMode}
@@ -206,32 +187,13 @@ export const HeaderToolGroup = ({
                 icon={<PaintBucket size={14} />}
               />
 
-              {/* Штамп есть у Peyote и Loom (в отличие от crossWeave), но без
-                  бейджа anchor-edge — ни та ни другая техника не различает
-                  «низ»/«верх» узора, якорь штампа всегда левый верхний угол
-                  выделения (см. peyoteStamp.ts/loomStamp.ts). Только X-бейдж
-                  сброса, как у силянки. */}
-              <div className="tool-btn-group">
-                <IconButton
-                  variant="chip"
-                  className="tool-btn"
-                  active={activeTool === 'stamp'}
-                  onClick={() => setActiveTool(activeTool === 'stamp' ? 'pencil' : 'stamp')}
-                  title="Stamp (S)"
-                  aria-pressed={activeTool === 'stamp'}
-                  icon={<Stamp size={14} />}
-                />
-
-                {activeTool === 'stamp' && stampMirrorProps.hasStampPattern && (
-                  <button
-                    onClick={stampMirrorProps.onCancelStampPattern}
-                    className="tool-btn-group__badge tool-btn-group__badge--cancel"
-                    title="Reset stamp pattern (Esc/Alt)"
-                  >
-                    <X size={9} />
-                  </button>
-                )}
-              </div>
+              {/* Штамп есть у Peyote и Loom (в отличие от crossWeave), но его
+                  плашка здесь из одной кнопки сброса — ни та ни другая техника
+                  не различает «низ»/«верх» узора, якорь штампа всегда левый
+                  верхний угол выделения (см. peyoteStamp.ts/loomStamp.ts). */}
+              {stampControls && (
+                <StampMenu activeTool={activeTool} setActiveTool={setActiveTool} {...stampControls} />
+              )}
 
               <MirrorMenu
                 mirrorMode={stampMirrorProps.mirrorMode}
@@ -243,6 +205,15 @@ export const HeaderToolGroup = ({
           )}
         </div>
       </div>
+
+      {/* Плавающая копия плашки штампа — соседом меню «Инструменты», а не
+          внутри него: на ≤599.98px кнопка штампа уезжает в его попап, и
+          собственная плашка кнопки гасла бы вместе с попапом ровно тогда,
+          когда нужна — узор захватывают уже на полотне, а тап по полотну
+          попап закрывает. Видна только на этой ширине и только при закрытом
+          попапе (см. StampMenu.css), так что одновременно двух плашек на
+          экране не бывает. */}
+      {stampControls && activeTool === 'stamp' && <StampMenuPanel floating {...stampControls} />}
     </div>
   );
 };

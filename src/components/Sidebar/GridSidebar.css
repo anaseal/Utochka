@@ -30,8 +30,17 @@
   grid-area: 1 / 2;
 }
 
+/* Вынос вправо — тот же правый столбец панели, что у «?» и кнопок-сбросов
+   секций (Sidebar.css, --sidebar-rail-inset): значок меньше своего бокса, и
+   без выноса он стоит левее тумблеров секций.
+   justify-self: end обязателен именно здесь: ширина у .icon-btn фиксированная
+   (--icon-btn-size), а grid-элемент с заданной шириной прижимается к началу
+   своей колонки — отрицательный margin один только освободил бы место справа,
+   не сдвинув саму кнопку. */
 .grid-sidebar__steppers .grid-controls__reset {
   grid-area: 1 / 3;
+  justify-self: end;
+  margin-right: calc(-1 * var(--sidebar-rail-inset));
 }
 
 /* Без min-width: 0 grid-элемент не сжимается ниже min-content, и длинное

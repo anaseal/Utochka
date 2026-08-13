@@ -91,6 +91,13 @@
   outline-offset: 2px;
 }
 
+/* Кольцо вплотную к рамке у вариантов, где рамка того же цвета, что кольцо, —
+   разбор в Button.css, правило у обоих блоков одинаковое. */
+.icon-btn--primary:focus-visible,
+.icon-btn--danger:focus-visible {
+  outline-offset: 0;
+}
+
 .icon-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;

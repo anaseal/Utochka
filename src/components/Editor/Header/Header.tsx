@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { ListChecks } from 'lucide-react';
+import { ListChecks, ChevronDown, ChevronUp } from 'lucide-react';
 import './Header.css';
 import { TechniqueMenu } from './TechniqueMenu';
 import { ProjectStatus } from './ProjectStatus';
@@ -24,6 +24,7 @@ export const Header = (props: HeaderProps) => {
     referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome,
     threads, onClearAllThreads,
     sidebarOpen, onToggleSidebar,
+    headerCollapsed, onToggleHeaderCollapsed,
     weaveMode, onToggleWeaveMode, weaveControls, canvasView,
   } = props;
 
@@ -40,7 +41,7 @@ export const Header = (props: HeaderProps) => {
   const loomProps = props.technique === 'loom' ? props.loomProps : undefined;
 
   return (
-    <header className={`header${weaveMode ? ' header--weave' : ''}`}>
+    <header className={`header${weaveMode ? ' header--weave' : ''}${headerCollapsed ? ' header--collapsed' : ''}`}>
       <nav className="header__nav">
         {/* Имя активного проекта и статус сохранения — самое левое, что есть
             в хедере, и в обоих режимах на одном месте (см. ProjectStatus.tsx).
@@ -157,7 +158,6 @@ export const Header = (props: HeaderProps) => {
           canvasView={canvasView}
           referenceWindowOpen={referenceWindowOpen}
           onToggleReferenceWindow={onToggleReferenceWindow}
-          onOpenWelcome={onOpenWelcome}
         />
 
         {/* header__divider--before-end: на ≤767.98px в режиме плетения весь
@@ -183,6 +183,20 @@ export const Header = (props: HeaderProps) => {
           technique={technique}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={onToggleSidebar}
+        />
+
+        {/* Свернуть/развернуть строку. Видна только на ландшафтном телефоне
+            (Header.css) — единственной раскладке, где высота хедера всерьёз
+            конкурирует с холстом. Стоит последней в строке и в свёрнутом виде
+            остаётся на том же месте: кнопка, возвращающая интерфейс, не должна
+            переезжать вместе с ним. */}
+        <IconButton
+          variant="chip"
+          className="tool-btn header__collapse"
+          onClick={onToggleHeaderCollapsed}
+          aria-expanded={!headerCollapsed}
+          title={headerCollapsed ? 'Show the full header' : 'Collapse the header to the tool row'}
+          icon={headerCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
         />
       </nav>
     </header>

@@ -30,6 +30,16 @@ export const useAppSettings = () => {
     'app:referenceWindow:open', false, isBoolean,
   );
 
+  // Свёрнутый хедер — настройка ландшафтного телефона: там высоты ~350–430px,
+  // и полная строка съедает её пятую часть. Персистится, как и открытость
+  // окна образца: свернул один раз — работает свёрнутым, пока сам не вернёт.
+  // Хранится общим `app:`-ключом, а не per-технику: это свойство экрана, а не
+  // схемы. Действует только в ландшафтном медиа-запросе (Header.css) —
+  // в портрете строка нужна целиком, и флаг там ничего не меняет.
+  const [headerCollapsed, setHeaderCollapsed] = usePersistedState<boolean>(
+    'app:headerCollapsed', false, isBoolean,
+  );
+
   // Приветственное окно (WelcomeDialog.tsx). Персистится не «открыто ли оно»
   // (как у referenceOpen выше), а только факт «человек его уже видел»:
   // открывается оно само ровно один раз, на первом запуске, а дальше — по
@@ -62,12 +72,17 @@ export const useAppSettings = () => {
     setCanvasTheme(t => (t === 'dark' ? 'light' : 'dark'));
   }, [setCanvasTheme]);
 
+  const toggleHeaderCollapsed = useCallback(() => {
+    setHeaderCollapsed(v => !v);
+  }, [setHeaderCollapsed]);
+
   return {
     technique, setTechnique,
     zoom, updateZoom, setZoomAbsolute,
     palette, setPalette,
     canvasTheme, toggleCanvasTheme,
     referenceOpen, setReferenceOpen,
+    headerCollapsed, toggleHeaderCollapsed,
     welcomeOpen, openWelcome, closeWelcome,
   };
 };

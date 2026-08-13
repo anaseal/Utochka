@@ -75,6 +75,8 @@ export const PeyoteEditor = ({
       onClearAllThreads={() => {}}
       sidebarOpen={sidebarOpen}
       onToggleSidebar={onToggleSidebar}
+      headerCollapsed={settings.headerCollapsed}
+      onToggleHeaderCollapsed={settings.toggleHeaderCollapsed}
       weaveMode={weavePanel.weaveMode}
       onToggleWeaveMode={weavePanel.toggleWeaveMode}
       weaveControls={weavePanel.weaveControls}

@@ -72,12 +72,14 @@ export const useProjectLibrary = (technique: Technique, canvasTheme: CanvasTheme
     refresh();
   }, [technique, refresh]);
 
-  // Ищет живой холст по стабильному классу .canvas__svg (CanvasView.css),
-  // общему у всех четырёх техник, вместо прокидывания canvasSvgRef через
-  // каждый XxxProject-хук — в App.tsx единовременно смонтирован холст только
-  // одной активной техники, так что querySelector однозначен.
+  // Ищет живой холст по стабильному классу .canvas__svg-content
+  // (CanvasView.css), общему у всех четырёх техник, вместо прокидывания
+  // canvasSvgRef через каждый XxxProject-хук — в App.tsx единовременно
+  // смонтирован холст только одной активной техники, так что querySelector
+  // однозначен. Класс именно -content: .canvas__svg — это <div>-обёртка с
+  // прокруткой, а миниатюру снимает getBBox(), метод SVG-элемента.
   const captureThumbnail = useCallback(async (): Promise<Blob | null> => {
-    const svg = document.querySelector<SVGSVGElement>('.canvas__svg');
+    const svg = document.querySelector<SVGSVGElement>('.canvas__svg-content');
     if (!svg) return null;
     try {
       return await captureSchemeThumbnail(svg, canvasTheme);

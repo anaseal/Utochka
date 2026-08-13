@@ -1,6 +1,6 @@
 import { RefObject } from 'react';
 import {
-  MoreHorizontal, Download, Upload, Share2, RotateCcw, Maximize2, Minimize2, Image, HelpCircle,
+  MoreHorizontal, Download, Upload, Share2, RotateCcw, Maximize2, Minimize2, Image,
 } from 'lucide-react';
 import './HeaderOverflowMenu.css';
 import { Stepper } from '../../common/Stepper';
@@ -27,7 +27,6 @@ interface HeaderOverflowMenuProps {
   canvasView: SharedHeaderProps['canvasView'];
   referenceWindowOpen: boolean;
   onToggleReferenceWindow: () => void;
-  onOpenWelcome: () => void;
 }
 
 // Попап «⋯»: собирает то, что не поместилось в строку хедера, тремя ступенями
@@ -38,7 +37,7 @@ interface HeaderOverflowMenuProps {
 // целевой мобильной раскладки.
 export const HeaderOverflowMenu = ({
   zoom, onZoomChange, onSetZoom, onSaveProject, onShareProject, loadInputRef,
-  weaveMode, technique, weaveControls, canvasView, referenceWindowOpen, onToggleReferenceWindow, onOpenWelcome,
+  weaveMode, technique, weaveControls, canvasView, referenceWindowOpen, onToggleReferenceWindow,
 }: HeaderOverflowMenuProps) => {
   const { open, setOpen, ref, triggerRef } = useDismissablePopup();
 
@@ -191,30 +190,6 @@ export const HeaderOverflowMenu = ({
             )}
           </div>
 
-          {/* ≤599.98px: приветственное окно — единственное, что уехало из строки
-              хедера ради двух ровных рядов (12 ячеек сетки на 13 кнопок, см.
-              Header.css). Выбрано именно оно: это справка, которую читают один
-              раз, в отличие от очистки и правой панели, которые стояли здесь
-              раньше и вернулись в строку. К плетению не относится (там своя «?»
-              рядом с WeaveControls) и не рендерится, как и везде в хедере. */}
-          {!weaveMode && (
-            <div className="header__overflow-narrow-extra">
-              <div className="header__overflow-row">
-                <span className="header__overflow-label">What this app is</span>
-                <div className="grid-controls__actions">
-                  <IconButton
-                    className="grid-controls__btn"
-                    size="md"
-                    shape="square"
-                    variant="ghost"
-                    onClick={onOpenWelcome}
-                    title="What this app is"
-                    icon={<HelpCircle size={14} />}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

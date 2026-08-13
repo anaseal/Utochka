@@ -4,8 +4,7 @@
    иначе одно и то же действие доступно двумя способами сразу. Каждую включает
    свой брейкпоинт ниже:
      -tablet-extra  ≤1279.98px — Zoom, вид полотна, образец (место под имя проекта);
-     -mobile-extra  ≤767.98px  — Save/Load/Share и Fullscreen/Reset/«?» плетения;
-     -narrow-extra  ≤599.98px  — «?» рисования.
+     -mobile-extra  ≤767.98px  — Save/Load/Share и Fullscreen/Reset/«?» плетения.
    Width/Height/Spacing/Edges переехали в панель «Сетка» (GridSidebar) и
    больше не коллапсируют сюда: триггер появляется на той же ширине, что и
    раньше ради них (≤1279.98px), но теперь ради Zoom/вида полотна/образца —
@@ -19,7 +18,6 @@
 
 .header__overflow-tablet-extra { display: none; }
 .header__overflow-mobile-extra { display: none; }
-.header__overflow-narrow-extra { display: none; }
 
 /* Строка, где контрол не помещается справа от подписи (пункты вида полотна —
    текстовые, а не иконки): подпись сверху, пункты под ней. */
@@ -142,12 +140,4 @@
      решает порядок файлов в бандле: этот лежит позже WeaveControls.css, что и
      нужно. */
   .header__nav .header__overflow-panel .weave-help { display: none; }
-
-  /* Секция, которая видна только здесь (на широких экранах у её пункта есть
-     собственная кнопка в строке). */
-  .header__overflow-narrow-extra {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
 }
