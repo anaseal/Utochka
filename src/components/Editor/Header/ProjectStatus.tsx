@@ -16,8 +16,12 @@ type StatusKind = 'draft' | 'saved' | 'saving' | 'unsaved' | 'failed' | 'pending
 // час рисовать, не зная ни где ты, ни попадает ли это куда-нибудь
 // (см. spec.md, «Библиотека проектов» → UI).
 //
-// Четыре состояния, а не два «сохранено/нет»:
-//   draft   — активного проекта нет. Имя «Draft»: работа не потеряна (черновик
+// Шесть состояний, а не два «сохранено/нет»:
+//   draft   — активного проекта нет, а список библиотеки уже прочитан: либо
+//             в проект и правда не сохранялись, либо activeId указывает на
+//             запись, которой в этой технике нет (например, файл проекта
+//             принёс чужой app:activeLibraryProjectId — см. applyProjectData
+//             в projectFile.ts). Имя «Draft»: работа не потеряна (черновик
 //             всегда лежит в localStorage), но в библиотеку не попала —
 //             «Not saved» здесь было бы прямой неправдой.
 //   saved   — снимок совпадает с живой работой, показываем «Saved 2m ago».
@@ -33,15 +37,17 @@ type StatusKind = 'draft' | 'saved' | 'saving' | 'unsaved' | 'failed' | 'pending
 //             при переполненной квоте он вернёт ту же ошибку, поэтому в title
 //             к тексту ошибки добавлен STORAGE_ERROR_HINT («что делать»);
 //             галерея, которую открывает этот же клик, показывает его строкой.
-//   pending — первые миллисекунды после загрузки страницы, пока список ещё
-//             читается из IndexedDB: активный проект есть, но какой — ещё не
-//             известно. Показывать в этот момент «Draft» нельзя, мигнёт ложью.
+//   pending — активный проект есть, но список из IndexedDB (isLoading) ещё не
+//             дочитан, так что какой это проект — не известно. Показывать в
+//             этот момент «Draft» нельзя, мигнёт ложью; как только чтение
+//             закончится, kind пересчитается — в draft, если activeId так и
+//             не нашёлся среди записей.
 //
 // Тикает раз в RELATIVE_TIME_TICK_MS сам, а не через состояние в App — иначе
 // каждое «2m ago → 3m ago» перерисовывало бы всё дерево редактора вместе с
 // холстом. Тот же приём, что и в ProjectGallery.tsx.
 export const ProjectStatus = ({ library, onOpenGallery }: ProjectStatusProps) => {
-  const { activeId, activeProject, isDirty, error, saveNow } = library;
+  const { activeId, activeProject, isDirty, error, saveNow, isLoading } = library;
 
   const [, forceTick] = useState(0);
   useEffect(() => {
@@ -70,7 +76,7 @@ export const ProjectStatus = ({ library, onOpenGallery }: ProjectStatusProps) =>
 
   const kind: StatusKind = activeProject
     ? (error ? 'failed' : !isDirty ? 'saved' : isAutosaveEnabled(activeProject) ? 'saving' : 'unsaved')
-    : (activeId ? 'pending' : 'draft');
+    : (activeId && isLoading ? 'pending' : 'draft');
 
   const name = activeProject ? activeProject.name : kind === 'pending' ? '…' : 'Draft';
   const status = kind === 'saved' && activeProject ? formatRelativeTime(activeProject.updatedAt)
