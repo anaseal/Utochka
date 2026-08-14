@@ -9,9 +9,10 @@ interface UseFastPaintOptions {
   mirrorMode: boolean;
   mirrorFn: (id: string) => string | null;
   // Цвет незакрашенной бисерины — своя логика геометрии на каждый холст
-  // (силянка различает NODE/SPAN по классу, у крестика тип один), поэтому
-  // не хардкодится здесь, а приходит снаружи (см. CanvasView.tsx/
-  // CrossWeaveCanvasView.tsx).
+  // (силянка различает NODE/SPAN по классу, у остальных трёх техник тип
+  // бисерины один), поэтому не хардкодится здесь, а приходит снаружи (см.
+  // CanvasView.tsx / CrossWeaveCanvasView.tsx / PeyoteCanvasView.tsx /
+  // LoomCanvasView.tsx).
   defaultColorOf: (beadEl: HTMLElement) => string;
 }
 

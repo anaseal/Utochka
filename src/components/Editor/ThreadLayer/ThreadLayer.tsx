@@ -68,13 +68,13 @@ export const ThreadLayer = memo(({
   const { hitboxRadius } = BEAD_THEME.sizes;
   const handleRadius = hitboxRadius * BEAD_THEME.threadDefaults.handleRadiusFactor;
 
-  // setPointerCapture (не releasePointerCapture, как раньше) — нужно ловить
-  // pointermove/pointerup именно на этом <circle>, даже если курсор чуть
-  // съехал с его небольшого радиуса, иначе порог клик/драг (см. вызывающий
-  // код) нечем было бы измерить. Capture снимается на pointerUp/pointerCancel,
-  // поэтому последующие независимые клики по другим бусинам (трассировка
-  // ведётся кликами, не одним протяжным драгом через несколько бусин)
-  // по-прежнему попадают в свои элементы как раньше.
+  // setPointerCapture, а не releasePointerCapture (как у бусин сетки,
+  // см. BeadView.tsx) — нужно ловить pointermove/pointerup именно на этом
+  // <circle>, даже если курсор чуть съехал с его небольшого радиуса, иначе
+  // порог клик/драг (см. вызывающий код) нечем было бы измерить. Capture
+  // снимается на pointerUp/pointerCancel, поэтому последующие независимые
+  // клики по другим бусинам (трассировка ведётся кликами, не одним протяжным
+  // драгом через несколько бусин) попадают в свои элементы.
   const handleHandlePointerDown = useCallback((
     e: React.PointerEvent,
     threadId: string,

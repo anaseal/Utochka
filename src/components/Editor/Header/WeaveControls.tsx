@@ -112,9 +112,9 @@ export const WeaveControls = ({
               (см. .grid-controls__actions-row/-divider в Header.css): на
               десктопе/планшете обе строки "растворяются" в один ряд
               (display: contents), на ≤1149.98px становятся физическими рядами.
-              Поворот/отражение полотна отсюда уехали в CanvasViewMenu
-              (Header.tsx) — контрол общий для рисования и режима плетения,
-              копии здесь больше нет. */}
+              Поворот/отражение полотна лежат в CanvasViewMenu (Header.tsx),
+              а не здесь: контрол общий для рисования и режима плетения,
+              второй копии у него нет. */}
           <div className="grid-controls__actions-row">
             <IconButton
               className="grid-controls__btn"

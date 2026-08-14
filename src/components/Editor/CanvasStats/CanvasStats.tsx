@@ -21,7 +21,7 @@ interface CanvasStatsProps {
 //
 // .stats__total/.stats__divider/.stats__list лежат внутри .stats__panel —
 // на большинстве брейкпоинтов это просто разметочная вложенность (.stats__panel
-// и .stats__list-toggle — display: contents, всё видно как раньше). В
+// и .stats__list-toggle — display: contents, на вид вложенность не влияет). В
 // landscape на телефоне (мало высоты) .stats__list-toggle становится самим
 // содержимым .stats (маленькая иконка-кнопка, тот же стиль, что у
 // .export-btn/.canvas-theme-toggle в CanvasView.css), а .stats__panel —
@@ -32,8 +32,8 @@ export const CanvasStats = forwardRef<HTMLElement, CanvasStatsProps>(({
 }, ref) => {
   // Раскрытие панели попапом — реально используется только в landscape на
   // телефоне (см. .stats__toggle/.stats--list-open в CanvasStats.css): на
-  // остальных брейкпоинтах CSS игнорирует этот стейт и панель видна всегда,
-  // как раньше. Тот же паттерн клика-снаружи/Escape, что у
+  // остальных брейкпоинтах CSS игнорирует этот стейт и панель видна всегда.
+  // Тот же паттерн клика-снаружи/Escape, что у
   // MirrorMenu/ThreadMenu/header__overflow в Header.tsx.
   const [listOpen, setListOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);

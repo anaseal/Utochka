@@ -43,10 +43,10 @@ export const isEdgeExtension = (v: unknown): v is EdgeExtension =>
 // Целое неотрицательное. Строго, а не просто `typeof === 'number'`: NaN из
 // повреждённого файла проекта или Share-ссылки протекал в срез и обнулял
 // сравнения в generator.ts — на холсте не оставалось НИ ОДНОЙ бисерины.
-export const isCount = (v: unknown): v is number =>
+const isCount = (v: unknown): v is number =>
   typeof v === 'number' && Number.isInteger(v) && v >= 0;
 
-export const isTaperSide = (v: unknown): v is TaperSide =>
+const isTaperSide = (v: unknown): v is TaperSide =>
   typeof v === 'object' && v !== null && isCount((v as TaperSide).rows);
 
 export const isTaper = (v: unknown): v is Taper =>

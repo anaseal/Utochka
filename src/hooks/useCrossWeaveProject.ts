@@ -18,8 +18,8 @@ import { isIntInRange } from './useSilyankaProject.validators';
 
 // CrossWeave не поддерживает подвески и цепочки-подвески (MVP) — стабильные
 // пустая ссылка и no-op сеттер, чтобы useDrawing не считал их «изменившимися»
-// на каждый рендер. Нитка (в отличие от подвесок) работает в обеих техниках —
-// см. spec.md, «Нитка».
+// на каждый рендер. Нитка (в отличие от подвесок) у крестика есть — из четырёх
+// техник её поддерживают силянка и крестик, см. spec.md, «Нитка».
 const EMPTY_PENDANT_PLACEMENTS: PendantPlacement[] = [];
 const noopSetPendantPlacements = () => {};
 const EMPTY_PENDANT_CHAINS: PendantChain[] = [];

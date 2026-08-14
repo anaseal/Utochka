@@ -3,8 +3,8 @@ import { computeColorStats } from '../utils/colorStats';
 import { effectiveBeadColor } from '../config/theme';
 
 // Подсветка цвета из панели материалов (CanvasStats) и сама сводка по цветам —
-// общее для обеих техник. Клик по строке легенды подсвечивает все бисерины
-// этого цвета, повторный клик снимает подсветку, Escape — тоже.
+// общее для всех четырёх техник. Клик по строке легенды подсвечивает все
+// бисерины этого цвета, повторный клик снимает подсветку, Escape — тоже.
 //
 // Обе тяжёлые выборки закешированы на время мазка: пока идёт протяжка
 // карандашом/ластиком (isDrawing), designMap меняется на каждую задетую
@@ -51,6 +51,11 @@ export const useColorHighlight = <B extends { id: string }>({
     setHighlightedColor((c) => (c === oldColor ? null : c));
   }, [onReplaceColor]);
 
+  // Оба useMemo ниже читают и пишут кеш в рефе, что правило react-hooks/refs
+  // запрещает: во время мазка вернётся значение с прошлого рендера, а не
+  // свежевычисленное. Здесь это и требуется — обе выборки полным проходом по
+  // бисеринам, а designMap во время протяжки меняется на каждую задетую.
+  /* eslint-disable react-hooks/refs -- намеренный кеш на время мазка, см. выше */
   const statsRef = useRef<[string, number][]>([]);
   const colorStats = useMemo(() => {
     if (isDrawing) return statsRef.current;
@@ -74,6 +79,8 @@ export const useColorHighlight = <B extends { id: string }>({
     return ids;
   }, [highlightedColor, beads, designMap, isDrawing, defaultColorOf]);
 
+  // Блок захватывает и return: highlightedBeadIds во время мазка — это ровно
+  // значение из рефа, и правило считает его возвратом рефа из рендера.
   return {
     highlightedColor,
     highlightedBeadIds,
@@ -82,3 +89,4 @@ export const useColorHighlight = <B extends { id: string }>({
     replaceColor,
   };
 };
+/* eslint-enable react-hooks/refs */

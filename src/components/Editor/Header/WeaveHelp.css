@@ -21,7 +21,7 @@
   border-radius: 12px;
   box-shadow: var(--shadow-md);
   padding: 12px 14px;
-  z-index: 110;
+  z-index: var(--z-popover);
   color: var(--color-text);
   font-size: var(--text-sm);
   line-height: 1.55;

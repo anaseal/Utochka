@@ -1,6 +1,6 @@
-// Размер SVG-холста по бисеринам — общая формула для CanvasView и
-// CrossWeaveCanvasView (margin=30 по умолчанию). extraMaxY нужен силянке —
-// подвески могут свисать ниже нижней бисерины сетки.
+// Размер SVG-холста по бисеринам — общая формула для всех четырёх холстов
+// (margin=30 по умолчанию). extraMaxY нужен силянке — подвески могут свисать
+// ниже нижней бисерины сетки.
 export interface CanvasDimOptions {
   margin?: number;
   extraMaxY?: number;

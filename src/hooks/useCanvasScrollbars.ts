@@ -2,9 +2,9 @@ import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { clamp } from '../utils/clamp';
 import { useFrameThrottle } from './useFrameThrottle';
 
-// Тач-скроллбар .canvas__svg (см. CanvasScrollbars.tsx) — общий для
-// CanvasView и CrossWeaveCanvasView, как и остальные общие механики холста
-// (см. spec.md, раздел 4.2). Нативный browser-scrollbar на мобильных
+// Тач-скроллбар .canvas__svg (см. CanvasScrollbars.tsx) — общий для всех
+// четырёх холстов, как и остальные общие механики холста (см. spec.md,
+// раздел 4.2). Нативный browser-scrollbar на мобильных
 // WebKit/Blink не является перетаскиваемым пальцем виджетом (в отличие от
 // десктопа), а единственная тач-альтернатива — двупальцевый жест
 // (useTouchPanZoom) — неудобна для точной прокрутки. Этот хук считает

@@ -59,8 +59,8 @@ export const hsvToHex = ({ h, s, v }: HSV): string => {
   return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
 };
 
-// Невалидный hex подменяем белым — та же логика, что раньше жила прямо в ColorPicker:
-// сброс SV/Hue стейта на "пустой" цвет лучше, чем падение на невалидном вводе.
+// Невалидный hex подменяем белым: сброс SV/Hue стейта на "пустой" цвет лучше,
+// чем падение на невалидном вводе.
 export const hexToHsv = (hex: string): HSV => {
   const rgb = hexToRgb(hex) ?? { r: 255, g: 255, b: 255 };
   return rgbToHsv(rgb.r, rgb.g, rgb.b);

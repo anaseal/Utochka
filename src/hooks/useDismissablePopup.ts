@@ -3,7 +3,7 @@ import { RefObject, useEffect, useRef, useState } from 'react';
 export type DismissReason = 'outside' | 'escape';
 
 // Ядро закрытия попапа: клик снаружи и Escape для уже готового флага open.
-// Вынесено из useDismissablePopup, потому что <Menu> (components/common/Menu.tsx)
+// Лежит отдельно от useDismissablePopup, потому что <Menu> (components/common/Menu.tsx)
 // — управляемый компонент: флагом open владеет место вызова, а вот подписки на
 // document должны остаться одни на проект, а не разойтись копией.
 export const useDismissable = (
@@ -13,8 +13,9 @@ export const useDismissable = (
 ) => {
   // Свежий колбэк без переподписки на каждый рендер: иначе в зависимости
   // эффекта пришлось бы класть onDismiss, а он у мест вызова — стрелка,
-  // новая на каждом рендере (про ref.current в рендере — см. CLAUDE.md).
+  // новая на каждом рендере.
   const onDismissRef = useRef(onDismiss);
+  // eslint-disable-next-line react-hooks/refs -- свежая ссылка без переподписки, см. выше
   onDismissRef.current = onDismiss;
 
   useEffect(() => {

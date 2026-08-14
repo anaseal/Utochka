@@ -9,7 +9,11 @@
   border-radius: 12px;
   box-shadow: var(--shadow-md);
   padding: 12px;
-  z-index: 120;
+  /* Этаж палитры-пипетки: выше попапов хедера, из пункта которых она и
+     открывается. Собственная лесенка пикера отсчитывается отсюда числами —
+     скрим (119) и попап вставки цвета (130, на мобильной раскладке 140):
+     за пределами этого файла её ступени ничего не значат. */
+  z-index: var(--z-picker);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -353,6 +357,7 @@ border: 1px solid var(--color-text-dim);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Над панелью пикера (--z-picker, 120): попап растёт из неё. */
   z-index: 130;
 }
 .color-picker__sv--mini {
@@ -474,6 +479,8 @@ border: 1px solid var(--color-text-dim);
     position: fixed;
     inset: 0;
     background: var(--color-scrim);
+    /* Под панелью пикера (--z-picker, 120), но над попапами хедера: затемнение
+       гасит интерфейс под пикером, не задевая сам пикер. */
     z-index: 119;
   }
 
@@ -500,6 +507,8 @@ border: 1px solid var(--color-text-dim);
     max-height: calc(100vh - var(--header-height) - 24px);
     max-height: calc(100dvh - var(--header-height) - 24px);
     overflow-y: auto;
+    /* Оба попапа здесь зафиксированы к viewport и лежат друг на друге,
+       поэтому вставка цвета поднимается над панелью пикера явно. */
     z-index: 140;
   }
 }

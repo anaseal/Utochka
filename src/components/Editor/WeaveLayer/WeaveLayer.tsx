@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import './WeaveLayer.css';
 
-/** Где стоит бисерина и какого она размера — общий вид для обеих техник. */
+/** Где стоит бисерина и какого она размера — общий вид для всех четырёх техник. */
 export type WeaveBeadPositions = Map<string, { x: number; y: number; r: number }>;
 
 interface WeaveLayerProps {

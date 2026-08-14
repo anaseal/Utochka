@@ -140,7 +140,7 @@ export const ReferenceWindow = ({ open, setOpen }: ReferenceWindowProps) => {
 
   // Собственный resize-хэндл поверх Pointer Events вместо нативного CSS
   // `resize: both` — тот управляется только мышью и не откликается на тач
-  // ни на Android, ни на iOS, поэтому на мобильном окно нельзя было уменьшить.
+  // ни на Android, ни на iOS, то есть на мобильном окно им не уменьшить.
   // Тот же приём "пишем в DOM во время драга, коммитим в state на pointerup",
   // что и у перетаскивания шапки (handlePointerMove/Up выше).
   const handleResizePointerDown = useCallback((e: React.PointerEvent) => {

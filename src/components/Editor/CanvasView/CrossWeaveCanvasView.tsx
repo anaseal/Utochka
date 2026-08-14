@@ -179,6 +179,7 @@ export const CrossWeaveCanvasView = ({
     brushStrand: activeThreadStrand,
   });
 
+  // eslint-disable-next-line react-hooks/refs -- поздняя привязка, см. объявление рефа выше
   cancelActiveStrokeRef.current = () => {
     stopDrawing();
     thread.cancelHandleDrag();

@@ -11,7 +11,8 @@ interface ThreadTraceControlsProps {
 // Тач-эквивалент крестика-по-hover (ThreadLayer, недостижим без hover на
 // тач-экранах) и клавиши Escape (нет физической клавиши на тач) — плавающая
 // пара кнопок, видна только пока трассировка нитки не завершена. Byte-в-byte
-// общий для CanvasView/CrossWeaveCanvasView, как CanvasChrome.
+// общий для CanvasView/CrossWeaveCanvasView — двух холстов с ниткой (у Peyote
+// и Loom её нет), как CanvasChrome общий для всех четырёх.
 export const ThreadTraceControls = ({ trace, onRemoveLastPoint, onCancel }: ThreadTraceControlsProps) => {
   if (!trace) return null;
 

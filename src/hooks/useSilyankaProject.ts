@@ -32,17 +32,17 @@ import {
   isOpacity, isDeletedBeads, normalizePendantPlacements,
 } from './useSilyankaProject.validators';
 
-// Всё силяночное состояние и обработчики, вынесенные из App.tsx, чтобы
-// хостить вторую независимую технику (крестик) без дублирования ~400 строк.
-// Геометрия сетки (размеры/спаны/скос/края) вынесена в useGridConfig —
+// Всё силяночное состояние и обработчики — здесь, а не в App.tsx: иначе
+// вторую независимую технику (крестик) не поднять без дублирования ~400 строк.
+// Геометрия сетки (размеры/спаны/скос/края) живёт в useGridConfig —
 // см. комментарий там же.
 export const useSilyankaProject = (palette: readonly string[]) => {
   const [rawPendantPlacements, setRawPendantPlacements] = usePersistedState<PendantPlacement[]>(
     'silyanka:pendantPlacements', [], isPendantPlacements,
   );
-  // Раньше подвеска хранила плоский col — теперь anchor:{kind:'grid'|'tooth',
-  // ...} (см. types/pendant.ts, «Зубец» в spec.md). normalizePendantPlacements
-  // переносит старые записи в новый формат; обёрнутый сеттер прогоняет через
+  // Подвеска адресуется через anchor:{kind:'grid'|'tooth', ...}
+  // (см. types/pendant.ts, «Зубец» в spec.md), а записи с плоским col приводит
+  // к этой форме normalizePendantPlacements; обёрнутый сеттер прогоняет через
   // неё и prev (для функциональных апдейтов), и итоговое значение (для
   // прямой записи — так восстанавливается снимок истории Undo/Redo,
   // см. useDrawing.ts) — все потребители ниже (usePendants, floodFill,
@@ -298,11 +298,10 @@ export const useSilyankaProject = (palette: readonly string[]) => {
   // см. CanvasView.tsx) — общая с canvasSvgRef, чтобы PendantsSidebar мог
   // переводить client-координаты драга через ту же useBeadCoords (getScreenCTM),
   // которой уже пользуется сам холст (нитка/стемп), а не ручной копией той же
-  // формулы: раньше toSvgPoint в PendantsSidebar.tsx считал сдвиг сам, жёстко
-  // через BEAD_THEME.gridDefaults.offsetX — расходился с реальным
-  // effectiveOffsetX/dim.shiftX холста (напр. при свёрнутых span-контролах,
-  // офсет по умолчанию), из-за чего цель драга подвески на зубец промахивалась
-  // мимо видимого узла на десятки пикселей.
+  // формулы: копия, считающая сдвиг сама через BEAD_THEME.gridDefaults.offsetX,
+  // расходится с реальным effectiveOffsetX/dim.shiftX холста (напр. при
+  // свёрнутых span-контролах, офсет по умолчанию), и цель драга подвески на
+  // зубец промахивается мимо видимого узла на десятки пикселей.
   const stampGroupRef = useRef<SVGGElement>(null);
 
   const rowGaps = useMemo(() => {

@@ -42,10 +42,13 @@ export const useWeaveProgress = (technique: 'silyanka' | 'crossWeave' | 'peyote'
   );
   const [past, setPast] = useState<{ passes: WeavePasses; lastSegment: string[] }[]>([]);
 
+  /* eslint-disable react-hooks/refs -- свежие значения для колбэков, которые
+     должны остаться стабильными: они уходят пропами вниз к холсту. */
   const passesRef = useRef(passes);
   passesRef.current = passes;
   const lastSegmentRef = useRef(lastSegment);
   lastSegmentRef.current = lastSegment;
+  /* eslint-enable react-hooks/refs */
 
   // Итоговое число проходов по каждой задетой мазком бисерине (0 = снять).
   const strokeRef = useRef<Map<string, number>>(new Map());

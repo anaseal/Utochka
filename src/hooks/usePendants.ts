@@ -52,7 +52,7 @@ export const usePendants = (
 
   // Снимает точечные подвески с сеточных якорей в [startCol, endCol] — зовётся
   // при простановке зубца (см. spec.md, «Зубец»): зубец занимает эти ноды
-  // нижнего ряда целиком, точечная подвеска там больше не держится.
+  // нижнего ряда целиком, точечная подвеска там не держится.
   const removeGridPlacementsInRange = useCallback((startCol: number, endCol: number) => {
     setPlacements((prev) => prev.filter((p) =>
       !(p.anchor.kind === 'grid' && p.anchor.col >= startCol && p.anchor.col <= endCol)));

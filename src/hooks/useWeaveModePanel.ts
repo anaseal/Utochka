@@ -50,10 +50,10 @@ export const useWeaveModePanel = ({ technique, silyanka, crossWeave, peyote, loo
   // (см. useCanvasView.ts), но свой для каждой техники: это свойство формы
   // конкретной сетки (как gridSize), а не UI-настройка вроде zoom, поэтому
   // переключение техники не должно "протаскивать" поворот в другую сетку.
-  // Персист — объект по ключу техники, ключи в localStorage оставлены
-  // старыми (app:weaveOrientation/app:weaveFlip); формат значения сменился
-  // со скаляра на объект, так что старое сохранённое значение один раз не
-  // пройдёт валидацию и сбросится в дефолт — осознанная разовая потеря.
+  // Персист — объект «техника → значение» под ключами app:weaveOrientation и
+  // app:weaveFlip. Сохранённое значение другой формы валидацию не проходит и
+  // сбрасывается в дефолт: вид полотна дешевле выставить заново, чем угадывать,
+  // к какой технике отнести одиночное значение.
   const [orientationByTechnique, setOrientationByTechnique] = usePersistedState<
     Partial<Record<Technique, CanvasOrientation>>
   >('app:weaveOrientation', {}, isOrientationByTechnique);

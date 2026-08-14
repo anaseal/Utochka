@@ -15,13 +15,13 @@
   border-radius: 8px;
   box-shadow: var(--shadow-md);
   overflow: auto;
-  /* Было `resize: both` — нативный resize управляется только мышью и не
-     откликается на тач ни на Android, ни на iOS (окно нельзя было уменьшить
-     с телефона). Заменено на собственный .reference-window__resize-handle
-     поверх Pointer Events (см. ReferenceWindow.tsx), который работает
-     одинаково для мыши, тача и пера. */
+  /* Нативный `resize: both` здесь не годится: он управляется только мышью и
+     не откликается на тач ни на Android, ни на iOS — с телефона окно им не
+     уменьшить. Размер меняет собственный .reference-window__resize-handle
+     поверх Pointer Events (см. ReferenceWindow.tsx), одинаково работающий для
+     мыши, тача и пера. */
   resize: none;
-  z-index: 60;
+  z-index: var(--z-reference);
 }
 
 /* Свёрнутое окно (см. кнопку ChevronDown/Up в шапке) — остаётся только

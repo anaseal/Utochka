@@ -47,7 +47,7 @@ interface PendantsSidebarProps {
   onRemoveDecorTail: (placementId: string) => void;
   onClearDecorTails: () => void;
   onHoveredDecorTailColChange: (col: number | null) => void;
-  // Bottom Chain теперь включается/выключается на вкладке «Grid» (GridSidebar) —
+  // Bottom Chain включается/выключается на вкладке «Grid» (GridSidebar) —
   // здесь только читаем флаг, чтобы блокировать карточки подвесок (взаимоисключение,
   // см. spec.md, «Взаимоисключение с Bottom Chain»).
   bottomEdgeEnabled: boolean;
@@ -67,8 +67,8 @@ interface PendantsSidebarProps {
   toothPendingStart: number | null;
   onRemoveTooth: (placementId: string) => void;
   onClearTeeth: () => void;
-  // Дыра (вкладка «Grid» раньше — теперь здесь, среди остальных инструментов
-  // редактирования содержимого, а не среди чистой геометрии сетки).
+  // Дыра — инструмент редактирования содержимого, поэтому живёт здесь, рядом
+  // с остальными такими же, а не на вкладке «Grid» с чистой геометрией сетки.
   holeToolActive: boolean;
   onToggleHoleTool: () => void;
   holeSegmentToolActive: boolean;
@@ -168,12 +168,12 @@ export const PendantsSidebar = ({
   // непустой — тот же критерий, что и у конца цепочки-подвески в
   // ToothLayer.tsx, не только кончик) либо ближайшая нода нижнего ряда,
   // ИСКЛЮЧАЯ колонки, занятые зубцом целиком (см. spec.md, «Зубец» — зубец
-  // заменяет эти ноды, точечная подвеска там больше не держится). Декор-хвост
-  // (computeCol/computeRow выше) этим ограничением сознательно не связан —
-  // решение сузили до точечных подвесок. Порог попадания — половина шага
+  // заменяет эти ноды, точечная подвеска там не держится). Декор-хвост
+  // (computeCol/computeRow выше) этим ограничением сознательно не связан:
+  // оно касается только точечных подвесок. Порог попадания — половина шага
   // сетки (`stepX`), а не мелкий `hitboxRadius` бисерины: узлы зубца мельче и
-  // реже, чем у сплошного ряда, целиться в них по размеру самой бисерины
-  // было практически невозможно.
+  // реже, чем у сплошного ряда, и целиться в них по размеру самой бисерины
+  // практически невозможно.
   const computePendantAnchor = useCallback((clientX: number, clientY: number): PendantAnchor | null => {
     const pt = toSvgPoint(clientX, clientY);
     if (!pt) return null;

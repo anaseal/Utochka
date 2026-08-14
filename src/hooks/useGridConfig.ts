@@ -16,9 +16,8 @@ import {
 } from './useSilyankaProject.validators';
 
 // Геометрия сетки: размеры, спаны, скос, края — и все обработчики, которые их
-// меняют. Вынесено из useSilyankaProject.ts тем же приёмом, что usePendants/
-// usePendantChains/useDecorTails: свой срез persisted-состояния + свои
-// обработчики. pendant/chain/decorTail сеттеры и placements нужны только
+// меняют. Отдельный хук тем же приёмом, что usePendants/usePendantChains/
+// useDecorTails: свой срез persisted-состояния + свои обработчики. pendant/chain/decorTail сеттеры и placements нужны только
 // внутри applyWidth/toggleBottomEdgeEnabled — их каскадные эффекты при
 // resize и пересечение с Bottom Chain (см. комментарии ниже).
 export const useGridConfig = (
@@ -96,7 +95,7 @@ export const useGridConfig = (
         ? teeth.filter(t => t.startCol < newWidth && t.endCol < newWidth)
         : teeth;
     const survivingToothIds = new Set(nextTeeth.map(t => t.placementId));
-    // Конец-сетка сдвигается/режется по col, как и раньше; конец-зубец сам не
+    // Конец-сетка сдвигается/режется по col; конец-зубец сам не
     // сдвигается (зубец уже сдвинут в nextTeeth) — валиден, пока жив зубец.
     const shiftChainEndpoint = (e: ChainEndpoint): ChainEndpoint =>
       (e.kind === 'grid' ? { ...e, col: e.col + mirrorDelta } : e);

@@ -16,9 +16,10 @@ interface UseSilyankaWeaveSegmentsOptions {
 }
 
 // Режим плетения: холст ничего не рисует, клик/протяжка только отмечают, что
-// уже сплетено. Резолвер сегмента у силянки и у крестика разный (см. spec.md,
-// раздел 4.2 «Общие механики двух холстов») — каждый живёт в своём хуке рядом
-// с доменной геометрией своей техники, не унифицируется через useWeaveCanvas.
+// уже сплетено. Резолвер сегмента свой у каждой из четырёх техник (см. spec.md,
+// раздел 4.2 «Общие механики холстов») — он живёт рядом с доменной геометрией
+// своей техники (у силянки — этот хук, у остальных трёх — вызов утилиты из
+// utils/weaveSegment.ts прямо в холсте) и не унифицируется через useWeaveCanvas.
 export const useSilyankaWeaveSegments = ({ beads, weaveTool, flipped }: UseSilyankaWeaveSegmentsOptions) => {
   const segmentIndex = useMemo(() => buildSegmentIndex(beads), [beads]);
   const beadById = useMemo(() => new Map(beads.map((b) => [b.id, b])), [beads]);

@@ -96,7 +96,7 @@ export const GridSidebar = (props: GridSidebarProps) => {
   const loomProps = props.technique === 'loom' ? props.loomProps : undefined;
   // crossWeave, Peyote и Loom делят один интерфейс (BasicGridSidebarProps) —
   // вместо N-арного `? :` на каждом поле ниже, один merge и дальше двойной
-  // `? :` (силянка / остальное), как было раньше.
+  // `? :` (силянка / остальное).
   const basicProps = crossWeaveProps ?? peyoteProps ?? loomProps;
 
   const width = silyankaProps ? silyankaProps.gridWidth : basicProps!.gridWidth;

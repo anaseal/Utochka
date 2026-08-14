@@ -122,7 +122,7 @@ export const PaletteWidget = ({
             экономит горизонтальное место тем же приёмом, что палитра уже
             применяет к base/recent рядам. display:contents на более широких
             экранах "растворяет" обёртку — оба элемента остаются прямыми
-            flex-детьми .palette, как раньше. */}
+            flex-детьми .palette. */}
         <div className="palette__extra">
           <div className="palette__custom">
             <button

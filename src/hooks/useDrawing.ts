@@ -19,7 +19,7 @@ const isDesignMap = (v: unknown): v is Record<string, string> => {
 // Снимок истории хранит те же типы (PendantChain и др.), что и «живое»
 // состояние в useSilyankaProject.ts — переиспользуем их полноценные
 // валидаторы, а не Array.isArray: тот проверяет только внешний массив и
-// пропускает элементы устаревшей формы (например, PendantChain с прежними
+// пропускает элементы чужой формы (например, PendantChain с числовыми
 // startCol/endCol вместо start/end) — resolveChainAnchor падает на таких
 // при Undo, потому что endpoint.kind у них не существует.
 const isHistorySnapshotArray = (v: unknown): v is HistorySnapshot[] => {
@@ -79,10 +79,12 @@ export const useDrawing = (
   // цепочкой пробивало бы memo у BeadGrid (см. BeadGrid.tsx), пересобирая
   // весь список из тысяч бисерин просто от выбора цвета, без какого-либо
   // рисования.
+  /* eslint-disable react-hooks/refs -- см. комментарий выше */
   const activeColorRef = useRef(activeColor);
   activeColorRef.current = activeColor;
   const activeToolRef = useRef(activeTool);
   activeToolRef.current = activeTool;
+  /* eslint-enable react-hooks/refs */
   const [recentColors, setRecentColors] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(recentStorageKey);
@@ -144,7 +146,7 @@ export const useDrawing = (
       return next.length > MAX_HISTORY ? next.slice(1) : next;
     });
     setFuture([]);
-  }, []);
+  }, [setPast, setFuture]);
 
   const startDrawing = useCallback(() => {
     preStrokeRef.current = {
@@ -203,7 +205,7 @@ export const useDrawing = (
         [id]: activeColorRef.current
       }));
     }
-  }, []);
+  }, [setDesignMap]);
 
   // Быстрый путь для протяжки (см. strokeChangesRef выше) — не трогает React
   // state, только копит изменение и отдаёт итоговый цвет вызывающей стороне
@@ -254,7 +256,7 @@ export const useDrawing = (
     if (hasThreads) setThreads([]);
   }, [
     designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads, pushSnapshot,
-    setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
+    setDesignMap, setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
   ]);
 
   // Управляемая трансформация Design Map (например, пересчёт при смене ширины).
@@ -269,7 +271,7 @@ export const useDrawing = (
       decorTails: decorTailPlacements, teeth: toothPlacements, threads,
     });
     setDesignMap(next);
-  }, [designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads, pushSnapshot]);
+  }, [designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads, pushSnapshot, setDesignMap]);
 
   // Одновременное изменение сетки, подвесок, цепочек, декор-хвостов, зубцов
   // И ниток одним шагом истории (например, заливка, которая может задеть
@@ -306,7 +308,8 @@ export const useDrawing = (
     if (nextThreads !== threads) setThreads(nextThreads);
   }, [
     designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads,
-    pushSnapshot, setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
+    pushSnapshot, setDesignMap, setPendantPlacements, setPendantChains, setDecorTailPlacements,
+    setToothPlacements, setThreads,
   ]);
 
   const undo = useCallback(() => {
@@ -325,7 +328,8 @@ export const useDrawing = (
     setPast(p => p.slice(0, -1));
   }, [
     past, designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads,
-    setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
+    setPast, setFuture, setDesignMap, setPendantPlacements, setPendantChains, setDecorTailPlacements,
+    setToothPlacements, setThreads,
   ]);
 
   const redo = useCallback(() => {
@@ -344,7 +348,8 @@ export const useDrawing = (
     setFuture(f => f.slice(1));
   }, [
     future, designMap, pendantPlacements, pendantChains, decorTailPlacements, toothPlacements, threads,
-    setPendantPlacements, setPendantChains, setDecorTailPlacements, setToothPlacements, setThreads,
+    setPast, setFuture, setDesignMap, setPendantPlacements, setPendantChains, setDecorTailPlacements,
+    setToothPlacements, setThreads,
   ]);
 
   // useMemo — та же причина, что и в usePendants.ts/usePendantChains.ts/

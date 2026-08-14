@@ -9,8 +9,9 @@ interface ThreadStyleFieldsProps {
 
 // Цвет/прозрачность «кисти» нитки — та, которой ляжет следующая прокладываемая
 // нитка (см. useSilyankaProject.ts/useCrossWeaveProject.ts, activeThreadColor/
-// Opacity). Общий для обеих техник: у силянки — свой попап (ThreadStyleButton
-// в Header.tsx), у crossWeave — врезан в уже существующий ThreadMenu.
+// Opacity). Общий для двух техник с ниткой: у силянки — свой попап
+// (ThreadStyleButton в Header.tsx), у crossWeave — врезан в уже существующий
+// ThreadMenu; у Peyote и Loom нитки нет, и поля не показываются.
 // Нативный <input type="color"> — тот же примитив, что уже используется в
 // хедере для custom-цвета бусин (см. палитру), без своего цветового пикера
 // с нуля. Мин. прозрачность 0.1, не 0 — нить с opacity=0 невидима и

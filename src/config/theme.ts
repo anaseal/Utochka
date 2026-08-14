@@ -94,7 +94,7 @@ export const defaultColorFor = (type: BeadType): string =>
 // fill, и в CSS, поэтому даже путь мимо нормализации не ломает отрисовку.
 export const CLEAR_BEAD_COLOR = '#ffffff00';
 
-export const isClearBead = (color: string | undefined): boolean => color === CLEAR_BEAD_COLOR;
+const isClearBead = (color: string | undefined): boolean => color === CLEAR_BEAD_COLOR;
 
 // Бисерина выглядит незакрашенной: цвета нет вовсе либо он прозрачный.
 export const isUnfilledBead = (color: string | undefined): boolean => !color || isClearBead(color);
@@ -105,9 +105,9 @@ export const effectiveBeadColor = (color: string | undefined, fallback: string):
   isUnfilledBead(color) ? fallback : color!;
 
 // Модификатор состояния бисерины по её цвету — с ведущим пробелом, чтобы
-// подставляться прямо в шаблон className (там, где раньше стояло
-// `${!color ? ' bead--empty' : ''}`). Общий для всех четырёх техник и для
-// слоёв подвесок/цепочек/зубцов/декор-хвостов силянки.
+// подставляться прямо в шаблон className рядом с остальными классами. Общий
+// для всех четырёх техник и для слоёв подвесок/цепочек/зубцов/декор-хвостов
+// силянки.
 export const beadStateClass = (color: string | undefined): string =>
   isUnfilledBead(color) ? ' bead--empty' : '';
 
@@ -115,19 +115,21 @@ export const beadStateClass = (color: string | undefined): string =>
 // activeThreadColor/activeThreadOpacity, персистятся отдельно от истории
 // Undo/Redo, как activeColor для рисования) — общий источник для хуков и
 // Header.tsx (образцы-точки в ThreadMenu), чтобы не дублировать hex в двух
-// местах. Значения подобраны в тон прежним --thread-color/-2 (CanvasView.css).
+// местах. Значения — те же, что у --thread-color/-2 (CanvasView.css): нитка с
+// дефолтной «кистью» выглядит ровно так же, как нитка без своего цвета.
 export const THREAD_STRAND_DEFAULT_COLORS: Record<1 | 2, string> = {
   1: '#e2d6bb',
   2: '#22d3ee',
 };
 export const DEFAULT_THREAD_OPACITY = 0.85;
 
-// Zoom и предел размера сетки — общие понятия для обеих техник (Silyanka и
-// CrossWeave), не силяночные, поэтому вынесены из BEAD_THEME.constraints в
-// отдельный объект. maxGridWidth/maxGridHeight — числа, которые видит и вводит
-// пользователь в панели Grid (то же, что подписывает линейка на холсте);
-// у силянки это со сдвигом от сырых gridSize.width/height (см. комментарий
-// в App.tsx, «Линейка на холсте — источник правды»), у CrossWeave — без сдвига.
+// Zoom и предел размера сетки — общие понятия для всех четырёх техник
+// (Silyanka, CrossWeave, Peyote, Loom), не силяночные, поэтому лежат отдельным
+// объектом, а не в BEAD_THEME.constraints. maxGridWidth/maxGridHeight — числа,
+// которые видит и вводит пользователь в панели Grid (то же, что подписывает
+// линейка на холсте); у силянки это со сдвигом от сырых gridSize.width/height
+// (см. комментарий в App.tsx, «Линейка на холсте — источник правды»), у
+// остальных трёх — без сдвига.
 export const APP_CONSTRAINTS = {
   minZoom: 0.25,
   maxZoom: 3,
@@ -136,7 +138,8 @@ export const APP_CONSTRAINTS = {
   maxGridHeight: 30,
 };
 
-// Reference Window — плавающее окно с картинкой-образцом, общее для обеих техник.
+// Reference Window — плавающее окно с картинкой-образцом, общее для всех
+// четырёх техник.
 export const REFERENCE_WINDOW = {
   defaultWidth: 320,
   defaultHeight: 380,

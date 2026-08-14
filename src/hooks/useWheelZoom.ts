@@ -3,7 +3,7 @@ import { APP_CONSTRAINTS } from '../config/theme';
 import { clamp } from '../utils/clamp';
 import { computeZoomToPointScroll } from '../utils/zoomToPoint';
 
-// Ctrl+wheel zoom холста — общий для CanvasView и CrossWeaveCanvasView.
+// Ctrl+wheel zoom холста — общий для всех четырёх холстов.
 //
 // Зумирует к точке под курсором: width/height <svg> и scrollLeft/scrollTop
 // контейнера пишутся напрямую в DOM (тот же приём, что и в useTouchPanZoom,
@@ -43,6 +43,7 @@ export const useWheelZoom = (
     liveZoomRef.current = zoom;
   }, [zoom]);
   const dimRef = useRef(dim);
+  // eslint-disable-next-line react-hooks/refs -- свежие размеры для обработчика wheel
   dimRef.current = dim;
 
   useEffect(() => {

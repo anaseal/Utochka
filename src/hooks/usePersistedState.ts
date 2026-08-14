@@ -25,7 +25,10 @@ export function usePersistedState<T>(
     }
   });
 
+  // Отложенная запись читает состояние на момент срабатывания таймера, а не на
+  // момент подписки, — иначе дебаунс сохранял бы устаревший снимок.
   const latestStateRef = useRef(state);
+  // eslint-disable-next-line react-hooks/refs -- свежее значение для таймера, см. выше
   latestStateRef.current = state;
 
   useEffect(() => {

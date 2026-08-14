@@ -8,8 +8,8 @@ interface Point { x: number; y: number; }
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const midpoint = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
-// Двупальцевый жест на холсте (панорама + pinch-zoom) — общий для CanvasView
-// и CrossWeaveCanvasView. Нужен только из-за touch-action: none на
+// Двупальцевый жест на холсте (панорама + pinch-zoom) — общий для всех
+// четырёх холстов. Нужен только из-за touch-action: none на
 // .canvas__svg (см. spec.md, «Ввод: мышь и тач») — без него рисование
 // пальцем не работало бы (см. useDrawing/BeadView), но заодно отключает
 // нативный скролл/pinch браузера, поэтому оба жеста приходится
@@ -47,6 +47,7 @@ export const useTouchPanZoom = (
   // между началом и коммитом жеста, синхронизируется с zoom prop вне жеста.
   const liveZoomRef = useRef(zoom);
   const dimRef = useRef(dim);
+  // eslint-disable-next-line react-hooks/refs -- свежие размеры для обработчиков жеста
   dimRef.current = dim;
 
   const isMultiTouch = useCallback(() => pointersRef.current.size >= 2, []);

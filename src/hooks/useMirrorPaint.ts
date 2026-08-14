@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 
-// paintBead + поиск зеркальной пары — общий паттерн для CanvasView и
-// CrossWeaveCanvasView. Конкретная mirror-функция (своя геометрия у каждой
-// техники) передаётся снаружи уже забинженной на нужные аргументы.
+// paintBead + поиск зеркальной пары — общий паттерн для всех четырёх холстов.
+// Конкретная mirror-функция (своя геометрия у каждой техники) передаётся
+// снаружи уже забинженной на нужные аргументы.
 export const useMirrorPaint = (
   paintBead: (id: string) => void,
   mirrorMode: boolean,

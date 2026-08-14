@@ -47,7 +47,7 @@
   font-size: var(--text-sm);
   line-height: 1.4;
   text-align: left;
-  z-index: 1000;
+  z-index: var(--z-topmost);
 }
 
 .section-help__bubble::before {

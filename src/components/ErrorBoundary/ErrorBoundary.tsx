@@ -89,8 +89,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           // Что именно стирается, названо точно: clearOwnStorage чистит
           // localStorage целиком по всем техникам и настройкам, но галерея
           // проектов и картинка референса лежат в IndexedDB и уцелеют.
-          // Прежний текст («your saved design and progress») пугал сильнее,
-          // чем есть, и одновременно умалчивал про соседние техники.
+          // Обобщённая формулировка вроде «your saved design and progress»
+          // пугает сильнее, чем есть, и умалчивает про соседние техники.
           <>
             <p className="error-boundary__text error-boundary__text--warning">
               This deletes your current work in every technique, along with app settings.

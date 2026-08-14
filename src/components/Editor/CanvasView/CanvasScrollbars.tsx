@@ -5,8 +5,8 @@ interface CanvasScrollbarsProps {
   containerRef: RefObject<HTMLDivElement | null>;
 }
 
-// Тач-скроллбар холста — общий для CanvasView и CrossWeaveCanvasView (см.
-// spec.md, раздел 4.2: механики, осмысленные для обеих техник, живут здесь,
+// Тач-скроллбар холста — общий для всех четырёх холстов (см. spec.md,
+// раздел 4.2: механики, осмысленные больше чем для одной техники, живут здесь,
 // а не копиями в теле холста). Рендерится внутри .canvas__svg-frame — та же
 // позиционирующая обёртка, что и у .span-controls-toggle (CanvasView.tsx):
 // размер в точности как у .canvas__svg, но без overflow:auto, поэтому
